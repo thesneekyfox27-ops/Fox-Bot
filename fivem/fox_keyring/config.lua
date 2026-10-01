@@ -31,6 +31,9 @@ Config.KeysOnly = true
 -- 'force'  = server-side ForceOpenInventory (older method, items may snap back when dragged out)
 Config.OpenMethod = 'client'
 
+-- Milliseconds to wait after using the keyring before opening it ('client' method only)
+Config.OpenDelay = 300
+
 -- Fallback used when tgiann-inventory has no export to read stash contents.
 -- Run `keyringcheck <playerId>` in the server console to see which method your server uses.
 Config.StashTable = {
