@@ -6,7 +6,9 @@ Use the keyring in your inventory and it opens a 25-slot container that only acc
 
 - Every keyring is its own container. Give someone your keyring and they get every key on it.
 - Only `vehiclekeys` items fit on a keyring.
-- New keys go straight onto your keyring. Whenever 0r-vehiclekeys gives you a key (garage, buying a car, a key from another player), it lands on the first keyring you carry that has room. With no keyring, or a full one, it goes into your pockets as usual. Turn this off with `Config.AutoAddKeys = false`.
+- Only keys for **your own cars** go on a keyring automatically. That means a `player_vehicles` row with your citizenid and no `job`. Job cars (police, EMS, mechanic...), Lunar society cars, and stolen or hotwired cars always go into your pockets.
+- When a job car is returned and 0r-vehiclekeys takes its key back, it also checks your keyrings, in case someone dragged the key onto one by hand.
+- New keys for your own cars go straight onto your keyring. Whenever 0r-vehiclekeys gives you a key (garage, buying a car, a key from another player), it lands on the first keyring you carry that has room. With no keyring, or a full one, it goes into your pockets as usual. Turn this off with `Config.AutoAddKeys = false`.
 - Storing a car in Lunar Garage doesn't pull its key off the keyring. Taking it out again doesn't add a duplicate.
 
 ## Install
@@ -36,7 +38,7 @@ keyring = {
 
 ### 2. Patch 0r-vehiclekeys
 
-Make two small additions to `0r-vehiclekeys/modules/inventory/tgiann-inventory/server.lua`. The full diff is in `integrations/0r-vehiclekeys.patch`.
+Make three small additions to `0r-vehiclekeys/modules/inventory/tgiann-inventory/server.lua`. The full diff is in `integrations/0r-vehiclekeys.patch`.
 
 **a)** In `Inventory.AddItem`, right after `markGranted(src, metadata.plate)`, send new keys to the keyring:
 
@@ -53,7 +55,9 @@ Make two small additions to `0r-vehiclekeys/modules/inventory/tgiann-inventory/s
         end
 ```
 
-**b)** In `Inventory.HasItem`, count keys that are on a keyring:
+**b)** In `Inventory.RemoveItem`, when the key isn't in the player's pockets, take it off their keyring instead. This is how returned job cars lose their key. See the patch file for the exact block.
+
+**c)** In `Inventory.HasItem`, count keys that are on a keyring:
 
 ```lua
         if findItemByMetadata(src, item, metadata) ~= nil then return true end
@@ -90,5 +94,6 @@ Do a **full server restart**, because tgiann loads its item list at boot. Give y
 ```lua
 exports.fox_keyring:RingHasPlate(source, plate, ssn) -- true if a key for that plate is on a keyring they carry
 exports.fox_keyring:GetRingPlates(source)            -- { 'ABC123', ... }
-exports.fox_keyring:AddKeyToRing(source, item, metadata) -- true if the key was placed on a keyring
+exports.fox_keyring:AddKeyToRing(source, item, metadata)      -- true if the key was placed on a keyring (own cars only)
+exports.fox_keyring:RemoveKeyFromRing(source, item, metadata) -- true if the key was taken off a keyring
 ```

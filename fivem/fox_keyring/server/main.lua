@@ -183,12 +183,35 @@ local function keyOnRing(ringId, plate, ssn)
     return false
 end
 
+--- True when the plate is the player's own car: their row in player_vehicles with no job/society.
+--- Job cars, society cars, and stolen or hotwired cars all return false, so their keys stay in the pockets.
+local function isPersonalVehicle(src, plate)
+    local cfg = Config.PersonalVehicles
+    if not cfg then return true end
+
+    local player = QBCore.Functions.GetPlayer(src)
+    local citizenid = player and player.PlayerData.citizenid
+    if not citizenid then return false end
+
+    local where = ('`%s` = ? AND UPPER(TRIM(plate)) = ?'):format(cfg.ownerColumn)
+    if cfg.jobColumn then
+        where = ('%s AND (`%s` IS NULL OR `%s` = \'\')'):format(where, cfg.jobColumn, cfg.jobColumn)
+    end
+
+    local ok, found = pcall(MySQL.scalar.await, ('SELECT 1 FROM `%s` WHERE %s LIMIT 1'):format(cfg.table, where), { citizenid, plate })
+    if not ok then
+        print(('^1[fox_keyring] Personal vehicle check failed, check Config.PersonalVehicles: %s^0'):format(tostring(found)))
+        return false
+    end
+    return found ~= nil
+end
+
 --- Puts a key on the first keyring the player carries that has room.
 --- Returns true when it was placed; false means the caller should give it the normal way.
 local function addKeyToRing(src, item, metadata)
     if not Config.AutoAddKeys or item ~= Config.KeyItem or type(metadata) ~= 'table' then return false end
     local plate = Keyring.NormalizePlate(metadata.plate)
-    if not plate then return false end
+    if not plate or not isPersonalVehicle(src, plate) then return false end
 
     local items = tgiann:GetPlayerItems(src)
     if type(items) ~= 'table' then return false end
@@ -224,6 +247,43 @@ local function addKeyToRing(src, item, metadata)
 end
 
 exports('AddKeyToRing', addKeyToRing)
+
+--- Takes a key off whichever keyring the player carries it on (e.g. a job car was returned).
+--- Returns true when a key was removed.
+local function removeKeyFromRing(src, item, metadata)
+    if item ~= Config.KeyItem or type(metadata) ~= 'table' then return false end
+    local plate = Keyring.NormalizePlate(metadata.plate)
+    if not plate then return false end
+
+    local removed = false
+    forEachRing(src, function(info)
+        local id = stashId(info.ringId)
+        for k, key in pairs(readStash(id)) do
+            local keyInfo = type(key) == 'table' and key.name == Config.KeyItem and Keyring.ItemInfo(key)
+            if keyInfo and Keyring.NormalizePlate(keyInfo.plate) == plate and ssnMatches(keyInfo.ssn, metadata.ssn) then
+                local slot = tonumber(key.slot) or tonumber(k)
+                local ok, result = pcall(function()
+                    return tgiann:RemoveItemFromSecondaryInventory('stash', id, item, 1, slot)
+                end)
+                if not ok then
+                    print(('^1[fox_keyring] Could not remove key %s from %s: %s^0'):format(plate, id, tostring(result)))
+                    return true
+                end
+                -- Confirm from the live stash when we can; otherwise trust tgiann's return value.
+                local stillThere = keyOnRing(info.ringId, plate, metadata.ssn)
+                if stillThere == nil then
+                    removed = result ~= nil and result ~= false
+                else
+                    removed = not stillThere
+                end
+                return true
+            end
+        end
+    end)
+    return removed
+end
+
+exports('RemoveKeyFromRing', removeKeyFromRing)
 
 ---------------------------------------------------------------------
 -- Diagnostics: keyringcheck <playerId>

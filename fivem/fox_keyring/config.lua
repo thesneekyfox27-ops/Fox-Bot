@@ -9,6 +9,15 @@ Config.KeyItem = 'vehiclekeys'
 -- New 0r-vehiclekeys keys go straight onto a keyring you're carrying (if it has room)
 Config.AutoAddKeys = true
 
+-- Only keys for your own cars go on the keyring: a row in this table with your citizenid and no job.
+-- Job cars, lunar_garage society cars and stolen/hotwired cars always go to your pockets so they can be
+-- taken back when the car is returned. Set jobColumn = nil if your table has no job column.
+Config.PersonalVehicles = {
+    table = 'player_vehicles',
+    ownerColumn = 'citizenid',
+    jobColumn = 'job',
+}
+
 -- Keyring container
 Config.Label = 'Keyring'
 Config.Slots = 25
