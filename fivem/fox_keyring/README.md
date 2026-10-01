@@ -2,7 +2,7 @@
 
 A keyring item for **QBCore + tgiann-inventory + 0r-vehiclekeys**.
 
-Use the keyring in your inventory and it opens a 25-slot container that only accepts vehicle keys. Keys on a keyring still work: you can lock, unlock and start any car whose key is on a keyring you're carrying. 0r-vehiclekeys keeps doing all the key work, and this resource adds the container.
+Use the keyring in your inventory and it opens a 25-slot container that only accepts vehicle keys. tgiann-inventory opens it the same way it opens wallets and bags. Keys on a keyring still work: you can lock, unlock and start any car whose key is on a keyring you're carrying. 0r-vehiclekeys keeps doing all the key work, and this resource connects the two.
 
 - Every keyring is its own container. Give someone your keyring and they get every key on it.
 - Only `vehiclekeys` items fit on a keyring.
@@ -13,9 +13,9 @@ Use the keyring in your inventory and it opens a 25-slot container that only acc
 
 ## Install
 
-### 1. Add the keyring item to tgiann-inventory
+### 1. Add the keyring to tgiann-inventory
 
-Add it next to your other items in tgiann-inventory's items file. Copy the format of your `vehiclekeys` entry if it looks different:
+**a) The item.** Add it next to your other items in tgiann-inventory's items file. Copy the format of your `vehiclekeys` entry if it looks different:
 
 ```lua
 keyring = {
@@ -34,7 +34,19 @@ keyring = {
 
 `unique` and `hasMetadata` must both be `true`, because each keyring stores its own id. Put a `keyring.png` in tgiann's image folder.
 
-**Don't** also add `keyring` to tgiann's `configItemStash.lua`. This resource opens it, and adding it there makes it open twice.
+**b) The container.** In `tgiann-inventory/configs/configItemStash.lua`, add this to the end of `config.itemStash`:
+
+```lua
+    {
+        item = "keyring",
+        maxweight = 0,
+        slots = 25,
+        label = "Keyring",
+        whitelist = { "vehiclekeys" },
+    },
+```
+
+If you change `slots`, change `Config.Slots` in fox_keyring's `config.lua` to match.
 
 ### 2. Patch 0r-vehiclekeys
 
@@ -98,6 +110,6 @@ exports.fox_keyring:AddKeyToRing(source, item, metadata)      -- true if the key
 exports.fox_keyring:RemoveKeyFromRing(source, item, metadata) -- true if the key was taken off a keyring
 ```
 
-## Troubleshooting
+## Upgrading from fox_keyring 2.x
 
-**A key snaps back onto the keyring when you drag it out:** make sure `Config.OpenMethod = 'client'` (the default). It opens the keyring through tgiann's documented `OpenInventory` export, so tgiann's server accepts moves in both directions. If it still snaps back, set `Config.KeysOnly = false` and test again. That tells you whether tgiann is applying the keys-only whitelist to moves out of the keyring as well as moves in.
+Keyrings made by the older version opened their own stash. When a player joins (or when fox_keyring starts), those keyrings are pointed at their existing stash before tgiann opens them, so the keys already on them stay put.

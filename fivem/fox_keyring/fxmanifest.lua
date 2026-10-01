@@ -5,7 +5,7 @@ lua54 'yes'
 name 'fox_keyring'
 author 'Fox'
 description 'Keyring item for tgiann-inventory that holds 0r-vehiclekeys keys'
-version '2.1.0'
+version '3.0.0'
 
 dependencies {
     'qb-core',
@@ -15,10 +15,6 @@ dependencies {
 shared_scripts {
     'config.lua',
     'shared/utils.lua',
-}
-
-client_scripts {
-    'client/main.lua',
 }
 
 server_scripts {

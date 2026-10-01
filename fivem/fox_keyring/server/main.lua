@@ -1,12 +1,32 @@
 local tgiann = exports['tgiann-inventory']
 local QBCore = exports['qb-core']:GetCoreObject()
 
-local function stashId(ringId)
-    return ('keyring_%s'):format(ringId)
+-- tgiann-inventory opens the keyring itself (config.itemStash). Each keyring item stores the name of
+-- its stash in info.id, the same as tgiann's wallets and bags.
+
+local function newStashId(src)
+    local player = QBCore.Functions.GetPlayer(src)
+    local cid = player and player.PlayerData.citizenid or tostring(src)
+    return ('%s%s%d%04d'):format(Config.KeyringItem, cid, os.time(), math.random(0, 9999))
 end
 
-local function newRingId(src)
-    return ('%d%d%04d'):format(os.time(), src, math.random(0, 9999))
+--- Returns the stash id of a keyring item, giving it one when needed.
+--- Keyrings made by fox_keyring 2.x stored a ringId instead; they keep their old stash (and keys)
+--- by pointing info.id at it before tgiann ever opens them.
+local function ringStashId(src, item, slot, create)
+    local info = Keyring.ItemInfo(item) or {}
+    if info.id then return info.id end
+
+    if info.ringId then
+        info.id = ('keyring_%s'):format(info.ringId)
+    elseif create then
+        info.id = newStashId(src)
+    else
+        return nil
+    end
+
+    tgiann:UpdateItemMetadata(src, Config.KeyringItem, slot, info)
+    return info.id
 end
 
 ---------------------------------------------------------------------
@@ -60,15 +80,15 @@ local function ssnMatches(have, want)
     return tostring(have) == tostring(want)
 end
 
---- Calls cb(ringInfo) for every keyring item the player is carrying. Return true from cb to stop.
+--- Calls cb(stashId) for every keyring item the player is carrying. Return true from cb to stop.
 local function forEachRing(src, cb)
     local items = tgiann:GetPlayerItems(src)
     if type(items) ~= 'table' then return end
 
-    for _, item in pairs(items) do
+    for k, item in pairs(items) do
         if type(item) == 'table' and item.name == Config.KeyringItem then
-            local info = Keyring.ItemInfo(item)
-            if info and info.ringId and cb(info) then return end
+            local id = ringStashId(src, item, item.slot or tonumber(k), false)
+            if id and cb(id) then return end
         end
     end
 end
@@ -79,8 +99,8 @@ local function ringHasPlate(src, plate, ssn)
     if not plate then return false end
 
     local found = false
-    forEachRing(src, function(info)
-        for _, key in pairs(readStash(stashId(info.ringId))) do
+    forEachRing(src, function(id)
+        for _, key in pairs(readStash(id)) do
             if type(key) == 'table' and key.name == Config.KeyItem then
                 local keyInfo = Keyring.ItemInfo(key)
                 if keyInfo and Keyring.NormalizePlate(keyInfo.plate) == plate and ssnMatches(keyInfo.ssn, ssn) then
@@ -96,8 +116,8 @@ end
 --- Every plate on every keyring the player is carrying.
 local function getRingPlates(src)
     local plates = {}
-    forEachRing(src, function(info)
-        for _, key in pairs(readStash(stashId(info.ringId))) do
+    forEachRing(src, function(id)
+        for _, key in pairs(readStash(id)) do
             local keyInfo = type(key) == 'table' and key.name == Config.KeyItem and Keyring.ItemInfo(key)
             local plate = keyInfo and Keyring.NormalizePlate(keyInfo.plate)
             if plate then plates[#plates + 1] = plate end
@@ -110,53 +130,22 @@ exports('RingHasPlate', ringHasPlate)
 exports('GetRingPlates', getRingPlates)
 
 ---------------------------------------------------------------------
--- Using the keyring
+-- Moving old keyrings over to tgiann's container system
 ---------------------------------------------------------------------
 
-local function findKeyringSlot(src)
-    local items = tgiann:GetPlayerItems(src)
-    if type(items) ~= 'table' then return nil end
-    for k, item in pairs(items) do
-        if type(item) == 'table' and item.name == Config.KeyringItem then
-            return item.slot or tonumber(k), item
-        end
-    end
+local function migratePlayer(src)
+    forEachRing(src, function() end) -- ringStashId updates any old keyring it finds
 end
 
---- Every keyring gets its own id the first time it's touched, so each one is its own container.
-local function ensureRingId(src, item, slot)
-    local info = Keyring.ItemInfo(item) or {}
-    if not info.ringId then
-        info.ringId = newRingId(src)
-        tgiann:UpdateItemMetadata(src, Config.KeyringItem, slot, info)
+AddEventHandler('QBCore:Server:PlayerLoaded', function(player)
+    local src = player and player.PlayerData and player.PlayerData.source
+    if src then migratePlayer(src) end
+end)
+
+CreateThread(function()
+    for _, id in ipairs(GetPlayers()) do
+        migratePlayer(tonumber(id))
     end
-    return info.ringId
-end
-
-local function openKeyring(src, item)
-    local slot = item and item.slot
-    if not slot then slot, item = findKeyringSlot(src) end
-    if not slot then return end
-
-    local ringId = ensureRingId(src, item, slot)
-
-    if Config.OpenMethod == 'force' then
-        tgiann:ForceOpenInventory(src, 'stash', stashId(ringId), {
-            label = Config.Label,
-            slots = Config.Slots,
-            maxWeight = Config.MaxWeight,
-            maxweight = Config.MaxWeight,
-            whitelist = Config.KeysOnly and { Config.KeyItem } or nil,
-        })
-    else
-        -- tgiann's documented way to open a stash (the same path as its own F2 key), so the
-        -- server registers it properly and items can be dragged both in and out.
-        TriggerClientEvent('fox_keyring:client:open', src, stashId(ringId))
-    end
-end
-
-QBCore.Functions.CreateUseableItem(Config.KeyringItem, function(source, item)
-    openKeyring(source, item)
 end)
 
 ---------------------------------------------------------------------
@@ -177,8 +166,8 @@ local function freeRingSlot(contents)
     end
 end
 
-local function keyOnRing(ringId, plate, ssn)
-    local items = readStashFromExport(stashId(ringId))
+local function keyOnRing(id, plate, ssn)
+    local items = readStashFromExport(id)
     if not items then return nil end -- can't check live contents
     for _, key in pairs(items) do
         local keyInfo = type(key) == 'table' and key.name == Config.KeyItem and Keyring.ItemInfo(key)
@@ -224,8 +213,7 @@ local function addKeyToRing(src, item, metadata)
 
     for k, ring in pairs(items) do
         if type(ring) == 'table' and ring.name == Config.KeyringItem then
-            local ringId = ensureRingId(src, ring, ring.slot or tonumber(k))
-            local id = stashId(ringId)
+            local id = ringStashId(src, ring, ring.slot or tonumber(k), true)
             local slot = freeRingSlot(readStash(id))
 
             if slot then
@@ -235,7 +223,7 @@ local function addKeyToRing(src, item, metadata)
 
                 if ok then
                     -- Confirm from the live stash when we can; otherwise trust tgiann's return value.
-                    local placed = keyOnRing(ringId, plate, metadata.ssn)
+                    local placed = keyOnRing(id, plate, metadata.ssn)
                     if placed == nil then placed = result ~= nil and result ~= false end
 
                     if placed then
@@ -262,8 +250,7 @@ local function removeKeyFromRing(src, item, metadata)
     if not plate then return false end
 
     local removed = false
-    forEachRing(src, function(info)
-        local id = stashId(info.ringId)
+    forEachRing(src, function(id)
         for k, key in pairs(readStash(id)) do
             local keyInfo = type(key) == 'table' and key.name == Config.KeyItem and Keyring.ItemInfo(key)
             if keyInfo and Keyring.NormalizePlate(keyInfo.plate) == plate and ssnMatches(keyInfo.ssn, metadata.ssn) then
@@ -276,7 +263,7 @@ local function removeKeyFromRing(src, item, metadata)
                     return true
                 end
                 -- Confirm from the live stash when we can; otherwise trust tgiann's return value.
-                local stillThere = keyOnRing(info.ringId, plate, metadata.ssn)
+                local stillThere = keyOnRing(id, plate, metadata.ssn)
                 if stillThere == nil then
                     removed = result ~= nil and result ~= false
                 else
@@ -305,18 +292,18 @@ RegisterCommand('keyringcheck', function(source, args)
 
     print(('^3[fox_keyring] ---- keyrings carried by %s (%d) ----^0'):format(GetPlayerName(target), target))
     local rings = 0
-    forEachRing(target, function(info)
+    forEachRing(target, function(id)
         rings = rings + 1
-        local items, method = readStash(stashId(info.ringId))
+        local items, method = readStash(id)
         local count = 0
         for _, key in pairs(items) do
             if type(key) == 'table' then
                 local keyInfo = Keyring.ItemInfo(key) or {}
                 count = count + 1
-                print(('  %s: %s plate=%s ssn=%s'):format(stashId(info.ringId), tostring(key.name), tostring(keyInfo.plate), tostring(keyInfo.ssn)))
+                print(('  %s: %s plate=%s ssn=%s'):format(id, tostring(key.name), tostring(keyInfo.plate), tostring(keyInfo.ssn)))
             end
         end
-        print(('  %s holds %d item(s), read via %s'):format(stashId(info.ringId), count, tostring(method or 'nothing (empty or unreadable)')))
+        print(('  %s holds %d item(s), read via %s'):format(id, count, tostring(method or 'nothing (empty or unreadable)')))
     end)
 
     if rings == 0 then

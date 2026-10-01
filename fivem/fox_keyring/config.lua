@@ -18,21 +18,9 @@ Config.PersonalVehicles = {
     jobColumn = 'job',
 }
 
--- Keyring container
-Config.Label = 'Keyring'
+-- Number of slots on a keyring. Must match `slots` in the keyring's entry in
+-- tgiann-inventory/configs/configItemStash.lua (see README).
 Config.Slots = 25
-Config.MaxWeight = 25000
-
--- Only vehicle keys can be put on a keyring
-Config.KeysOnly = true
-
--- How the keyring container is opened:
--- 'client' = tgiann's documented OpenInventory export (recommended)
--- 'force'  = server-side ForceOpenInventory (older method, items may snap back when dragged out)
-Config.OpenMethod = 'client'
-
--- Milliseconds to wait after using the keyring before opening it ('client' method only)
-Config.OpenDelay = 300
 
 -- Fallback used when tgiann-inventory has no export to read stash contents.
 -- Run `keyringcheck <playerId>` in the server console to see which method your server uses.
