@@ -44,3 +44,34 @@ Export("OpenKeyringStash", function(src, stashId)
 	OpenInventory(src, "stash", stashId)
 	return true
 end)
+
+-- Lets fox_keyring read what's on a keyring, straight from tgiann's live inventory data.
+local function foxFindStash(stashId)
+	local ok, inv = pcall(GetInventory, stashId, "stash")
+	if ok and type(inv) == "table" and inv.Items then return inv end
+	for _, v in pairs(Inventory) do
+		if v.invType == "stash" and v.invId == stashId then return v end
+	end
+end
+
+Export("GetKeyringItems", function(stashId)
+	if type(stashId) ~= "string" then return nil end
+
+	local inv = foxFindStash(stashId)
+	if not inv and not IsStashRegistered(stashId) then
+		-- Never opened since the restart: register it (loads it from the database), then look again.
+		local stashData = foxKeyringStashData()
+		if stashData then
+			RegisterStash({
+				name = stashId,
+				maxWeight = stashData.maxweight,
+				slots = stashData.slots,
+				whitelist = stashData.whitelist,
+				label = stashData.label
+			})
+			inv = foxFindStash(stashId)
+		end
+	end
+
+	return inv and inv.Items or nil
+end)

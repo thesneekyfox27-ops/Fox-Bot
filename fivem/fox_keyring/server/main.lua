@@ -35,6 +35,14 @@ end
 
 local databaseUsable = true
 
+--- Live contents from the GetKeyringItems export added to tgiann-inventory/server/editable.lua.
+local function readStashFromEditable(id)
+    local ok, items = pcall(function()
+        return tgiann:GetKeyringItems(id)
+    end)
+    if ok and type(items) == 'table' then return items end
+end
+
 local function readStashFromExport(id)
     local ok, items = pcall(function()
         return tgiann:GetSecondaryInventoryItems('stash', id)
@@ -64,6 +72,10 @@ end
 --- Returns the items inside a keyring stash (or an empty table), plus where they were read from.
 --- The export is the live copy; the database covers stashes tgiann hasn't loaded yet (e.g. after a restart).
 local function readStash(id)
+    -- tgiann's own live copy: trust it even when empty.
+    local live = readStashFromEditable(id)
+    if live then return live, 'editable' end
+
     local items = readStashFromExport(id)
     if items and next(items) then return items, 'export' end
 
@@ -163,7 +175,7 @@ local function freeRingSlot(contents)
 end
 
 local function keyOnRing(id, plate, ssn)
-    local items = readStashFromExport(id)
+    local items = readStashFromEditable(id) or readStashFromExport(id)
     if not items then return nil end -- can't check live contents
     for _, key in pairs(items) do
         local keyInfo = type(key) == 'table' and key.name == Config.KeyItem and Keyring.ItemInfo(key)
