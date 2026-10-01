@@ -1,7 +1,25 @@
 diff -ru a/modules/inventory/tgiann-inventory/server.lua b/modules/inventory/tgiann-inventory/server.lua
 --- a/modules/inventory/tgiann-inventory/server.lua
 +++ b/modules/inventory/tgiann-inventory/server.lua
-@@ -236,6 +236,10 @@
+@@ -150,6 +150,17 @@
+ 
+         markGranted(src, metadata.plate)
+ 
++        -- fox_keyring: put the key straight onto a keyring the player is carrying, if one has room.
++        if GetResourceState('fox_keyring') == 'started' then
++            local ringOk, onRing = pcall(function()
++                return exports['fox_keyring']:AddKeyToRing(src, item, metadata)
++            end)
++            if ringOk and onRing then
++                print(('[0r-vehiclekeys] key for plate %s placed on keyring'):format(tostring(metadata.plate)))
++                return true
++            end
++        end
++
+         if not tgiann:CanCarryItem(src, item, count) then return false end
+ 
+         -- SEPARATE SLOTS
+@@ -236,6 +247,10 @@
      if type(metadata) == 'table' then
          if findItemByMetadata(src, item, metadata) ~= nil then return true end
          -- NRP: also count a vehicle key stored on the player's keyring

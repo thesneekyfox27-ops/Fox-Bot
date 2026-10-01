@@ -6,6 +6,9 @@ Config.KeyringItem = 'keyring'
 -- The 0r-vehiclekeys key item (0r-vehiclekeys/config/main.lua -> VehicleKeys.itemName)
 Config.KeyItem = 'vehiclekeys'
 
+-- New 0r-vehiclekeys keys go straight onto a keyring you're carrying (if it has room)
+Config.AutoAddKeys = true
+
 -- Keyring container
 Config.Label = 'Keyring'
 Config.Slots = 25

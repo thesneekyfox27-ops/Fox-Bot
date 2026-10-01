@@ -123,19 +123,24 @@ local function findKeyringSlot(src)
     end
 end
 
-local function openKeyring(src, item)
-    local slot = item and item.slot
-    if not slot then slot, item = findKeyringSlot(src) end
-    if not slot then return end
-
-    -- Every keyring gets its own id the first time it's used, so each one is its own container.
+--- Every keyring gets its own id the first time it's touched, so each one is its own container.
+local function ensureRingId(src, item, slot)
     local info = Keyring.ItemInfo(item) or {}
     if not info.ringId then
         info.ringId = newRingId(src)
         tgiann:UpdateItemMetadata(src, Config.KeyringItem, slot, info)
     end
+    return info.ringId
+end
 
-    tgiann:ForceOpenInventory(src, 'stash', stashId(info.ringId), {
+local function openKeyring(src, item)
+    local slot = item and item.slot
+    if not slot then slot, item = findKeyringSlot(src) end
+    if not slot then return end
+
+    local ringId = ensureRingId(src, item, slot)
+
+    tgiann:ForceOpenInventory(src, 'stash', stashId(ringId), {
         label = Config.Label,
         slots = Config.Slots,
         maxWeight = Config.MaxWeight,
@@ -147,6 +152,78 @@ end
 QBCore.Functions.CreateUseableItem(Config.KeyringItem, function(source, item)
     openKeyring(source, item)
 end)
+
+---------------------------------------------------------------------
+-- New keys go straight onto the keyring
+---------------------------------------------------------------------
+
+local function freeRingSlot(contents)
+    local used, count = {}, 0
+    for k, entry in pairs(contents) do
+        if type(entry) == 'table' then
+            count = count + 1
+            used[tonumber(entry.slot) or tonumber(k) or 0] = true
+        end
+    end
+    if count >= Config.Slots then return nil end
+    for i = 1, Config.Slots do
+        if not used[i] then return i end
+    end
+end
+
+local function keyOnRing(ringId, plate, ssn)
+    local items = readStashFromExport(stashId(ringId))
+    if not items then return nil end -- can't check live contents
+    for _, key in pairs(items) do
+        local keyInfo = type(key) == 'table' and key.name == Config.KeyItem and Keyring.ItemInfo(key)
+        if keyInfo and Keyring.NormalizePlate(keyInfo.plate) == plate and ssnMatches(keyInfo.ssn, ssn) then
+            return true
+        end
+    end
+    return false
+end
+
+--- Puts a key on the first keyring the player carries that has room.
+--- Returns true when it was placed; false means the caller should give it the normal way.
+local function addKeyToRing(src, item, metadata)
+    if not Config.AutoAddKeys or item ~= Config.KeyItem or type(metadata) ~= 'table' then return false end
+    local plate = Keyring.NormalizePlate(metadata.plate)
+    if not plate then return false end
+
+    local items = tgiann:GetPlayerItems(src)
+    if type(items) ~= 'table' then return false end
+
+    for k, ring in pairs(items) do
+        if type(ring) == 'table' and ring.name == Config.KeyringItem then
+            local ringId = ensureRingId(src, ring, ring.slot or tonumber(k))
+            local id = stashId(ringId)
+            local slot = freeRingSlot(readStash(id))
+
+            if slot then
+                local ok, result = pcall(function()
+                    return tgiann:AddItemToSecondaryInventory('stash', id, item, 1, slot, metadata)
+                end)
+
+                if ok then
+                    -- Confirm from the live stash when we can; otherwise trust tgiann's return value.
+                    local placed = keyOnRing(ringId, plate, metadata.ssn)
+                    if placed == nil then placed = result ~= nil and result ~= false end
+
+                    if placed then
+                        TriggerClientEvent('QBCore:Notify', src, ('Key for %s added to your keyring'):format(plate), 'success')
+                        return true
+                    end
+                else
+                    print(('^1[fox_keyring] Could not add key to %s: %s^0'):format(id, tostring(result)))
+                end
+            end
+        end
+    end
+
+    return false
+end
+
+exports('AddKeyToRing', addKeyToRing)
 
 ---------------------------------------------------------------------
 -- Diagnostics: keyringcheck <playerId>

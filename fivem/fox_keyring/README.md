@@ -6,6 +6,7 @@ Use the keyring in your inventory and it opens a 25-slot container that only acc
 
 - Every keyring is its own container. Give someone your keyring and they get every key on it.
 - Only `vehiclekeys` items fit on a keyring.
+- New keys go straight onto your keyring. Whenever 0r-vehiclekeys gives you a key (garage, buying a car, a key from another player), it lands on the first keyring you carry that has room. With no keyring, or a full one, it goes into your pockets as usual. Turn this off with `Config.AutoAddKeys = false`.
 - Storing a car in Lunar Garage doesn't pull its key off the keyring. Taking it out again doesn't add a duplicate.
 
 ## Install
@@ -35,7 +36,24 @@ keyring = {
 
 ### 2. Patch 0r-vehiclekeys
 
-In `0r-vehiclekeys/modules/inventory/tgiann-inventory/server.lua`, in `Inventory.HasItem`, add the `fox_keyring` check (see `integrations/0r-vehiclekeys.patch`):
+Make two small additions to `0r-vehiclekeys/modules/inventory/tgiann-inventory/server.lua`. The full diff is in `integrations/0r-vehiclekeys.patch`.
+
+**a)** In `Inventory.AddItem`, right after `markGranted(src, metadata.plate)`, send new keys to the keyring:
+
+```lua
+        -- fox_keyring: put the key straight onto a keyring the player is carrying, if one has room.
+        if GetResourceState('fox_keyring') == 'started' then
+            local ringOk, onRing = pcall(function()
+                return exports['fox_keyring']:AddKeyToRing(src, item, metadata)
+            end)
+            if ringOk and onRing then
+                print(('[0r-vehiclekeys] key for plate %s placed on keyring'):format(tostring(metadata.plate)))
+                return true
+            end
+        end
+```
+
+**b)** In `Inventory.HasItem`, count keys that are on a keyring:
 
 ```lua
         if findItemByMetadata(src, item, metadata) ~= nil then return true end
@@ -72,4 +90,5 @@ Do a **full server restart**, because tgiann loads its item list at boot. Give y
 ```lua
 exports.fox_keyring:RingHasPlate(source, plate, ssn) -- true if a key for that plate is on a keyring they carry
 exports.fox_keyring:GetRingPlates(source)            -- { 'ABC123', ... }
+exports.fox_keyring:AddKeyToRing(source, item, metadata) -- true if the key was placed on a keyring
 ```
