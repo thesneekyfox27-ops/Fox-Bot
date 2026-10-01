@@ -9,9 +9,35 @@ local function notify(src, message, kind)
     TriggerClientEvent('fox_keyring:client:notify', src, message, kind or 'inform')
 end
 
+local QBCore
+local function getQBCore()
+    if Config.Framework == 'standalone' then return nil end
+    if not QBCore and GetResourceState('qb-core') == 'started' then
+        QBCore = exports['qb-core']:GetCoreObject()
+    end
+    return QBCore
+end
+
+local function getQBPlayer(src)
+    local qb = getQBCore()
+    return qb and qb.Functions.GetPlayer(src)
+end
+
+-- Last identifier seen per player, so we can clean up after QBCore has already unloaded them.
+local identifierCache = {}
+
 local function getIdentifier(src)
-    return GetPlayerIdentifierByType(src, Config.IdentifierType)
-        or GetPlayerIdentifierByType(src, 'license')
+    local identifier
+    if getQBCore() then
+        -- Keyrings are per character. No character loaded = no keyring.
+        local player = getQBPlayer(src)
+        identifier = player and player.PlayerData.citizenid
+    else
+        identifier = GetPlayerIdentifierByType(src, Config.IdentifierType)
+            or GetPlayerIdentifierByType(src, 'license')
+    end
+    if identifier then identifierCache[src] = identifier end
+    return identifier
 end
 
 local function getKeyring(src)
@@ -156,6 +182,85 @@ local function distanceBetween(src, entity)
     return #(GetEntityCoords(GetPlayerPed(src)) - GetEntityCoords(entity))
 end
 
+---------------------------------------------------------------------
+-- Owned vehicles (oxmysql)
+---------------------------------------------------------------------
+
+local function dbSingle(query, params)
+    if GetResourceState('oxmysql') ~= 'started' then return nil end
+    local p = promise.new()
+    exports.oxmysql:single(query, params, function(row) p:resolve(row or false) end)
+    SetTimeout(5000, function()
+        if p.state == 0 then p:resolve(false) end
+    end)
+    return Citizen.Await(p) or nil
+end
+
+--- Returns the vehicle row when the plate belongs to this player (or their job), otherwise nil.
+local function getOwnedVehicle(src, plate)
+    local cfg = Config.OwnedVehicles
+    if not cfg or not cfg.enabled then return nil end
+
+    local owner = getIdentifier(src)
+    if not owner then return nil end
+
+    local where = ('`%s` = ?'):format(cfg.ownerColumn)
+    local params = { plate, owner }
+
+    local player = getQBPlayer(src)
+    local job = player and player.PlayerData.job and player.PlayerData.job.name
+    if cfg.jobColumn and job then
+        where = ('%s OR `%s` = ?'):format(where, cfg.jobColumn)
+        params[#params + 1] = job
+    end
+
+    local columns = cfg.modelColumn and ('plate, `%s` AS model'):format(cfg.modelColumn) or 'plate'
+    local query = ('SELECT %s FROM `%s` WHERE UPPER(TRIM(plate)) = ? AND (%s) LIMIT 1'):format(columns, cfg.table, where)
+
+    local ok, row = pcall(dbSingle, query, params)
+    if not ok then
+        print(('^1[%s] Owned vehicle lookup failed: %s^0'):format(RESOURCE, tostring(row)))
+        return nil
+    end
+    return row
+end
+
+local function vehicleLabel(row, plate)
+    local model = row and row.model
+    if type(model) ~= 'string' or model == '' then return plate end
+
+    local qb = getQBCore()
+    local shared = qb and qb.Shared.Vehicles and qb.Shared.Vehicles[model]
+    if shared and shared.name then
+        return shared.brand and ('%s %s'):format(shared.brand, shared.name) or shared.name
+    end
+    return model:sub(1, 1):upper() .. model:sub(2)
+end
+
+--- Removes a plate from every keyring, online or offline. Use it when a vehicle is sold.
+local function resetKeys(plate)
+    plate = Keyring.NormalizePlate(plate)
+    if not plate then return 0 end
+
+    local affected, removed = {}, 0
+    for identifier, ring in pairs(keyrings) do
+        if ring[plate] then
+            local wasTemp = ring[plate].temp
+            ring[plate] = nil
+            if not wasTemp then queueSave() end
+            affected[identifier] = true
+            removed = removed + 1
+        end
+    end
+
+    for _, id in ipairs(GetPlayers()) do
+        local src = tonumber(id)
+        if affected[identifierCache[src] or ''] then syncPlayer(src) end
+    end
+    return removed
+end
+
+exports('ResetKeys', resetKeys)
 exports('HasKey', hasKey)
 exports('GiveKey', function(src, plate, label) return giveKey(src, plate, label, false) end)
 exports('GiveTempKey', function(src, plate, label) return giveKey(src, plate, label, true) end)
@@ -176,6 +281,53 @@ end)
 RegisterNetEvent('fox_keyring:server:requestSync', function()
     syncPlayer(source)
 end)
+
+-- A garage/dealership/job asks for a key. Owned plates get a permanent key; anything else only
+-- gets a temporary key when the player is standing next to that vehicle (job cars, rentals).
+local lastClaim = {}
+local function claimKey(src, plate)
+    plate = Keyring.NormalizePlate(plate)
+    if not plate or hasKey(src, plate) then return end
+
+    local now = GetGameTimer()
+    if (lastClaim[src] or 0) + 250 > now then return end
+    lastClaim[src] = now
+
+    local row = getOwnedVehicle(src, plate)
+    if row then
+        local ok, reason = giveKey(src, plate, vehicleLabel(row, plate), false)
+        if ok then
+            notify(src, ('You received the keys to %s'):format(plate), 'success')
+        else
+            notify(src, failMessage(reason), 'error')
+        end
+        return
+    end
+
+    if not Config.QBCompat then return end
+
+    local veh = findVehicleByPlate(plate)
+    if veh and distanceBetween(src, veh) <= Config.TempKeyDistance then
+        local ok, reason = giveKey(src, plate, nil, true)
+        if ok then
+            notify(src, ('You received temporary keys to %s'):format(plate), 'success')
+        else
+            notify(src, failMessage(reason), 'error')
+        end
+    end
+end
+
+exports('ClaimKey', claimKey)
+
+RegisterNetEvent('fox_keyring:server:claimKey', function(plate)
+    claimKey(source, plate)
+end)
+
+if Config.QBCompat then
+    RegisterNetEvent('qb-vehiclekeys:server:AcquireVehicleKeys', function(plate)
+        claimKey(source, plate)
+    end)
+end
 
 RegisterNetEvent('fox_keyring:server:toggleLock', function(netId)
     local src = source
@@ -301,18 +453,34 @@ end, true)
 -- Lifecycle
 ---------------------------------------------------------------------
 
+-- Temporary keys (rentals, jobs, etc.) only last for the session / character.
+local function clearTempKeys(src)
+    local identifier = identifierCache[src]
+    local ring = identifier and keyrings[identifier]
+    if not ring then return end
+    for plate, key in pairs(ring) do
+        if key.temp then ring[plate] = nil end
+    end
+end
+
 AddEventHandler('playerDropped', function()
     local src = source
+    clearTempKeys(src)
     lastLock[src] = nil
+    lastClaim[src] = nil
+    identifierCache[src] = nil
+end)
 
-    -- Temporary keys (rentals, jobs, etc.) only last for the session.
-    local identifier = getIdentifier(src)
-    local ring = identifier and keyrings[identifier]
-    if ring then
-        for plate, key in pairs(ring) do
-            if key.temp then ring[plate] = nil end
-        end
-    end
+-- QBCore: load the character's keyring on spawn, clear it when they go back to character select.
+AddEventHandler('QBCore:Server:PlayerLoaded', function(player)
+    local src = player and player.PlayerData and player.PlayerData.source
+    if src then syncPlayer(src) end
+end)
+
+AddEventHandler('QBCore:Server:OnPlayerUnload', function(src)
+    clearTempKeys(src)
+    identifierCache[src] = nil
+    TriggerClientEvent('fox_keyring:client:sync', src, {})
 end)
 
 AddEventHandler('onResourceStop', function(name)

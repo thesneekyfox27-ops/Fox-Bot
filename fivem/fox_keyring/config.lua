@@ -22,8 +22,29 @@ Config.MaxKeys = 25
 Config.Persist = true
 Config.SaveFile = 'data/keys.json'
 
--- Identifier used to tie keyrings to players ('license', 'fivem', 'discord', ...)
+-- 'auto' uses QBCore when qb-core is running (keyrings are per character / citizenid),
+-- otherwise falls back to standalone. Force with 'qb' or 'standalone'.
+Config.Framework = 'auto'
+
+-- Standalone only: identifier used to tie keyrings to players ('license', 'fivem', 'discord', ...)
 Config.IdentifierType = 'license'
+
+-- Owned vehicles (requires oxmysql). Garages and dealerships ask fox_keyring for a key, and the
+-- server only hands out a permanent key when the plate is really owned by that player (or their job).
+Config.OwnedVehicles = {
+    enabled = true,
+    table = 'player_vehicles',
+    ownerColumn = 'citizenid',  -- ESX: 'owner'
+    jobColumn = 'job',          -- lunar_garage society vehicles; set to nil if your table has no job column
+    modelColumn = 'vehicle',    -- used to label the key, set to nil to label keys by plate
+}
+
+-- Handle the events other QBCore scripts use to give keys (qb-vehicleshop, qb-policejob, ...):
+-- vehiclekeys:client:SetOwner and qb-vehiclekeys:server:AcquireVehicleKeys.
+-- Owned plates get a permanent key. Unowned plates (job cars, rentals) get a temporary key, but only
+-- when the player is standing right next to a vehicle with that plate.
+Config.QBCompat = true
+Config.TempKeyDistance = 10.0
 
 -- Stop players from starting a vehicle's engine without its key
 Config.RequireKeyForEngine = true

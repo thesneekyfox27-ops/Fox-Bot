@@ -43,6 +43,26 @@ AddEventHandler('onClientResourceStart', function(name)
     end
 end)
 
+-- QBCore: fetch the character's keyring once they've picked a character.
+RegisterNetEvent('QBCore:Client:OnPlayerLoaded', function()
+    TriggerServerEvent('fox_keyring:server:requestSync')
+end)
+
+-- Ask the server for a key. It only gives one if you own the plate (or, for job cars, are next to it).
+local function claimKey(plate)
+    plate = Keyring.NormalizePlate(plate)
+    if plate and not myKeys[plate] then
+        TriggerServerEvent('fox_keyring:server:claimKey', plate)
+    end
+end
+
+exports('ClaimKey', claimKey)
+
+if Config.QBCompat then
+    -- Used by qb-vehicleshop, qb-policejob, qb-ambulancejob and most QBCore garages.
+    RegisterNetEvent('vehiclekeys:client:SetOwner', claimKey)
+end
+
 ---------------------------------------------------------------------
 -- Helpers
 ---------------------------------------------------------------------
