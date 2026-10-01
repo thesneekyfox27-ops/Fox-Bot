@@ -27,6 +27,7 @@ TitanBot offers a complete suite of tools for Discord server management and comm
 ### Moderation & Administration
 - **Mass Actions** - Bulk ban/kick capabilities
 - **User Notes** - Keep detailed moderation records
+- **Word Filter** - Auto-removes slurs even when disguised with other alphabets, fancy fonts, leetspeak, or spacing (`/wordfilter`)
 - **Case Management** - View and track all mod actions
 
 ### Economy System
