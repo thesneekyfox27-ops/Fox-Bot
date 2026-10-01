@@ -8,6 +8,9 @@ Use the keyring in your inventory and it opens a 25-slot container that only acc
 - Only `vehiclekeys` items fit on a keyring.
 - Only keys for **your own cars** go on a keyring automatically. That means a `player_vehicles` row with your citizenid and no `job`. Job cars (police, EMS, mechanic...), Lunar society cars, and stolen or hotwired cars always go into your pockets.
 - When a job car is returned and 0r-vehiclekeys takes its key back, it also checks your keyrings, in case someone dragged the key onto one by hand.
+- The keyring can't leave your inventory. No dropping it, stashing it, putting it in a trunk, or having it taken in a robbery. You can still move it between your own slots.
+- Robbers can search it: target a player who is dead, cuffed or has their hands up and pick **Search keyring** (or use `/searchkeyring` on the closest player). They see the keys and can take the one for the car they want.
+- On a server restart, car keys are cleared: the first time each character loads in, every `vehiclekeys` item is removed from their pockets and keyrings. Business, house and other keys are different items and stay. Owners get keys back from the garage or the locksmith.
 - New keys for your own cars go straight onto your keyring. Whenever 0r-vehiclekeys gives you a key (garage, buying a car, a key from another player), it lands on the first keyring you carry that has room. With no keyring, or a full one, it goes into your pockets as usual. Turn this off with `Config.AutoAddKeys = false`.
 - Storing a car in Lunar Garage doesn't pull its key off the keyring. Taking it out again doesn't add a duplicate.
 
@@ -80,11 +83,19 @@ Make three small additions to `0r-vehiclekeys/modules/inventory/tgiann-inventory
         end
 ```
 
+### 2b. Add the fox_keyring block to tgiann-inventory
+
+Paste `integrations/tgiann-editable.lua` at the very end of `tgiann-inventory/server/editable.lua`. It does two things:
+- It stops the keyring being moved out of its owner's inventory, using tgiann's `swapItems` hook.
+- It adds an `OpenKeyringStash` export, so robbers can open someone else's keyring and take keys from it.
+
 ### 3. Start it
 
 ```
 ensure qb-core
 ensure oxmysql
+ensure ox_lib
+ensure ox_target
 ensure tgiann-inventory
 ensure 0r-vehiclekeys
 ensure fox_keyring

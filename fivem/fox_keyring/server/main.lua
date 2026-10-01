@@ -137,10 +137,6 @@ local function migratePlayer(src)
     forEachRing(src, function() end) -- ringStashId updates any old keyring it finds
 end
 
-AddEventHandler('QBCore:Server:PlayerLoaded', function(player)
-    local src = player and player.PlayerData and player.PlayerData.source
-    if src then migratePlayer(src) end
-end)
 
 CreateThread(function()
     for _, id in ipairs(GetPlayers()) do
@@ -277,6 +273,128 @@ local function removeKeyFromRing(src, item, metadata)
 end
 
 exports('RemoveKeyFromRing', removeKeyFromRing)
+
+---------------------------------------------------------------------
+-- Server restart: car keys reset
+---------------------------------------------------------------------
+
+-- When the server process started. GetGameTimer() counts from server start, so this stays the
+-- same when only fox_keyring is restarted and only changes on a real server restart.
+local serverStartedAt = os.time() - math.floor(GetGameTimer() / 1000)
+
+local function notify(src, message, kind)
+    TriggerClientEvent('QBCore:Notify', src, message, kind or 'primary')
+end
+
+--- Removes every car key from the player's pockets and from the keyrings they carry.
+--- Only Config.KeyItem is touched, so other keys (businesses, houses...) stay.
+local function wipeCarKeys(src)
+    local removed = 0
+
+    local items = tgiann:GetPlayerItems(src)
+    if type(items) == 'table' then
+        for k, item in pairs(items) do
+            if type(item) == 'table' and item.name == Config.KeyItem then
+                local amount = tonumber(item.amount or item.count) or 1
+                if tgiann:RemoveItem(src, Config.KeyItem, amount, item.slot or tonumber(k)) then
+                    removed = removed + amount
+                end
+            end
+        end
+    end
+
+    forEachRing(src, function(id)
+        for k, key in pairs(readStash(id)) do
+            if type(key) == 'table' and key.name == Config.KeyItem then
+                local amount = tonumber(key.amount or key.count) or 1
+                local ok, result = pcall(function()
+                    return tgiann:RemoveItemFromSecondaryInventory('stash', id, Config.KeyItem, amount, tonumber(key.slot) or tonumber(k))
+                end)
+                if ok and result ~= false then
+                    removed = removed + amount
+                else
+                    print(('^1[fox_keyring] Could not clear key from %s: %s^0'):format(id, tostring(result)))
+                end
+            end
+        end
+    end)
+
+    return removed
+end
+
+local function handleRestartWipe(src, citizenid)
+    if not Config.WipeKeysOnRestart or not citizenid then return end
+
+    local kvp = ('wiped:%s'):format(citizenid)
+    -- Already cleared since this server start (relog, or fox_keyring restarted): leave their keys alone.
+    if math.abs(GetResourceKvpInt(kvp) - serverStartedAt) <= 300 then return end
+
+    -- Give tgiann a moment to finish loading the character's inventory.
+    SetTimeout(Config.WipeDelay, function()
+        if not GetPlayerName(src) then return end
+        local removed = wipeCarKeys(src)
+        SetResourceKvpInt(kvp, serverStartedAt)
+        if removed > 0 then
+            print(('[fox_keyring] restart reset: removed %d car key(s) from %s'):format(removed, citizenid))
+            notify(src, Config.WipeMessage, 'primary')
+        end
+    end)
+end
+
+AddEventHandler('QBCore:Server:PlayerLoaded', function(player)
+    local data = player and player.PlayerData
+    local src = data and data.source
+    if not src then return end
+    migratePlayer(src)
+    handleRestartWipe(src, data.citizenid)
+end)
+
+---------------------------------------------------------------------
+-- Robbing: search another player's keyring
+---------------------------------------------------------------------
+
+local function canBeSearched(target)
+    local player = QBCore.Functions.GetPlayer(target)
+    local meta = player and player.PlayerData.metadata or {}
+    if meta.isdead or meta.inlaststand or meta.ishandcuffed then return true end
+    return lib.callback.await('fox_keyring:client:handsUp', target) == true
+end
+
+--- The first keyring the player carries, giving it a stash id if it has never been used.
+local function firstRingId(src)
+    local items = tgiann:GetPlayerItems(src)
+    if type(items) ~= 'table' then return nil end
+    for k, item in pairs(items) do
+        if type(item) == 'table' and item.name == Config.KeyringItem then
+            return ringStashId(src, item, item.slot or tonumber(k), true)
+        end
+    end
+end
+
+RegisterNetEvent('fox_keyring:server:searchKeyring', function(target)
+    local src = source
+    target = tonumber(target)
+    if not Config.Search.enabled or not target or target == src or not GetPlayerName(target) then return end
+
+    if #(GetEntityCoords(GetPlayerPed(src)) - GetEntityCoords(GetPlayerPed(target))) > Config.Search.distance then
+        return notify(src, 'You need to be closer.', 'error')
+    end
+    if not canBeSearched(target) then
+        return notify(src, 'They need to have their hands up, be cuffed or be down.', 'error')
+    end
+
+    local id = firstRingId(target)
+    if not id then return notify(src, "They don't have a keyring.", 'error') end
+
+    -- Added to tgiann-inventory/server/editable.lua (see README); it registers the stash so keys can be taken.
+    local ok, opened = pcall(function()
+        return tgiann:OpenKeyringStash(src, id)
+    end)
+    if not ok or not opened then
+        print(('^1[fox_keyring] OpenKeyringStash failed: %s. Did you add the fox_keyring block to tgiann-inventory/server/editable.lua?^0'):format(tostring(opened)))
+        return notify(src, "Couldn't open their keyring.", 'error')
+    end
+end)
 
 ---------------------------------------------------------------------
 -- Diagnostics: keyringcheck <playerId>
