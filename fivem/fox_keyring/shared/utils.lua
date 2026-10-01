@@ -4,15 +4,18 @@ Keyring = Keyring or {}
 function Keyring.NormalizePlate(plate)
     if type(plate) ~= 'string' then return nil end
     plate = plate:gsub('^%s+', ''):gsub('%s+$', ''):upper()
-    if plate == '' or #plate > 8 then return nil end
+    if plate == '' then return nil end
     return plate
 end
 
-function Keyring.SanitizeLabel(label)
-    if type(label) ~= 'string' then return nil end
-    -- Strip GTA (~r~), chat (^1) and HTML (<b>) formatting so labels can't inject styling.
-    label = label:gsub('~%w*~', ''):gsub('%^%d', ''):gsub('<[^>]*>', ''):gsub('[<>%^~]', '')
-    label = label:gsub('^%s+', ''):gsub('%s+$', '')
-    if label == '' then return nil end
-    return label:sub(1, 32)
+-- tgiann returns item metadata as .info or .metadata, as a table or a JSON string.
+function Keyring.ItemInfo(item)
+    if type(item) ~= 'table' then return nil end
+    local info = item.info ~= nil and item.info or item.metadata
+    if type(info) == 'table' then return info end
+    if type(info) == 'string' and info ~= '' then
+        local ok, decoded = pcall(json.decode, info)
+        if ok and type(decoded) == 'table' then return decoded end
+    end
+    return nil
 end

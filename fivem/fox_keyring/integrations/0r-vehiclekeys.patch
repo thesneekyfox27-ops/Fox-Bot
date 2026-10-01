@@ -1,0 +1,14 @@
+diff -ru a/modules/inventory/tgiann-inventory/server.lua b/modules/inventory/tgiann-inventory/server.lua
+--- a/modules/inventory/tgiann-inventory/server.lua
++++ b/modules/inventory/tgiann-inventory/server.lua
+@@ -236,6 +236,10 @@
+     if type(metadata) == 'table' then
+         if findItemByMetadata(src, item, metadata) ~= nil then return true end
+         -- NRP: also count a vehicle key stored on the player's keyring
++        if metadata.plate and GetResourceState('fox_keyring') == 'started'
++           and exports['fox_keyring']:RingHasPlate(src, metadata.plate, metadata.ssn) then
++            return true
++        end
+         if metadata.plate and GetResourceState('nrp-keyguard') == 'started'
+            and exports['nrp-keyguard']:RingHasPlate(src, metadata.plate) then
+             return true

@@ -1,490 +1,183 @@
-local RESOURCE = GetCurrentResourceName()
+local tgiann = exports['tgiann-inventory']
+local QBCore = exports['qb-core']:GetCoreObject()
 
--- keyrings[identifier][plate] = { label = string, temp = boolean }
-local keyrings = {}
-local lastLock = {}
-local saveQueued = false
-
-local function notify(src, message, kind)
-    TriggerClientEvent('fox_keyring:client:notify', src, message, kind or 'inform')
+local function stashId(ringId)
+    return ('keyring_%s'):format(ringId)
 end
 
-local QBCore
-local function getQBCore()
-    if Config.Framework == 'standalone' then return nil end
-    if not QBCore and GetResourceState('qb-core') == 'started' then
-        QBCore = exports['qb-core']:GetCoreObject()
-    end
-    return QBCore
-end
-
-local function getQBPlayer(src)
-    local qb = getQBCore()
-    return qb and qb.Functions.GetPlayer(src)
-end
-
--- Last identifier seen per player, so we can clean up after QBCore has already unloaded them.
-local identifierCache = {}
-
-local function getIdentifier(src)
-    local identifier
-    if getQBCore() then
-        -- Keyrings are per character. No character loaded = no keyring.
-        local player = getQBPlayer(src)
-        identifier = player and player.PlayerData.citizenid
-    else
-        identifier = GetPlayerIdentifierByType(src, Config.IdentifierType)
-            or GetPlayerIdentifierByType(src, 'license')
-    end
-    if identifier then identifierCache[src] = identifier end
-    return identifier
-end
-
-local function getKeyring(src)
-    local identifier = getIdentifier(src)
-    if not identifier then return nil end
-    keyrings[identifier] = keyrings[identifier] or {}
-    return keyrings[identifier]
-end
-
-local function countKeys(ring)
-    local count = 0
-    for _ in pairs(ring) do count = count + 1 end
-    return count
+local function newRingId(src)
+    return ('%d%d%04d'):format(os.time(), src, math.random(0, 9999))
 end
 
 ---------------------------------------------------------------------
--- Persistence
+-- Reading a keyring's contents
 ---------------------------------------------------------------------
 
-local function loadKeys()
-    if not Config.Persist then return end
-    local raw = LoadResourceFile(RESOURCE, Config.SaveFile)
-    if not raw or raw == '' then return end
+local databaseUsable = true
 
-    local ok, data = pcall(json.decode, raw)
-    if not ok or type(data) ~= 'table' then
-        print(('^1[%s] Could not read %s, starting with empty keyrings^0'):format(RESOURCE, Config.SaveFile))
-        return
-    end
-
-    for identifier, plates in pairs(data) do
-        keyrings[identifier] = {}
-        for plate, label in pairs(plates) do
-            keyrings[identifier][plate] = { label = type(label) == 'string' and label or plate, temp = false }
-        end
-    end
-end
-
-local function saveKeys()
-    local out = {}
-    for identifier, ring in pairs(keyrings) do
-        local plates = {}
-        local any = false
-        for plate, key in pairs(ring) do
-            if not key.temp then
-                plates[plate] = key.label
-                any = true
-            end
-        end
-        if any then out[identifier] = plates end
-    end
-
-    if not SaveResourceFile(RESOURCE, Config.SaveFile, json.encode(out), -1) then
-        print(('^1[%s] Failed to write %s^0'):format(RESOURCE, Config.SaveFile))
-    end
-end
-
-local function queueSave()
-    if not Config.Persist or saveQueued then return end
-    saveQueued = true
-    SetTimeout(5000, function()
-        saveQueued = false
-        saveKeys()
+local function readStashFromExport(id)
+    local ok, items = pcall(function()
+        return tgiann:GetSecondaryInventoryItems('stash', id)
     end)
+    if ok and type(items) == 'table' then return items end
 end
 
----------------------------------------------------------------------
--- Core API
----------------------------------------------------------------------
+local function readStashFromDatabase(id)
+    if not databaseUsable then return nil end
 
-local function syncPlayer(src)
-    local ring = getKeyring(src)
-    if not ring then return end
-    local list = {}
-    for plate, key in pairs(ring) do
-        list[#list + 1] = { plate = plate, label = key.label, temp = key.temp }
-    end
-    table.sort(list, function(a, b) return a.label < b.label end)
-    TriggerClientEvent('fox_keyring:client:sync', src, list)
-end
-
-local function hasKey(src, plate)
-    plate = Keyring.NormalizePlate(plate)
-    local ring = plate and getKeyring(src)
-    return ring ~= nil and ring[plate] ~= nil
-end
-
---- Gives a player a key. Returns true on success, or false and a reason.
-local function giveKey(src, plate, label, temp)
-    plate = Keyring.NormalizePlate(plate)
-    if not plate then return false, 'invalid_plate' end
-
-    local ring = getKeyring(src)
-    if not ring then return false, 'no_identifier' end
-
-    local existing = ring[plate]
-    if existing then
-        -- Upgrading a temporary key to a permanent one is allowed.
-        if existing.temp and not temp then
-            existing.temp = false
-            queueSave()
-            syncPlayer(src)
-        end
-        return true
-    end
-
-    if countKeys(ring) >= Config.MaxKeys then return false, 'keyring_full' end
-
-    ring[plate] = { label = Keyring.SanitizeLabel(label) or plate, temp = temp == true }
-    if not temp then queueSave() end
-    syncPlayer(src)
-    return true
-end
-
-local function removeKey(src, plate)
-    plate = Keyring.NormalizePlate(plate)
-    local ring = plate and getKeyring(src)
-    if not ring or not ring[plate] then return false end
-
-    local wasTemp = ring[plate].temp
-    ring[plate] = nil
-    if not wasTemp then queueSave() end
-    syncPlayer(src)
-    return true
-end
-
-local function failMessage(reason)
-    if reason == 'keyring_full' then return ('Keyring is full (max %d keys).'):format(Config.MaxKeys) end
-    if reason == 'invalid_plate' then return 'That plate is not valid.' end
-    return 'Could not add the key.'
-end
-
-local function findVehicleByPlate(plate)
-    for _, veh in ipairs(GetAllVehicles()) do
-        if Keyring.NormalizePlate(GetVehicleNumberPlateText(veh)) == plate then
-            return veh
-        end
-    end
-end
-
-local function distanceBetween(src, entity)
-    return #(GetEntityCoords(GetPlayerPed(src)) - GetEntityCoords(entity))
-end
-
----------------------------------------------------------------------
--- Owned vehicles (oxmysql)
----------------------------------------------------------------------
-
-local function dbSingle(query, params)
-    if GetResourceState('oxmysql') ~= 'started' then return nil end
-    local p = promise.new()
-    exports.oxmysql:single(query, params, function(row) p:resolve(row or false) end)
-    SetTimeout(5000, function()
-        if p.state == 0 then p:resolve(false) end
-    end)
-    return Citizen.Await(p) or nil
-end
-
---- Returns the vehicle row when the plate belongs to this player (or their job), otherwise nil.
-local function getOwnedVehicle(src, plate)
-    local cfg = Config.OwnedVehicles
-    if not cfg or not cfg.enabled then return nil end
-
-    local owner = getIdentifier(src)
-    if not owner then return nil end
-
-    local where = ('`%s` = ?'):format(cfg.ownerColumn)
-    local params = { plate, owner }
-
-    local player = getQBPlayer(src)
-    local job = player and player.PlayerData.job and player.PlayerData.job.name
-    if cfg.jobColumn and job then
-        where = ('%s OR `%s` = ?'):format(where, cfg.jobColumn)
-        params[#params + 1] = job
-    end
-
-    local columns = cfg.modelColumn and ('plate, `%s` AS model'):format(cfg.modelColumn) or 'plate'
-    local query = ('SELECT %s FROM `%s` WHERE UPPER(TRIM(plate)) = ? AND (%s) LIMIT 1'):format(columns, cfg.table, where)
-
-    local ok, row = pcall(dbSingle, query, params)
+    local cfg = Config.StashTable
+    local query = ('SELECT `%s` FROM `%s` WHERE `%s` = ? LIMIT 1'):format(cfg.itemsColumn, cfg.table, cfg.idColumn)
+    local ok, raw = pcall(MySQL.scalar.await, query, { id })
     if not ok then
-        print(('^1[%s] Owned vehicle lookup failed: %s^0'):format(RESOURCE, tostring(row)))
+        -- Wrong table/column names: stop retrying so the console isn't spammed.
+        databaseUsable = false
+        print(('^1[fox_keyring] Could not read %s, check Config.StashTable: %s^0'):format(cfg.table, tostring(raw)))
         return nil
     end
-    return row
+    if type(raw) ~= 'string' or raw == '' then return nil end
+
+    local decoded
+    ok, decoded = pcall(json.decode, raw)
+    if ok and type(decoded) == 'table' then return decoded end
 end
 
-local function vehicleLabel(row, plate)
-    local model = row and row.model
-    if type(model) ~= 'string' or model == '' then return plate end
+--- Returns the items inside a keyring stash (or an empty table), plus where they were read from.
+--- The export is the live copy; the database covers stashes tgiann hasn't loaded yet (e.g. after a restart).
+local function readStash(id)
+    local items = readStashFromExport(id)
+    if items and next(items) then return items, 'export' end
 
-    local qb = getQBCore()
-    local shared = qb and qb.Shared.Vehicles and qb.Shared.Vehicles[model]
-    if shared and shared.name then
-        return shared.brand and ('%s %s'):format(shared.brand, shared.name) or shared.name
+    local saved = readStashFromDatabase(id)
+    if saved and next(saved) then return saved, 'database' end
+
+    return items or {}, items and 'export' or nil
+end
+
+local function ssnMatches(have, want)
+    if want == nil then return true end
+    -- 0r-vehiclekeys treats keys made before ssn tracking as ssn 0.
+    if have == nil then have = 0 end
+    return tostring(have) == tostring(want)
+end
+
+--- Calls cb(ringInfo) for every keyring item the player is carrying. Return true from cb to stop.
+local function forEachRing(src, cb)
+    local items = tgiann:GetPlayerItems(src)
+    if type(items) ~= 'table' then return end
+
+    for _, item in pairs(items) do
+        if type(item) == 'table' and item.name == Config.KeyringItem then
+            local info = Keyring.ItemInfo(item)
+            if info and info.ringId and cb(info) then return end
+        end
     end
-    return model:sub(1, 1):upper() .. model:sub(2)
 end
 
---- Removes a plate from every keyring, online or offline. Use it when a vehicle is sold.
-local function resetKeys(plate)
+--- True when a key for this plate is on any keyring the player is carrying.
+local function ringHasPlate(src, plate, ssn)
     plate = Keyring.NormalizePlate(plate)
-    if not plate then return 0 end
+    if not plate then return false end
 
-    local affected, removed = {}, 0
-    for identifier, ring in pairs(keyrings) do
-        if ring[plate] then
-            local wasTemp = ring[plate].temp
-            ring[plate] = nil
-            if not wasTemp then queueSave() end
-            affected[identifier] = true
-            removed = removed + 1
+    local found = false
+    forEachRing(src, function(info)
+        for _, key in pairs(readStash(stashId(info.ringId))) do
+            if type(key) == 'table' and key.name == Config.KeyItem then
+                local keyInfo = Keyring.ItemInfo(key)
+                if keyInfo and Keyring.NormalizePlate(keyInfo.plate) == plate and ssnMatches(keyInfo.ssn, ssn) then
+                    found = true
+                    return true
+                end
+            end
         end
-    end
-
-    for _, id in ipairs(GetPlayers()) do
-        local src = tonumber(id)
-        if affected[identifierCache[src] or ''] then syncPlayer(src) end
-    end
-    return removed
-end
-
-exports('ResetKeys', resetKeys)
-exports('HasKey', hasKey)
-exports('GiveKey', function(src, plate, label) return giveKey(src, plate, label, false) end)
-exports('GiveTempKey', function(src, plate, label) return giveKey(src, plate, label, true) end)
-exports('RemoveKey', removeKey)
-exports('GetKeys', function(src)
-    local ring = getKeyring(src)
-    local plates = {}
-    if ring then
-        for plate in pairs(ring) do plates[#plates + 1] = plate end
-    end
-    return plates
-end)
-
----------------------------------------------------------------------
--- Events from clients
----------------------------------------------------------------------
-
-RegisterNetEvent('fox_keyring:server:requestSync', function()
-    syncPlayer(source)
-end)
-
--- A garage/dealership/job asks for a key. Owned plates get a permanent key; anything else only
--- gets a temporary key when the player is standing next to that vehicle (job cars, rentals).
-local lastClaim = {}
-local function claimKey(src, plate)
-    plate = Keyring.NormalizePlate(plate)
-    if not plate or hasKey(src, plate) then return end
-
-    local now = GetGameTimer()
-    if (lastClaim[src] or 0) + 250 > now then return end
-    lastClaim[src] = now
-
-    local row = getOwnedVehicle(src, plate)
-    if row then
-        local ok, reason = giveKey(src, plate, vehicleLabel(row, plate), false)
-        if ok then
-            notify(src, ('You received the keys to %s'):format(plate), 'success')
-        else
-            notify(src, failMessage(reason), 'error')
-        end
-        return
-    end
-
-    if not Config.QBCompat then return end
-
-    local veh = findVehicleByPlate(plate)
-    if veh and distanceBetween(src, veh) <= Config.TempKeyDistance then
-        local ok, reason = giveKey(src, plate, nil, true)
-        if ok then
-            notify(src, ('You received temporary keys to %s'):format(plate), 'success')
-        else
-            notify(src, failMessage(reason), 'error')
-        end
-    end
-end
-
-exports('ClaimKey', claimKey)
-
-RegisterNetEvent('fox_keyring:server:claimKey', function(plate)
-    claimKey(source, plate)
-end)
-
-if Config.QBCompat then
-    RegisterNetEvent('qb-vehiclekeys:server:AcquireVehicleKeys', function(plate)
-        claimKey(source, plate)
     end)
+    return found
 end
 
-RegisterNetEvent('fox_keyring:server:toggleLock', function(netId)
-    local src = source
-    if type(netId) ~= 'number' then return end
+--- Every plate on every keyring the player is carrying.
+local function getRingPlates(src)
+    local plates = {}
+    forEachRing(src, function(info)
+        for _, key in pairs(readStash(stashId(info.ringId))) do
+            local keyInfo = type(key) == 'table' and key.name == Config.KeyItem and Keyring.ItemInfo(key)
+            local plate = keyInfo and Keyring.NormalizePlate(keyInfo.plate)
+            if plate then plates[#plates + 1] = plate end
+        end
+    end)
+    return plates
+end
 
-    local now = GetGameTimer()
-    if (lastLock[src] or 0) + Config.LockCooldown > now then return end
-    lastLock[src] = now
-
-    local veh = NetworkGetEntityFromNetworkId(netId)
-    if not veh or veh == 0 or not DoesEntityExist(veh) or GetEntityType(veh) ~= 2 then return end
-
-    local plate = Keyring.NormalizePlate(GetVehicleNumberPlateText(veh))
-    if not plate or not hasKey(src, plate) then
-        return notify(src, "You don't have a key for this vehicle.", 'error')
-    end
-
-    -- Small buffer over the client distance to account for movement and latency.
-    if distanceBetween(src, veh) > Config.LockDistance + 5.0 then return end
-
-    local locked = GetVehicleDoorLockStatus(veh) >= 2
-    SetVehicleDoorsLocked(veh, locked and 1 or 2)
-
-    TriggerClientEvent('fox_keyring:client:lockFx', -1, netId, not locked, src)
-    notify(src, locked and ('Unlocked %s'):format(plate) or ('Locked %s'):format(plate), locked and 'success' or 'inform')
-end)
-
-RegisterNetEvent('fox_keyring:server:giveKey', function(targetId, plate)
-    local src = source
-    targetId = tonumber(targetId)
-    plate = Keyring.NormalizePlate(plate)
-
-    if not plate or not hasKey(src, plate) then
-        return notify(src, "You don't have that key.", 'error')
-    end
-    if not targetId or targetId == src or not GetPlayerName(targetId) then
-        return notify(src, 'That player is not available.', 'error')
-    end
-    if #(GetEntityCoords(GetPlayerPed(src)) - GetEntityCoords(GetPlayerPed(targetId))) > Config.GiveDistance then
-        return notify(src, 'You need to be closer to that player.', 'error')
-    end
-
-    local ring = getKeyring(src)
-    local key = ring[plate]
-    local ok, reason = giveKey(targetId, plate, key.label, key.temp)
-    if not ok then
-        return notify(src, reason == 'keyring_full' and "Their keyring is full." or failMessage(reason), 'error')
-    end
-
-    if Config.TransferOnGive then removeKey(src, plate) end
-
-    notify(src, ('Gave key for %s to %s'):format(plate, GetPlayerName(targetId)), 'success')
-    notify(targetId, ('%s gave you a key for %s'):format(GetPlayerName(src), plate), 'success')
-end)
-
-RegisterNetEvent('fox_keyring:server:removeKey', function(plate)
-    local src = source
-    if removeKey(src, plate) then
-        notify(src, ('Removed key for %s'):format(Keyring.NormalizePlate(plate)), 'inform')
-    else
-        notify(src, "You don't have that key.", 'error')
-    end
-end)
-
-RegisterNetEvent('fox_keyring:server:labelKey', function(plate, label)
-    local src = source
-    plate = Keyring.NormalizePlate(plate)
-    label = Keyring.SanitizeLabel(label)
-    local ring = getKeyring(src)
-    if not plate or not ring or not ring[plate] then
-        return notify(src, "You don't have that key.", 'error')
-    end
-
-    ring[plate].label = label or plate
-    if not ring[plate].temp then queueSave() end
-    syncPlayer(src)
-    notify(src, ('Renamed %s to "%s"'):format(plate, ring[plate].label), 'success')
-end)
-
-RegisterNetEvent('fox_keyring:server:locate', function(plate)
-    local src = source
-    plate = Keyring.NormalizePlate(plate)
-    if not plate or not hasKey(src, plate) then
-        return notify(src, "You don't have that key.", 'error')
-    end
-
-    local veh = findVehicleByPlate(plate)
-    if not veh then
-        return notify(src, ('%s is not out right now.'):format(plate), 'error')
-    end
-
-    local coords = GetEntityCoords(veh)
-    TriggerClientEvent('fox_keyring:client:setWaypoint', src, coords.x, coords.y)
-    notify(src, ('Waypoint set to %s'):format(plate), 'success')
-end)
+exports('RingHasPlate', ringHasPlate)
+exports('GetRingPlates', getRingPlates)
 
 ---------------------------------------------------------------------
--- Admin command: /addkey [playerId] - key for the vehicle you're in
+-- Using the keyring
 ---------------------------------------------------------------------
 
-RegisterCommand(Config.AdminCommand, function(src, args)
-    if src == 0 then
-        return print(('[%s] /%s must be used in-game while sitting in a vehicle'):format(RESOURCE, Config.AdminCommand))
-    end
-
-    local veh = GetVehiclePedIsIn(GetPlayerPed(src), false)
-    if veh == 0 then return notify(src, 'Get in a vehicle first.', 'error') end
-
-    local target = tonumber(args[1]) or src
-    if not GetPlayerName(target) then return notify(src, 'That player is not online.', 'error') end
-
-    local plate = GetVehicleNumberPlateText(veh)
-    local ok, reason = giveKey(target, plate)
-    if not ok then return notify(src, failMessage(reason), 'error') end
-
-    notify(src, ('Gave key for %s to %s'):format(Keyring.NormalizePlate(plate), GetPlayerName(target)), 'success')
-    if target ~= src then
-        notify(target, ('You received a key for %s'):format(Keyring.NormalizePlate(plate)), 'success')
-    end
-end, true)
-
----------------------------------------------------------------------
--- Lifecycle
----------------------------------------------------------------------
-
--- Temporary keys (rentals, jobs, etc.) only last for the session / character.
-local function clearTempKeys(src)
-    local identifier = identifierCache[src]
-    local ring = identifier and keyrings[identifier]
-    if not ring then return end
-    for plate, key in pairs(ring) do
-        if key.temp then ring[plate] = nil end
+local function findKeyringSlot(src)
+    local items = tgiann:GetPlayerItems(src)
+    if type(items) ~= 'table' then return nil end
+    for k, item in pairs(items) do
+        if type(item) == 'table' and item.name == Config.KeyringItem then
+            return item.slot or tonumber(k), item
+        end
     end
 end
 
-AddEventHandler('playerDropped', function()
-    local src = source
-    clearTempKeys(src)
-    lastLock[src] = nil
-    lastClaim[src] = nil
-    identifierCache[src] = nil
+local function openKeyring(src, item)
+    local slot = item and item.slot
+    if not slot then slot, item = findKeyringSlot(src) end
+    if not slot then return end
+
+    -- Every keyring gets its own id the first time it's used, so each one is its own container.
+    local info = Keyring.ItemInfo(item) or {}
+    if not info.ringId then
+        info.ringId = newRingId(src)
+        tgiann:UpdateItemMetadata(src, Config.KeyringItem, slot, info)
+    end
+
+    tgiann:ForceOpenInventory(src, 'stash', stashId(info.ringId), {
+        label = Config.Label,
+        slots = Config.Slots,
+        maxWeight = Config.MaxWeight,
+        maxweight = Config.MaxWeight,
+        whitelist = { Config.KeyItem },
+    })
+end
+
+QBCore.Functions.CreateUseableItem(Config.KeyringItem, function(source, item)
+    openKeyring(source, item)
 end)
 
--- QBCore: load the character's keyring on spawn, clear it when they go back to character select.
-AddEventHandler('QBCore:Server:PlayerLoaded', function(player)
-    local src = player and player.PlayerData and player.PlayerData.source
-    if src then syncPlayer(src) end
-end)
+---------------------------------------------------------------------
+-- Diagnostics: keyringcheck <playerId>
+---------------------------------------------------------------------
 
-AddEventHandler('QBCore:Server:OnPlayerUnload', function(src)
-    clearTempKeys(src)
-    identifierCache[src] = nil
-    TriggerClientEvent('fox_keyring:client:sync', src, {})
-end)
+RegisterCommand('keyringcheck', function(source, args)
+    if source ~= 0 and not IsPlayerAceAllowed(source, Config.AdminAce) then return end
 
-AddEventHandler('onResourceStop', function(name)
-    if name == RESOURCE and Config.Persist then saveKeys() end
-end)
+    local target = tonumber(args[1]) or (source ~= 0 and source or nil)
+    if not target or not GetPlayerName(target) then
+        return print('[fox_keyring] usage: keyringcheck <playerId>')
+    end
 
-loadKeys()
+    print(('^3[fox_keyring] ---- keyrings carried by %s (%d) ----^0'):format(GetPlayerName(target), target))
+    local rings = 0
+    forEachRing(target, function(info)
+        rings = rings + 1
+        local items, method = readStash(stashId(info.ringId))
+        local count = 0
+        for _, key in pairs(items) do
+            if type(key) == 'table' then
+                local keyInfo = Keyring.ItemInfo(key) or {}
+                count = count + 1
+                print(('  %s: %s plate=%s ssn=%s'):format(stashId(info.ringId), tostring(key.name), tostring(keyInfo.plate), tostring(keyInfo.ssn)))
+            end
+        end
+        print(('  %s holds %d item(s), read via %s'):format(stashId(info.ringId), count, tostring(method or 'nothing (empty or unreadable)')))
+    end)
+
+    if rings == 0 then
+        print('  No used keyring found. Use the keyring once so it gets an id, then run this again.')
+    end
+    print('^3[fox_keyring] ---- end ----^0')
+end, false)

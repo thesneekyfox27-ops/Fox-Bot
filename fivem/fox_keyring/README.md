@@ -1,68 +1,75 @@
 # fox_keyring
 
-A FiveM vehicle keyring. It works standalone or with QBCore, which it detects automatically and then gives each character their own keyring. If [ox_lib](https://github.com/overextended/ox_lib) is running, menus and notifications use it.
+A keyring item for **QBCore + tgiann-inventory + 0r-vehiclekeys**.
 
-## Features
+Use the keyring in your inventory and it opens a 25-slot container that only accepts vehicle keys. Keys on a keyring still work: you can lock, unlock and start any car whose key is on a keyring you're carrying. 0r-vehiclekeys keeps doing all the key work, and this resource adds the container.
 
-- A keyring for each player, tied to their license. It saves to `data/keys.json`, so keys survive restarts.
-- Lock and unlock with **L** (players can rebind it). The server checks the key, the lights flash, the horn chirps and the key fob animation plays.
-- Engine protection: you can't start a vehicle unless you have its key.
-- Give keys to other players (a copy, or a transfer), locate your vehicles with a waypoint, and name your keys.
-- Temporary keys for rentals and jobs. They're removed when the player disconnects.
-- Server exports so garages, dealerships and jobs can hand out keys.
-- Ownership check: when a script asks for a key, the server checks `player_vehicles` (owner or job) through oxmysql before giving a permanent key.
-- QBCore compatibility: it answers `vehiclekeys:client:SetOwner` and `qb-vehiclekeys:server:AcquireVehicleKeys`, so qb-vehicleshop, police/EMS job cars and similar scripts work without changes.
+- Every keyring is its own container. Give someone your keyring and they get every key on it.
+- Only `vehiclekeys` items fit on a keyring.
+- Storing a car in Lunar Garage doesn't pull its key off the keyring. Taking it out again doesn't add a duplicate.
 
 ## Install
 
-1. Copy `fox_keyring` into your server's `resources` folder.
-2. Add `ensure fox_keyring` to `server.cfg` (after `ox_lib`, if you use it).
-3. Allow admins to use `/addkey`:
-   ```
-   add_ace group.admin command.addkey allow
-   ```
+### 1. Add the keyring item to tgiann-inventory
 
-Requires OneSync, which is the default on current servers.
-
-**Run only one key script.** Remove or stop `qb-vehiclekeys`, `0r-vehiclekeys` and any others. If two key scripts both control engines and locks, they fight each other.
-
-## Commands
-
-| Command | Description |
-| --- | --- |
-| `/keyring` | Open your keyring (ox_lib menu, or a list in chat) |
-| `L` / `/togglelock` | Lock or unlock the nearest vehicle you have a key for |
-| `/givekey [id] [plate]` | Give a key. With no arguments it gives the key for your nearest vehicle to the closest player |
-| `/dropkey [plate]` | Remove a key from your keyring |
-| `/labelkey [plate] [name]` | Give a key a name, e.g. `Daily driver` |
-| `/addkey [id]` | Admin: give a key for the vehicle you're sitting in |
-
-## Giving keys from other scripts (server side)
+Add it next to your other items in tgiann-inventory's items file. Copy the format of your `vehiclekeys` entry if it looks different:
 
 ```lua
-exports.fox_keyring:ClaimKey(source, plate)              -- give a key only if they own the plate (or it's their job's)
-exports.fox_keyring:GiveKey(source, plate, 'Sultan RS')  -- permanent key, no checks (label optional)
-exports.fox_keyring:GiveTempKey(source, plate)           -- removed on disconnect
-exports.fox_keyring:RemoveKey(source, plate)
-exports.fox_keyring:HasKey(source, plate)                -- true/false
-exports.fox_keyring:GetKeys(source)                      -- { 'ABC123', ... }
-exports.fox_keyring:ResetKeys(plate)                     -- take this plate off every keyring (vehicle sold)
+keyring = {
+    name = 'keyring',
+    label = 'Keyring',
+    weight = 50,
+    type = 'item',
+    image = 'keyring.png',
+    unique = true,
+    hasMetadata = true,
+    useable = true,
+    shouldClose = true,
+    description = 'Holds up to 25 vehicle keys',
+},
 ```
 
-Client side: `exports.fox_keyring:HasKey(plate)` and `exports.fox_keyring:ClaimKey(plate)` (the server checks ownership).
+`unique` and `hasMetadata` must both be `true`, because each keyring stores its own id. Put a `keyring.png` in tgiann's image folder.
 
-## Lunar Garage (QBCore)
+**Don't** also add `keyring` to tgiann's `configItemStash.lua`. This resource opens it, and adding it there makes it open twice.
 
-`integrations/lunar_garage.patch` makes three changes to lunar_garage:
+### 2. Patch 0r-vehiclekeys
 
-1. `config/config.lua`: `Config.KeySystem = 'fox_keyring'`
-2. `config/cl_edit.lua`: taking a vehicle out (or out of impound) calls `ClaimKey`. Storing a vehicle keeps the key, because the keyring is permanent.
-3. `server/contract.lua`: when a vehicle is sold with a contract, the seller's key and any copies they handed out are removed, and the buyer gets the key.
+In `0r-vehiclekeys/modules/inventory/tgiann-inventory/server.lua`, in `Inventory.HasItem`, add the `fox_keyring` check (see `integrations/0r-vehiclekeys.patch`):
 
-Society vehicles work through the `job` column that Lunar adds to `player_vehicles`.
+```lua
+        if findItemByMetadata(src, item, metadata) ~= nil then return true end
+        -- NRP: also count a vehicle key stored on the player's keyring
+        if metadata.plate and GetResourceState('fox_keyring') == 'started'
+           and exports['fox_keyring']:RingHasPlate(src, metadata.plate, metadata.ssn) then
+            return true
+        end
+```
 
-For example, in a garage's "take vehicle out" server handler, call `GiveKey(source, plate)` once the vehicle has spawned.
+### 3. Start it
 
-## Config
+```
+ensure qb-core
+ensure oxmysql
+ensure tgiann-inventory
+ensure 0r-vehiclekeys
+ensure fox_keyring
+```
 
-Every option is in `config.lua`: the lock key, distances, max keys, persistence, the identifier type, engine protection and exempt vehicle classes.
+Do a **full server restart**, because tgiann loads its item list at boot. Give yourself a keyring and test it.
+
+## Check it works
+
+1. Use the keyring, drag a car key onto it and close it.
+2. Walk to the car and lock it. It should work even though the key isn't in your pockets.
+3. In the server console, run `keyringcheck <yourId>`. It lists each keyring you carry, the keys on it, and how they were read:
+   - `read via export`: tgiann's live export works. This is the best case.
+   - `read via database`: the export isn't available, so keys are read from the saved stash. Keys you just moved might not count until tgiann saves the stash.
+   - `nothing`: neither worked. Check `Config.StashTable` in `config.lua` against your tgiann stash table (default `tgiann_inventory_stashitems`).
+
+## Exports (server)
+
+```lua
+exports.fox_keyring:RingHasPlate(source, plate, ssn) -- true if a key for that plate is on a keyring they carry
+exports.fox_keyring:GetRingPlates(source)            -- { 'ABC123', ... }
+```
