@@ -1,6 +1,7 @@
 import { Events } from 'discord.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { logger } from '../utils/logger.js';
+import { handleFilteredMessage } from '../services/wordFilterService.js';
 
 const MAX_LOGGED_EDIT_CONTENT_LENGTH = 512;
 
@@ -14,6 +15,12 @@ export default {
 
       
       if (oldMessage.content === newMessage.content) return;
+
+      // Catch blocked words that are edited into a message after it was sent
+      if (newMessage.partial) {
+        newMessage = await newMessage.fetch().catch(() => newMessage);
+      }
+      await handleFilteredMessage(newMessage, newMessage.client);
 
       const fields = [];
 
