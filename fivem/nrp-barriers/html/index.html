@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NRP Barriers</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app" class="hidden">
+        <header>
+            <div class="title">
+                <span class="dot"></span>
+                <h1>Barriers</h1>
+                <span id="count" class="badge">0</span>
+            </div>
+            <button id="close" class="icon" title="Close (Esc)">&times;</button>
+        </header>
+
+        <div class="toolbar">
+            <input id="search" type="text" placeholder="Search walls..." autocomplete="off">
+            <select id="sort">
+                <option value="distance">Nearest</option>
+                <option value="index">Number</option>
+                <option value="name">Name</option>
+            </select>
+        </div>
+
+        <div class="toggles">
+            <button id="toggleBlocking" class="chip">Blocking: ON</button>
+            <button id="toggleOutlines" class="chip">Outlines: OFF</button>
+            <button id="build" class="chip accent">+ Build new wall</button>
+        </div>
+
+        <ul id="list"></ul>
+        <div id="empty" class="empty hidden">No walls yet. Click <b>+ Build new wall</b> to draw one.</div>
+    </div>
+
+    <div id="confirm" class="modal hidden">
+        <div class="box">
+            <p id="confirmText"></p>
+            <div class="row">
+                <button id="confirmNo" class="btn">Cancel</button>
+                <button id="confirmYes" class="btn danger">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

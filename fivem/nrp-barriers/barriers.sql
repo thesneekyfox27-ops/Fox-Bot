@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS `nrp_barriers` (
+    `id`         INT(11) NOT NULL AUTO_INCREMENT,
+    `name`       VARCHAR(64) NOT NULL DEFAULT 'wall',
+    `height`     FLOAT NOT NULL DEFAULT 4.0,
+    `points`     LONGTEXT NOT NULL,
+    `created_by` VARCHAR(64) DEFAULT NULL,
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
