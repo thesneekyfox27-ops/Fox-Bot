@@ -341,6 +341,36 @@ local function handleRestartWipe(src, citizenid)
     end)
 end
 
+--- Bumps 0r-vehiclekeys' key_id on every owned car. Every key carries the key_id it was cut with,
+--- so all existing keys stop working at once - including ones hidden in stashes, trunks or houses.
+--- Owners get a fresh key from the garage or the locksmith.
+local function rotateAllKeys(reason)
+    local cfg = Config.PersonalVehicles
+    local ok, changed = pcall(MySQL.update.await,
+        ('UPDATE `%s` SET `key_id` = COALESCE(`key_id`, 0) + 1'):format(cfg.table))
+    if not ok then
+        print(('^1[fox_keyring] Could not reset car keys (%s): %s^0'):format(reason, tostring(changed)))
+        return false
+    end
+    print(('[fox_keyring] %s: every old car key is now dead (%s vehicles)'):format(reason, tostring(changed)))
+    return true
+end
+
+CreateThread(function()
+    if not Config.RotateKeysOnRestart then return end
+    -- Only once per real server start, not when fox_keyring alone is restarted.
+    if math.abs(GetResourceKvpInt('rotatedAt') - serverStartedAt) <= 300 then return end
+    if rotateAllKeys('server restart') then
+        SetResourceKvpInt('rotatedAt', serverStartedAt)
+    end
+end)
+
+-- Console only: kill every car key right now (e.g. after an exploit).
+RegisterCommand('resetallcarkeys', function(source)
+    if source ~= 0 then return end
+    rotateAllKeys('resetallcarkeys')
+end, true)
+
 AddEventHandler('QBCore:Server:PlayerLoaded', function(player)
     local data = player and player.PlayerData
     local src = data and data.source

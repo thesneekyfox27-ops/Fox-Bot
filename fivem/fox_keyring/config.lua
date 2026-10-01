@@ -22,6 +22,11 @@ Config.PersonalVehicles = {
 -- tgiann-inventory/configs/configItemStash.lua (see README).
 Config.Slots = 25
 
+-- Server restart: every owned car gets a new key_id (0r-vehiclekeys' key code), so every old key
+-- stops working wherever it is - pockets, keyrings, house stashes, trunks, the ground.
+-- Stops people hoarding stolen keys. Owners get a new key from the garage or the locksmith.
+Config.RotateKeysOnRestart = true
+
 -- Server restart: every car key (Config.KeyItem only - business/house keys are other items and stay)
 -- is taken from a player's pockets and keyrings the first time they load in after a restart.
 -- Owners get keys back by taking the car out of the garage, or from the locksmith.
