@@ -471,3 +471,65 @@ RegisterCommand('keyringcheck', function(source, args)
     end
     print('^3[fox_keyring] ---- end ----^0')
 end, false)
+
+---------------------------------------------------------------------
+-- Diagnostics: keyringdebug <playerId> <plate>
+-- Walks the whole "does this player have the key" chain and prints each step.
+---------------------------------------------------------------------
+
+RegisterCommand('keyringdebug', function(source, args)
+    if source ~= 0 and not IsPlayerAceAllowed(source, Config.AdminAce) then return end
+
+    local target = tonumber(args[1])
+    local plate = Keyring.NormalizePlate(table.concat(args, ' ', 2))
+    if not target or not GetPlayerName(target) or not plate then
+        return print('[fox_keyring] usage: keyringdebug <playerId> <plate>')
+    end
+
+    local function line(...) print(('  ' .. select(1, ...)):format(select(2, ...))) end
+    print(('^3[fox_keyring] ---- keyringdebug %s plate "%s" ----^0'):format(GetPlayerName(target), plate))
+
+    -- 1. What key code does the car currently need?
+    local okId, keyId = pcall(MySQL.scalar.await,
+        ('SELECT `key_id` FROM `%s` WHERE UPPER(TRIM(plate)) = ? LIMIT 1'):format(Config.PersonalVehicles.table), { plate })
+    line('1. car key_id in %s: %s', Config.PersonalVehicles.table, okId and tostring(keyId) or ('ERROR ' .. tostring(keyId)))
+
+    -- 2. Which keyrings is the player carrying?
+    local rings = 0
+    local items = tgiann:GetPlayerItems(target)
+    for k, item in pairs(type(items) == 'table' and items or {}) do
+        if type(item) == 'table' and item.name == Config.KeyringItem then
+            rings = rings + 1
+            local info = Keyring.ItemInfo(item) or {}
+            line('2. keyring in slot %s: info.id=%s ringId=%s', tostring(item.slot or k), tostring(info.id), tostring(info.ringId))
+        end
+    end
+    if rings == 0 then line('2. NO keyring item named "%s" in their inventory', Config.KeyringItem) end
+
+    -- 3. Can we read each keyring, and what's on it?
+    forEachRing(target, function(id)
+        local okE, editable = pcall(function() return tgiann:GetKeyringItems(id) end)
+        line('3a. GetKeyringItems(%s): %s', id, okE and (type(editable) == 'table' and 'OK' or ('returned ' .. tostring(editable))) or ('ERROR ' .. tostring(editable)))
+        local okX, exported = pcall(function() return tgiann:GetSecondaryInventoryItems('stash', id) end)
+        line('3b. GetSecondaryInventoryItems: %s', okX and (type(exported) == 'table' and 'OK' or ('returned ' .. tostring(exported))) or ('ERROR ' .. tostring(exported)))
+
+        local contents, method = readStash(id)
+        line('3c. using %s, contents:', tostring(method))
+        for slot, key in pairs(contents) do
+            if type(key) == 'table' then
+                local keyInfo = Keyring.ItemInfo(key) or {}
+                line('      slot %s: %s plate="%s" ssn=%s', tostring(key.slot or slot), tostring(key.name), tostring(keyInfo.plate), tostring(keyInfo.ssn))
+            end
+        end
+    end)
+
+    -- 4. fox_keyring's answer, with and without the key code
+    line('4. RingHasPlate(plate, key_id %s): %s', tostring(keyId), tostring(ringHasPlate(target, plate, keyId)))
+    line('   RingHasPlate(plate, any code): %s', tostring(ringHasPlate(target, plate, nil)))
+
+    -- 5. 0r-vehiclekeys' own answer (this is what the lock button uses)
+    local ok0r, has = pcall(function() return exports['0r-vehiclekeys']:HasKeys(target, plate) end)
+    line('5. 0r-vehiclekeys HasKeys: %s', ok0r and tostring(has) or ('ERROR ' .. tostring(has)))
+    print('^3[fox_keyring] ---- end ----^0')
+end, false)
+
