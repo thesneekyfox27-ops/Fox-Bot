@@ -23,6 +23,14 @@ Config.Label = 'Keyring'
 Config.Slots = 25
 Config.MaxWeight = 25000
 
+-- Only vehicle keys can be put on a keyring
+Config.KeysOnly = true
+
+-- How the keyring container is opened:
+-- 'client' = tgiann's documented OpenInventory export (recommended)
+-- 'force'  = server-side ForceOpenInventory (older method, items may snap back when dragged out)
+Config.OpenMethod = 'client'
+
 -- Fallback used when tgiann-inventory has no export to read stash contents.
 -- Run `keyringcheck <playerId>` in the server console to see which method your server uses.
 Config.StashTable = {

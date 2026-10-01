@@ -140,13 +140,19 @@ local function openKeyring(src, item)
 
     local ringId = ensureRingId(src, item, slot)
 
-    tgiann:ForceOpenInventory(src, 'stash', stashId(ringId), {
-        label = Config.Label,
-        slots = Config.Slots,
-        maxWeight = Config.MaxWeight,
-        maxweight = Config.MaxWeight,
-        whitelist = { Config.KeyItem },
-    })
+    if Config.OpenMethod == 'force' then
+        tgiann:ForceOpenInventory(src, 'stash', stashId(ringId), {
+            label = Config.Label,
+            slots = Config.Slots,
+            maxWeight = Config.MaxWeight,
+            maxweight = Config.MaxWeight,
+            whitelist = Config.KeysOnly and { Config.KeyItem } or nil,
+        })
+    else
+        -- tgiann's documented way to open a stash (the same path as its own F2 key), so the
+        -- server registers it properly and items can be dragged both in and out.
+        TriggerClientEvent('fox_keyring:client:open', src, stashId(ringId))
+    end
 end
 
 QBCore.Functions.CreateUseableItem(Config.KeyringItem, function(source, item)

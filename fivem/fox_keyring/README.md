@@ -97,3 +97,7 @@ exports.fox_keyring:GetRingPlates(source)            -- { 'ABC123', ... }
 exports.fox_keyring:AddKeyToRing(source, item, metadata)      -- true if the key was placed on a keyring (own cars only)
 exports.fox_keyring:RemoveKeyFromRing(source, item, metadata) -- true if the key was taken off a keyring
 ```
+
+## Troubleshooting
+
+**A key snaps back onto the keyring when you drag it out:** make sure `Config.OpenMethod = 'client'` (the default). It opens the keyring through tgiann's documented `OpenInventory` export, so tgiann's server accepts moves in both directions. If it still snaps back, set `Config.KeysOnly = false` and test again. That tells you whether tgiann is applying the keys-only whitelist to moves out of the keyring as well as moves in.
