@@ -2,13 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <!-- ============ RENTAL BROWSER ============ -->
 <div id="app" class="hidden">
-  <div class="panel">
+  <div class="panel board">
+    <div class="clip" aria-hidden="true"><span class="clip-hanger"></span><span class="clip-bar"></span><span class="clip-wire"></span><span class="clip-grip l"></span><span class="clip-grip r"></span></div>
+    <div class="sheet">
     <header class="head">
       <div class="brand">
         <span class="brand-mark"></span>
@@ -28,11 +31,14 @@
       <span><b id="refundPct">75</b>% of your deposit comes back if the car returns clean.</span>
       <span class="foot-note">Damage cuts the refund.</span>
     </footer>
+    </div>
   </div>
 
   <!-- ============ CONTRACT / CONFIRM ============ -->
   <div class="confirm hidden" id="confirm">
-    <div class="confirm-card">
+    <div class="confirm-card board">
+      <div class="clip" aria-hidden="true"><span class="clip-hanger"></span><span class="clip-bar"></span><span class="clip-wire"></span><span class="clip-grip l"></span><span class="clip-grip r"></span></div>
+      <div class="sheet">
       <button class="sheet-x" id="cancelX" aria-label="Back">&times;</button>
 
       <div class="confirm-grid">
@@ -74,13 +80,15 @@
         <button class="btn ghost" id="cancelBtn">Back</button>
         <button class="btn primary" id="confirmBtn" disabled>Sign &amp; drive</button>
       </div>
+      </div>
     </div>
   </div>
 </div>
 
 <!-- ============ PAPERS OVERLAY ============ -->
 <div id="papers" class="hidden">
-  <div class="papers-wrap">
+  <div class="papers-wrap board">
+    <div class="clip" aria-hidden="true"><span class="clip-hanger"></span><span class="clip-bar"></span><span class="clip-wire"></span><span class="clip-grip l"></span><span class="clip-grip r"></span></div>
     <button class="close-x papers-close" id="papersClose" aria-label="Close">&times;</button>
 
     <!-- Contract document -->
