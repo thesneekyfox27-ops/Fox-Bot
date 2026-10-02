@@ -33,6 +33,16 @@ The coords in `Config.Boss`, `Config.Depot`, `Config.Van.bays` and
 `Config.Van.slots` are cargo positions in vehicle space — they are tuned for
 `boxville2`. If you swap the van model, re-measure them.
 
+## The contract board
+
+There is one board for the whole server, holding `Config.Contracts.offered`
+contracts. Opening and closing it never rerolls anything:
+
+- Open contracts are swapped for new ones every `Config.Contracts.rotateMinutes`
+  (30). The board shows the countdown.
+- A signed contract comes off the board for everyone. Its slot only gets a new
+  contract when that job ends (paid out, abandoned, or the crew boss leaves).
+
 ## How the money works
 
 Every contract is priced the same way, from `Config.Pay` in `shared/config.lua`:

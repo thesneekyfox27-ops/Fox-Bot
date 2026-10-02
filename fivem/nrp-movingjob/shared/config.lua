@@ -227,7 +227,9 @@ Config.Weights = {
 -- Contracts
 -- ---------------------------------------------------------------------------
 Config.Contracts = {
-    offered      = 3,        -- how many jobs the boss shows on the board
+    offered       = 3,       -- how many jobs the board holds (shared by everyone)
+    rotateMinutes = 30,      -- open contracts are swapped for new ones this often;
+                             -- a taken one is only replaced when that job ends
     minItems     = 4,
     maxItems     = 7,
 

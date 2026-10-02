@@ -81,9 +81,31 @@ function boxesFor(n) {
   return '▣'.repeat(Math.min(n, 10));
 }
 
+let rotateTimer = null;
+function startRotateClock(seconds) {
+  clearInterval(rotateTimer);
+  const el = $('rotateIn');
+  if (!(seconds > 0)) { el.textContent = ''; return; }
+  const ends = Date.now() + seconds * 1000;
+  const tick = () => {
+    const left = Math.max(0, Math.round((ends - Date.now()) / 1000));
+    if (left === 0) {
+      el.innerHTML = 'New contracts are up. <b>Reopen the board.</b>';
+      clearInterval(rotateTimer);
+      return;
+    }
+    const m = Math.floor(left / 60), s = String(left % 60).padStart(2, '0');
+    el.innerHTML = `Board rotates in <b>${m}:${s}</b>`;
+  };
+  tick();
+  rotateTimer = setInterval(tick, 1000);
+}
+
 function renderOrders() {
   const list = $('orderList');
-  const orders = state.contracts || [];
+  // an empty Lua table can arrive as {} instead of []
+  const orders = Array.isArray(state.contracts) ? state.contracts : [];
+  state.contracts = orders;
   $('ordersEmpty').classList.toggle('hidden', orders.length > 0);
 
   list.innerHTML = orders.map((c, i) => `
@@ -337,6 +359,7 @@ window.addEventListener('message', ({ data }) => {
     document.querySelectorAll('.co-name').forEach((el) => { el.textContent = state.company.name; });
     if (state.mode === 'board') {
       renderOrders();
+      startRotateClock(Number(state.rotatesIn) || 0);
       show('orders');
     } else {
       $('abandonConfirm').classList.add('hidden');

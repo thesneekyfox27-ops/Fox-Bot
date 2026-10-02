@@ -7,7 +7,6 @@ local QBCore = exports['qb-core']:GetCoreObject()
 
 local Jobs    = {}   -- [leaderSrc] = job
 local Members = {}   -- [src] = leaderSrc
-local Offers  = {}   -- [src] = { [id] = contract }
 local LastEvent = {} -- [src] = timestamp
 local Invites = {}   -- [targetSrc] = { from = src, expires = ms }
 
@@ -159,6 +158,49 @@ local function makeContract(id)
     }
 end
 
+-- ---------------------------------------------------------------------------
+-- shared contract board
+-- One board for the whole server. Reopening it never rerolls anything: the
+-- open contracts only change when the rotation timer runs out, and a taken
+-- contract's slot only gets a new one once that job is over.
+-- ---------------------------------------------------------------------------
+local Board = { slots = {}, nextRotate = 0, nextId = 0 }   -- slot = { contract, takenBy }
+
+local function freshContract()
+    Board.nextId = Board.nextId + 1
+    return makeContract(Board.nextId)
+end
+
+local function rotateBoard()
+    for i = 1, Config.Contracts.offered do
+        local slot = Board.slots[i]
+        if not slot or not slot.takenBy then
+            Board.slots[i] = { contract = freshContract() }
+        end
+    end
+    Board.nextRotate = os.time() + math.floor((Config.Contracts.rotateMinutes or 30) * 60)
+end
+
+local function findSlot(id)
+    for i, slot in ipairs(Board.slots) do
+        if slot.contract.id == id then return slot, i end
+    end
+end
+
+--- The job on this contract is over (done, abandoned, boss left): post a new one.
+local function releaseContract(contract)
+    local _, i = findSlot(contract and contract.id)
+    if i then Board.slots[i] = { contract = freshContract() } end
+end
+
+CreateThread(function()
+    rotateBoard()
+    while true do
+        Wait(15000)
+        if os.time() >= Board.nextRotate then rotateBoard() end
+    end
+end)
+
 lib.callback.register('nrp-movingjob:server:getContracts', function(src)
     if Members[src] then return nil end
 
@@ -173,19 +215,19 @@ lib.callback.register('nrp-movingjob:server:getContracts', function(src)
         return nil
     end
 
-    local list, public = {}, {}
-    Offers[src] = {}
-    for i = 1, Config.Contracts.offered do
-        local c = makeContract(i)
-        Offers[src][i] = c
-        -- The item list stays server side until the contract is accepted.
-        public[#public + 1] = {
-            id = c.id, customer = c.customer, drop = c.drop,
-            itemCount = c.itemCount, payPerItem = c.payPerItem, bonus = c.bonus,
-            price = c.price
-        }
+    local public = {}
+    for _, slot in ipairs(Board.slots) do
+        if not slot.takenBy then
+            local c = slot.contract
+            -- The item list stays server side until the contract is accepted.
+            public[#public + 1] = {
+                id = c.id, customer = c.customer, drop = c.drop,
+                itemCount = c.itemCount, payPerItem = c.payPerItem, bonus = c.bonus,
+                price = c.price
+            }
+        end
     end
-    return public
+    return public, math.max(0, Board.nextRotate - os.time())
 end)
 
 -- ---------------------------------------------------------------------------
@@ -228,8 +270,13 @@ RegisterNetEvent('nrp-movingjob:server:accept', function(id, signature, crew)
     if throttled(src) then return end
     if Members[src] then return end
 
-    local offer = Offers[src] and Offers[src][id]
-    if not offer then return warn(src, 'accepted a contract that was never offered') end
+    id = tonumber(id)
+    local slot = id and findSlot(id)
+    if not slot or slot.takenBy then
+        -- rotated off the board or someone else signed it first
+        return tell(src, 'That contract is gone. Have another look at the board.')
+    end
+    local offer = slot.contract
     if not near(src, vector3(Config.Boss.coords.x, Config.Boss.coords.y, Config.Boss.coords.z)) then
         return warn(src, 'accepted a contract from off site')
     end
@@ -251,7 +298,7 @@ RegisterNetEvent('nrp-movingjob:server:accept', function(id, signature, crew)
         end
     end
 
-    Offers[src] = nil
+    slot.takenBy = src
 
     local job = {
         leader    = src,
@@ -288,6 +335,7 @@ RegisterNetEvent('nrp-movingjob:server:accept', function(id, signature, crew)
 end)
 
 local function endJob(job, reason, payload)
+    releaseContract(job.contract)
     for _, src in ipairs(crewOf(job)) do
         Members[src] = nil
         if reason then
@@ -465,6 +513,7 @@ RegisterNetEvent('nrp-movingjob:server:finish', function(vanNet)
         if veh and veh ~= 0 and DoesEntityExist(veh) then DeleteEntity(veh) end
     end
 
+    releaseContract(job.contract)
     Jobs[leader] = nil
 end)
 
@@ -576,7 +625,6 @@ end)
 AddEventHandler('playerDropped', function()
     local src = source
     local job, leader = jobOf(src)
-    Offers[src] = nil
     LastEvent[src] = nil
     Invites[src] = nil
 

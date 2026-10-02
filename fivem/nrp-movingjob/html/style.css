@@ -252,6 +252,12 @@ body {
 }
 .order .pay span { font-size: 11px; color: var(--muted); }
 
+.rotate {
+  margin-top: 16px; text-align: center;
+  font-family: var(--hand); font-size: 22px; font-weight: 700; color: var(--muted);
+}
+.rotate b { color: var(--hivis); }
+
 /* the template's tick boxes */
 .box {
   width: 18px; height: 18px;

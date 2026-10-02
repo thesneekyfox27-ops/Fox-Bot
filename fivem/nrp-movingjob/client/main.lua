@@ -770,8 +770,9 @@ local function openPaper()
         msg.canHire  = (Config.Crew.enabled and Job.leader) and true or false
         msg.splitPay = Config.Crew.splitPay
     else
-        local contracts = lib.callback.await('nrp-movingjob:server:getContracts', false)
+        local contracts, rotatesIn = lib.callback.await('nrp-movingjob:server:getContracts', false)
         if not contracts then return true end   -- server already told them why
+        msg.rotatesIn = rotatesIn or 0
 
         local here, list = GetEntityCoords(cache.ped), {}
         for _, c in ipairs(contracts) do
