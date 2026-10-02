@@ -4,11 +4,12 @@ import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { MessageTemplates } from '../../utils/messageTemplates.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { jobPayouts } from '../../config/economy/payouts.js';
 
-const BASE_WIN_CHANCE = 0.4;
-const CLOVER_WIN_BONUS = 0.1;
-const CHARM_WIN_BONUS = 0.08;
-const PAYOUT_MULTIPLIER = 2.0;
+const BASE_WIN_CHANCE = jobPayouts.gamble.baseWinChance;
+const CLOVER_WIN_BONUS = jobPayouts.gamble.cloverWinBonus;
+const CHARM_WIN_BONUS = jobPayouts.gamble.charmWinBonus;
+const PAYOUT_MULTIPLIER = jobPayouts.gamble.payoutMultiplier;
 const GAMBLE_COOLDOWN = 5 * 60 * 1000;
 
 export default {

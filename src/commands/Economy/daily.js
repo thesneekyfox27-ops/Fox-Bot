@@ -6,10 +6,11 @@ import { formatDuration } from '../../utils/helpers.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { jobPayouts } from '../../config/economy/payouts.js';
 
 const DAILY_COOLDOWN = 24 * 60 * 60 * 1000;
-const DAILY_AMOUNT = 1000;
-const PREMIUM_BONUS_PERCENTAGE = 0.1;
+const DAILY_AMOUNT = jobPayouts.daily.amount;
+const PREMIUM_BONUS_PERCENTAGE = jobPayouts.daily.premiumBonus;
 
 export default {
     data: new SlashCommandBuilder()

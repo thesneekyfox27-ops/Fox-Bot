@@ -4,11 +4,12 @@ import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { MessageTemplates } from '../../utils/messageTemplates.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { jobPayouts } from '../../config/economy/payouts.js';
 
 const ROB_COOLDOWN = 4 * 60 * 60 * 1000;
-const BASE_ROB_SUCCESS_CHANCE = 0.25;
-const ROB_PERCENTAGE = 0.15;
-const FINE_PERCENTAGE = 0.1;
+const BASE_ROB_SUCCESS_CHANCE = jobPayouts.rob.successChance;
+const ROB_PERCENTAGE = jobPayouts.rob.stealPercentage;
+const FINE_PERCENTAGE = jobPayouts.rob.finePercentage;
 
 export default {
     data: new SlashCommandBuilder()

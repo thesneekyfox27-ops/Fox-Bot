@@ -4,6 +4,7 @@ import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { MessageTemplates } from '../../utils/messageTemplates.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { jobPayouts } from '../../config/economy/payouts.js';
 
 const CRIME_COOLDOWN = 60 * 60 * 1000;
 const MIN_CRIME_AMOUNT = 100;
@@ -11,13 +12,9 @@ const MAX_CRIME_AMOUNT = 2000;
 const FAILURE_RATE = 0.4;
 const JAIL_TIME = 2 * 60 * 60 * 1000;
 
-const CRIME_TYPES = [
-    { name: "Pickpocketing", min: 100, max: 500, risk: 0.3 },
-    { name: "Burglary", min: 300, max: 1000, risk: 0.4 },
-    { name: "Bank Heist", min: 1000, max: 5000, risk: 0.6 },
-    { name: "Art Theft", min: 2000, max: 10000, risk: 0.7 },
-    { name: "Cybercrime", min: 5000, max: 20000, risk: 0.8 },
-];
+const CRIME_TYPES = jobPayouts.crime.types;
+
+const toCrimeValue = name => name.toLowerCase().replace(/\s+/g, '-');
 
 export default {
     data: new SlashCommandBuilder()
@@ -29,11 +26,7 @@ export default {
                 .setDescription('Type of crime to commit')
                 .setRequired(true)
                 .addChoices(
-                    { name: 'Pickpocketing', value: 'pickpocketing' },
-                    { name: 'Burglary', value: 'burglary' },
-                    { name: 'Bank Heist', value: 'bank-heist' },
-                    { name: 'Art Theft', value: 'art-theft' },
-                    { name: 'Cybercrime', value: 'cybercrime' },
+                    ...CRIME_TYPES.map(c => ({ name: c.name, value: toCrimeValue(c.name) })),
                 )
         ),
 
@@ -70,7 +63,7 @@ export default {
 
             const crimeType = interaction.options.getString("type").toLowerCase();
             const crime = CRIME_TYPES.find(
-                c => c.name.toLowerCase().replace(/\s+/g, '-') === crimeType
+                c => toCrimeValue(c.name) === crimeType
             );
 
             if (!crime) {

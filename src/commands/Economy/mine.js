@@ -4,12 +4,13 @@ import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { MessageTemplates } from '../../utils/messageTemplates.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { jobPayouts } from '../../config/economy/payouts.js';
 
 const MINE_COOLDOWN = 60 * 60 * 1000;
-const BASE_MIN_REWARD = 400;
-const BASE_MAX_REWARD = 1200;
-const PICKAXE_MULTIPLIER = 1.2;
-const DIAMOND_PICKAXE_MULTIPLIER = 2.0;
+const BASE_MIN_REWARD = jobPayouts.mine.min;
+const BASE_MAX_REWARD = jobPayouts.mine.max;
+const PICKAXE_MULTIPLIER = jobPayouts.mine.pickaxeMultiplier;
+const DIAMOND_PICKAXE_MULTIPLIER = jobPayouts.mine.diamondPickaxeMultiplier;
 
 const MINE_LOCATIONS = [
     "abandoned gold mine",

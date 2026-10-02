@@ -4,11 +4,12 @@ import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { jobPayouts } from '../../config/economy/payouts.js';
 
 const WORK_COOLDOWN = 30 * 60 * 1000;
-const MIN_WORK_AMOUNT = 50;
-const MAX_WORK_AMOUNT = 300;
-const LAPTOP_MULTIPLIER = 1.5;
+const MIN_WORK_AMOUNT = jobPayouts.work.min;
+const MAX_WORK_AMOUNT = jobPayouts.work.max;
+const LAPTOP_MULTIPLIER = jobPayouts.work.laptopMultiplier;
 const WORK_JOBS = [
     "Software Developer",
     "Barista",

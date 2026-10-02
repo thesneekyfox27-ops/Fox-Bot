@@ -5,11 +5,12 @@ import { botConfig } from '../../config/bot.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { MessageTemplates } from '../../utils/messageTemplates.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { jobPayouts } from '../../config/economy/payouts.js';
 
 const COOLDOWN = 30 * 60 * 1000;
-const MIN_WIN = 50;
-const MAX_WIN = 200;
-const SUCCESS_CHANCE = 0.7;
+const MIN_WIN = jobPayouts.beg.min;
+const MAX_WIN = jobPayouts.beg.max;
+const SUCCESS_CHANCE = jobPayouts.beg.successChance;
 
 export default {
     data: new SlashCommandBuilder()
