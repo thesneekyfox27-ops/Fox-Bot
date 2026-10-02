@@ -54,6 +54,15 @@ if language == "es" then
         ["ticket_denied"] = "No puedes comprar ese boleto",
         ["card_saved"] = "Tarjeta guardada en tu inventario",
         ["card_failed"] = "No se pudo guardar la tarjeta",
-        ["talk_staff"] = "Hablar con el personal de %s"
+        ["talk_staff"] = "Hablar con el personal de %s",
+        ["your_turn"] = "Tu turno - camina a tu bola",
+        ["waiting_turn"] = "Esperando a que juegue %s",
+        ["waiting_group"] = "Esperando al resto del grupo",
+        ["address_ball"] = "~INPUT_CONTEXT~ preparar el tiro",
+        ["walk_to_ball"] = "Tu turno - camina a tu bola (flecha naranja)",
+        ["aim_params"] = "~INPUT_VEH_DUCK~ apartarse\n ~INPUT_CELLPHONE_OPTION~ salir del juego",
+        ["hole_start"] = "Hoyo %s - ve a la salida",
+        ["you_timeout"] = "Se acabo el tiempo - el hoyo cuenta con el maximo",
+        ["group_timeout"] = "A %s se le acabo el tiempo en este hoyo"
     }
 end

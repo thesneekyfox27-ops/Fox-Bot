@@ -14,11 +14,22 @@ in `shared/shared.lua`, `'auto'` picks whichever is running).
 
 ## Playing
 
-- Walk to the club rental and press **E**: the pricing board opens. Pick a
-  ticket (Adults / Kids / Seniors-Military), tick any friends standing nearby,
-  then **Buy ticket & start**. Nothing is charged until you press it.
+- Talk to the **Crazy Golf** staff member at the club rental (target eye, or
+  **E** if you don't run a target resource). The pricing board opens: pick a
+  ticket, tick any friends standing nearby, then **Buy ticket & start**.
+  Nothing is charged until you press it.
 - Invited friends get a card to pick their own ticket and join, or decline.
-- Hold the scorecard key while playing to see your card and your group's totals.
+- **Turns, like real golf.** A group plays each hole together. The ball
+  farthest from the cup plays next (everyone level on the tee: fewest strokes,
+  then join order). When everyone has finished a hole, the group moves on.
+- **Walk to your ball.** No screen fades: on your turn an orange arrow sits over
+  your ball. Walk up and press **E** to line up, **X** to step away again.
+  Out of bounds puts the ball back on the tee and you walk back to it.
+- **Your ball is yours.** Other players and their balls pass straight through
+  it, and only you can play it.
+- A turn not taken within `Config.turn_seconds` (90) is scored at the stroke
+  limit so nobody holds the group up (solo play has no timer).
+- Hold the scorecard key to see your card and your group's totals.
 - **Delete** quits early (asks first). Players can rebind it in
   Settings > Key Bindings > FiveM.
 - At the end of the round (or when you quit) your scorecard pops up with

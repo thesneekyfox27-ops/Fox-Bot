@@ -6,7 +6,7 @@ if language == "en" then
         ["stroke"] = "strokes",
         ["locate_club"] = "~INPUT_CONTEXT~ Talk to the Crazy Golf staff (tickets from $%s)",
         ["other_params"] = "~INPUT_ATTACK~ hold to charge your shot\n ~INPUT_VEH_FLY_ATTACK_CAMERA~ show the scorecard\n",
-        ["rotate_params"] = "~INPUT_CELLPHONE_LEFT~ ~INPUT_CELLPHONE_RIGHT~ walk around the ball\n",
+        ["rotate_params"] = "~INPUT_CELLPHONE_LEFT~ ~INPUT_CELLPHONE_RIGHT~ turn around the ball\n",
         ["games_params"] = "~INPUT_VEH_PREV_RADIO~ restart this hole\n ~INPUT_CELLPHONE_OPTION~ quit the game",
         ["no_money"] = "You can't afford the clubs.",
         ["max_stroke"] = "Stroke limit reached for this hole",
@@ -54,6 +54,15 @@ if language == "en" then
         ["ticket_denied"] = "You can't buy that ticket",
         ["card_saved"] = "Scorecard saved to your inventory",
         ["card_failed"] = "Couldn't save the scorecard - inventory full or item missing",
-        ["talk_staff"] = "Talk to %s staff"
+        ["talk_staff"] = "Talk to %s staff",
+        ["your_turn"] = "Your turn - walk to your ball",
+        ["waiting_turn"] = "Waiting for %s to play",
+        ["waiting_group"] = "Waiting for the rest of your group",
+        ["address_ball"] = "~INPUT_CONTEXT~ line up your shot",
+        ["walk_to_ball"] = "Your turn - walk to your ball (orange arrow)",
+        ["aim_params"] = "~INPUT_VEH_DUCK~ step away\n ~INPUT_CELLPHONE_OPTION~ quit the game",
+        ["hole_start"] = "Hole %s - head to the tee",
+        ["you_timeout"] = "Out of time - this hole is scored at the limit",
+        ["group_timeout"] = "%s ran out of time on this hole"
     }
 end

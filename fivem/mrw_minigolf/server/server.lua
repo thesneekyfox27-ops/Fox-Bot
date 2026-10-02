@@ -145,10 +145,166 @@ local function addToGroup(gid, src, ticket)
     local g = Groups[gid]
     local strokes = {}
     for i = 1, HOLES do strokes[i] = 0 end
-    g.players[src] = { name = nameOf(src), strokes = strokes, status = 'playing', ticket = ticket.label }
+    g.players[src] = {
+        name = nameOf(src), strokes = strokes, status = 'playing', ticket = ticket.label,
+        ball = nil,       -- where their ball rests on the current hole (nil = on the tee)
+        holed = false     -- done with the current hole
+    }
     g.order[#g.order + 1] = src
     PlayerGroup[src] = gid
 end
+
+-- ---------------------------------------------------------------------------
+-- turns: the ball farthest from the cup plays next, like real golf.
+-- Ties (everyone on the tee) go in the order people joined.
+-- ---------------------------------------------------------------------------
+local function totalOf(p)
+    local t = 0
+    for i = 1, HOLES do t = t + (p.strokes[i] or 0) end
+    return t
+end
+
+local function tellGroup(g, event, ...)
+    for _, m in ipairs(g.order) do
+        if g.players[m].status == 'playing' then TriggerClientEvent(event, m, ...) end
+    end
+end
+
+local nextTurn
+
+local function finishHoleFor(gid, src, reason)
+    local g = Groups[gid]
+    local p = g.players[src]
+    p.holed, p.ball = true, nil
+    TriggerClientEvent('mrw_minigolf:holeDone', src, p.strokes[g.hole] or 0, reason)
+end
+
+nextTurn = function(gid)
+    local g = Groups[gid]
+    if not g then return end
+    local t = Config.golf_track[g.hole]
+
+    -- farthest from the cup first; about level (within half a metre, e.g. both on
+    -- the tee) -> whoever has taken fewer strokes on this hole, then join order
+    local best, bestDist, bestStrokes
+    for _, m in ipairs(g.order) do
+        local p = g.players[m]
+        if p.status == 'playing' and not p.holed then
+            local b = p.ball or t.start
+            local d = #(vector3(b.x, b.y, b.z) - t.hole)
+            local st = p.strokes[g.hole] or 0
+            if not best
+                or d > bestDist + 0.5
+                or (math.abs(d - bestDist) <= 0.5 and st < bestStrokes) then
+                best, bestDist, bestStrokes = m, d, st
+            end
+        end
+    end
+
+    if best then
+        g.turn, g.turnStarted, g.awaiting = best, GetGameTimer(), false
+        tellGroup(g, 'mrw_minigolf:turn', best, g.players[best].name, g.hole)
+        return
+    end
+
+    -- everyone is done with this hole
+    g.turn = nil
+    local anyone = false
+    for _, m in ipairs(g.order) do
+        if g.players[m].status == 'playing' then anyone = true break end
+    end
+    if not anyone then return end
+
+    if g.hole >= HOLES then
+        for _, m in ipairs(g.order) do
+            local p = g.players[m]
+            if p.status == 'playing' then TriggerClientEvent('mrw_minigolf:groupFinished', m, totalOf(p)) end
+        end
+        return
+    end
+
+    g.hole = g.hole + 1
+    for _, m in ipairs(g.order) do
+        g.players[m].holed, g.players[m].ball = false, nil
+    end
+    tellGroup(g, 'mrw_minigolf:newHole', g.hole)
+    SetTimeout(1500, function() nextTurn(gid) end)   -- give everyone a moment to spawn the new ball
+end
+
+-- the player whose turn it is hit the ball
+RegisterNetEvent("mrw_minigolf:shot")
+AddEventHandler("mrw_minigolf:shot", function(hole)
+    local src = source
+    local gid = PlayerGroup[src]
+    local g = gid and Groups[gid]
+    if not g or g.turn ~= src or g.awaiting or tonumber(hole) ~= g.hole then return end
+
+    local p = g.players[src]
+    p.strokes[g.hole] = math.min((p.strokes[g.hole] or 0) + 1, Config.max_stroke or 10)
+    g.awaiting, g.turnStarted = true, GetGameTimer()
+    broadcast(gid)
+end)
+
+-- where the ball stopped
+RegisterNetEvent("mrw_minigolf:ballState")
+AddEventHandler("mrw_minigolf:ballState", function(hole, result, pos)
+    local src = source
+    local gid = PlayerGroup[src]
+    local g = gid and Groups[gid]
+    if not g or g.turn ~= src or not g.awaiting or tonumber(hole) ~= g.hole then return end
+    g.awaiting = false
+
+    local p = g.players[src]
+    local t = Config.golf_track[g.hole]
+
+    if result == 'holed' then
+        finishHoleFor(gid, src, 'holed')
+    else
+        if result == 'out' or type(pos) ~= 'table' or not tonumber(pos.x) then
+            p.ball = nil                                    -- back on the tee
+        else
+            local b = vector3(tonumber(pos.x), tonumber(pos.y), tonumber(pos.z) or t.start.z)
+            p.ball = #(b - t.hole) < 80.0 and b or nil      -- nonsense positions go back to the tee
+        end
+        if (p.strokes[g.hole] or 0) >= (Config.max_stroke or 10) then
+            finishHoleFor(gid, src, 'max')
+        end
+    end
+
+    broadcast(gid)
+    nextTurn(gid)
+end)
+
+-- nobody holds the group up: a turn that sits too long is scored at the limit
+CreateThread(function()
+    while true do
+        Wait(5000)
+        local now = GetGameTimer()
+        for gid, g in pairs(Groups) do
+            if g.turn then
+                local playing = 0
+                for _, m in ipairs(g.order) do
+                    if g.players[m].status == 'playing' then playing = playing + 1 end
+                end
+                local limit = (g.awaiting and 30 or (Config.turn_seconds or 90)) * 1000
+                if playing > 1 and now - (g.turnStarted or now) > limit then
+                    local src = g.turn
+                    local p = g.players[src]
+                    g.awaiting = false
+                    p.strokes[g.hole] = Config.max_stroke or 10
+                    finishHoleFor(gid, src, 'timeout')
+                    for _, m in ipairs(g.order) do
+                        if m ~= src and g.players[m].status == 'playing' then
+                            notify(m, (translation['group_timeout'] or '%s ran out of time on this hole'):format(p.name))
+                        end
+                    end
+                    broadcast(gid)
+                    nextTurn(gid)
+                end
+            end
+        end
+    end
+end)
 
 -- ---------------------------------------------------------------------------
 -- scorecards: built from the server's own record, so they can't be faked
@@ -265,11 +421,14 @@ local function leaveGroup(src, status)
     for _, m in ipairs(g.order) do
         if g.players[m].status == 'playing' then anyone = true break end
     end
-    if anyone then broadcast(gid) else Groups[gid] = nil end
+    if not anyone then Groups[gid] = nil return end
+
+    broadcast(gid)
+    if g.turn == src then nextTurn(gid) end
 end
 
-local function startGame(src, ticket)
-    TriggerClientEvent("mrw_minigolf:st_game", src, 1)
+local function startGame(src, ticket, hole)
+    TriggerClientEvent("mrw_minigolf:st_game", src, hole or 1)
     notify(src, (translation['game_started'] or 'Clubs rented for $%s - have fun!'):format(ticket.price))
 end
 
@@ -292,10 +451,11 @@ AddEventHandler("mrw_minigolf:requestStart", function(invite, ticketId)
 
     nextGroup = nextGroup + 1
     local gid = nextGroup
-    Groups[gid] = { host = src, players = {}, order = {} }
+    Groups[gid] = { host = src, players = {}, order = {}, hole = 1 }
     addToGroup(gid, src, ticket)
-    startGame(src, ticket)
+    startGame(src, ticket, 1)
     broadcast(gid)
+    SetTimeout(1500, function() nextTurn(gid) end)
 
     -- invites, checked server side: nearby, not already playing, group not full
     local sent, maxGroup = 0, Config.max_group or 4
@@ -347,21 +507,20 @@ AddEventHandler("mrw_minigolf:inviteAnswer", function(accept, ticketId)
     end
 
     addToGroup(inv.gid, src, ticket)
-    startGame(src, ticket)
+    startGame(src, ticket, g.hole)
     notify(inv.from, (translation['invite_joined'] or '%s joined the game'):format(nameOf(src)))
     broadcast(inv.gid)
+    SetTimeout(1500, function()
+        local gg = Groups[inv.gid]
+        if not gg or not gg.players[src] then return end
+        if gg.turn then
+            TriggerClientEvent('mrw_minigolf:turn', src, gg.turn, gg.players[gg.turn].name, gg.hole)
+        else
+            nextTurn(inv.gid)
+        end
+    end)
 end)
 
-RegisterNetEvent("mrw_minigolf:score")
-AddEventHandler("mrw_minigolf:score", function(hole, strokes)
-    local src = source
-    local g = Groups[PlayerGroup[src] or -1]
-    if not g then return end
-    hole, strokes = tonumber(hole), tonumber(strokes)
-    if not hole or hole < 1 or hole > HOLES or not strokes then return end
-    g.players[src].strokes[hole] = math.max(0, math.min(math.floor(strokes), Config.max_stroke or 10))
-    broadcast(PlayerGroup[src])
-end)
 
 RegisterNetEvent("mrw_minigolf:finished")
 AddEventHandler("mrw_minigolf:finished", function()

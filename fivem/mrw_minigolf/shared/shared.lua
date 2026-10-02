@@ -50,6 +50,7 @@ Config.blip = {
 Config.pay_account = 'cash'      -- QBCore: 'cash' or 'bank'
 Config.allow_bank_fallback = true -- QBCore: if cash is short, take it from the bank
 
+Config.turn_seconds = 90          -- in a group, a turn not taken in this long is scored at the stroke limit
 Config.max_group = 4              -- players per group (everyone rents their own clubs)
 Config.invite_range = 8.0         -- how close friends must be to get invited
 Config.quit_key = 'DELETE'        -- default key to quit early (players can rebind it in Settings > Key Bindings > FiveM)

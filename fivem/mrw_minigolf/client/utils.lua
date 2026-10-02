@@ -29,18 +29,29 @@ function Utils:freezeEntity(entity, toggle)
     FreezeEntityPosition(entity, toggle)
 end
 
-function Utils:placePed(h)
-    SetEntityHeading(c.ball.object, h+360.0)
-    AttachEntityToEntity(c.ped(), c.ball.object, 20, 0.14, -0.62, 0.99, 0.0, 0.0, 0.0, false, false, false, false, 1, true)
-    DetachEntity(c.ped(), true, true)
-    SetEntityHeading(c.ball.object, 0.0)
+--- Stand the player at the ball, facing heading h (snaps the last few cm).
+function Utils:placePed(ball, h)
+    local ped = PlayerPedId()
+    SetEntityHeading(ball, h + 360.0)
+    AttachEntityToEntity(ped, ball, 20, 0.14, -0.62, 0.99, 0.0, 0.0, 0.0, false, false, false, false, 1, true)
+    DetachEntity(ped, true, true)
+    SetEntityHeading(ball, 0.0)
 end
 
-function Utils:createCamera()
+--- Where placePed would stand the player, so they can walk there first.
+function Utils:stanceFor(ball, h)
+    SetEntityHeading(ball, h + 360.0)
+    local spot = GetOffsetFromEntityInWorldCoords(ball, 0.14, -0.62, 0.0)
+    SetEntityHeading(ball, 0.0)
+    return spot
+end
+
+function Utils:createCamera(ball)
+    if cam then return end
     cam = CreateCam("DEFAULT_SCRIPTED_FLY_CAMERA", true)
     RenderScriptCams(true,  false,  0,  true,  true)
     SetCamFov(cam, 90.0)
-    AttachCamToEntity(cam, c.ball.object, -0.2, 0.0, 1.0099, false)
+    AttachCamToEntity(cam, ball, -0.2, 0.0, 1.0099, false)
 end
 
 function Utils:deleteCamera()
@@ -75,13 +86,13 @@ function Utils:playSoundFromEntity(sound)
     PlaySoundFromEntity(-1, sound, PlayerPedId(), 0, 0, 0)
 end
 
-function Utils:groundMaterial()
-    local ballCoords = self:getEntityCoords(c.ball.object)
-    local shape = StartShapeTestCapsule(ballCoords.x, ballCoords.y, ballCoords.z + 4, ballCoords.x, ballCoords.y, ballCoords.z - 0.03, 2, -1, c.ball.object, 7)
+function Utils:groundMaterial(ball)
+    local ballCoords = self:getEntityCoords(ball)
+    local shape = StartShapeTestCapsule(ballCoords.x, ballCoords.y, ballCoords.z + 4, ballCoords.x, ballCoords.y, ballCoords.z - 0.03, 2, -1, ball, 7)
     local result, hit, endCoords, surfaceNormal, materialHash, entityHit = GetShapeTestResultIncludingMaterial(shape)
 
     if materialHash == 0 then
-        materialHash = GetLastMaterialHitByEntity(c.ball.object)
+        materialHash = GetLastMaterialHitByEntity(ball)
     end
 
     for i = 1, #self.materials, 1 do
@@ -135,6 +146,10 @@ function Utils:rayCastGamePlayCamera(distance)
 		y = cameraCoord.y + direction.y * distance, 
 		z = cameraCoord.z + direction.z * distance 
 	}
-	local a, b, c, d, e = GetShapeTestResult(StartShapeTestRay(cameraCoord.x, cameraCoord.y, cameraCoord.z, destination.x, destination.y, destination.z, -1, -1, 1))
-	return c
+	local _, hit, endCoords = GetShapeTestResult(StartShapeTestRay(cameraCoord.x, cameraCoord.y, cameraCoord.z, destination.x, destination.y, destination.z, -1, PlayerPedId(), 1))
+	-- aiming at open sky hits nothing: use the far end of the ray instead of (0,0,0)
+	if hit ~= 1 then
+		return vector3(destination.x, destination.y, destination.z)
+	end
+	return endCoords
 end

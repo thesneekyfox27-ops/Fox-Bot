@@ -54,6 +54,15 @@ if language == "fr" then
         ["ticket_denied"] = "Vous ne pouvez pas acheter ce billet",
         ["card_saved"] = "Carte enregistree dans votre inventaire",
         ["card_failed"] = "Impossible d'enregistrer la carte",
-        ["talk_staff"] = "Parler au personnel de %s"
+        ["talk_staff"] = "Parler au personnel de %s",
+        ["your_turn"] = "A vous de jouer - allez a votre balle",
+        ["waiting_turn"] = "En attente de %s",
+        ["waiting_group"] = "En attente du reste du groupe",
+        ["address_ball"] = "~INPUT_CONTEXT~ se mettre en position",
+        ["walk_to_ball"] = "A vous - allez a votre balle (fleche orange)",
+        ["aim_params"] = "~INPUT_VEH_DUCK~ s'ecarter\n ~INPUT_CELLPHONE_OPTION~ quitter la partie",
+        ["hole_start"] = "Trou %s - allez au depart",
+        ["you_timeout"] = "Temps ecoule - ce trou compte au maximum",
+        ["group_timeout"] = "%s a manque de temps sur ce trou"
     }
 end
