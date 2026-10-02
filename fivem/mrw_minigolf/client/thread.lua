@@ -22,11 +22,11 @@ function ZoneThread()
         local pcoords = Utils:getEntityCoords(PlayerPedId())
         local distance = #(pcoords - Config.locate_club)
 
-        if distance <= 1.5 then
+        if distance <= 1.5 and not IsPlayingGolf() then
             d = 1
 
             Ui:displayHelpNotification({
-                translation['locate_club']
+                translation['locate_club']:format(Config.club_price or 0)
             })
 
             if IsControlJustPressed(0, 38) then

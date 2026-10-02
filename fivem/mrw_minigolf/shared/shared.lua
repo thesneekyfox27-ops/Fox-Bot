@@ -1,19 +1,24 @@
 -- Author : Morow
 -- Github : https://github.com/Morow73
 
-_G.language = "en" -- change translation, 'en' or 'fr'
+_G.language = "en" -- change translation: 'en', 'es' or 'fr'
 _G.translation = {}
 
-if IsDuplicityVersion() then
-    Config = {}
-    Config.__index = Config
+Config = {}
+Config.__index = Config
 
-    Config.USE_ESX = true -- use ESX or not ?
-    Config.club_price = 200 -- minigolf price
-else
-    Config = {}
-    Config.__index = Config
+-- Which framework takes the money for the clubs.
+--   'auto' : qb-core if it is running, otherwise es_extended, otherwise free
+--   'qb'   : QBCore
+--   'esx'  : ESX
+--   'none' : no framework, playing is free
+Config.Framework = 'auto'
 
+Config.club_price = 200          -- what renting the clubs costs
+Config.pay_account = 'cash'      -- QBCore: 'cash' or 'bank'
+Config.allow_bank_fallback = true -- QBCore: if cash is short, take it from the bank
+
+do
     Config.max_stroke = 10 -- max stroke
     Config.locate_club = vector3(-1734.24, -1135.17, 12.79) -- locate club position
     Config.golf_track = {

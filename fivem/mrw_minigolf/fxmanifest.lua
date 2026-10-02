@@ -1,8 +1,9 @@
 fx_version 'cerulean'
 game'gta5'
 name 'mrw_minigolf'
-description 'script for patoche golf mapping'
+description 'script for patoche golf mapping - QBCore / ESX / standalone'
 author 'Morow'
+lua54 'yes'
 
 client_scripts{
     'client/*.lua'

@@ -6,6 +6,16 @@ Game.data = {}
 Game.__index = Game
 
 local firstInit, total_stroke, inGame = true, 0, false
+
+function IsPlayingGolf()
+    return inGame
+end
+
+-- messages from the server (e.g. not enough money)
+RegisterNetEvent("mrw_golf:Notification")
+AddEventHandler("mrw_golf:Notification", function(msg)
+    Ui:displayNotification(msg)
+end)
 allGame = {}
 c, s = nil, nil
 
@@ -56,12 +66,12 @@ function Game:addStroke()
         Utils:freezeEntity(c.ped(), false)
         ClearPedTasksImmediately(c.ped())
 
-        if self.hole + 1 < #Config.golf_track then
+        total_stroke = total_stroke + self.stroke
+
+        if self.hole < #Config.golf_track then
             self.hole = self.hole + 1
             TriggerEvent("mrw_minigolf:st_game", self.hole)
         else
-            total_stroke = total_stroke + self.stroke
-
             CreateThread(DisplayScaleform)
             s:addContent(translation["congrats"], ("%s %s %s"):format(translation["finish_game"], total_stroke, translation["stroke"]))
 

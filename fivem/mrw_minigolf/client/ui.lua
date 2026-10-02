@@ -47,7 +47,8 @@ function Ui:displayScoreboard(display)
         SendNuiMessage(json.encode({
             status = true,
             data = allGame,
-            ui = 'Scoreboard'
+            ui = 'Scoreboard',
+            labels = { hole = translation["hole"] or "Hole", score = translation["score"] or "Score" }
         }))
     else
         SendNuiMessage(json.encode({

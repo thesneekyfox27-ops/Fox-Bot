@@ -14,6 +14,11 @@ window.addEventListener('message', function (event) {
     if (ui === 'Scoreboard'){
         Scoreboard.style.display = (status ? "block" : "none");
 
+        if (item.labels) {
+            document.getElementById("labelHole").textContent = item.labels.hole;
+            document.getElementById("labelScore").textContent = item.labels.score;
+        }
+
         if (item.data == undefined) return;
 
         const deleteIfDivExist = function(className){
