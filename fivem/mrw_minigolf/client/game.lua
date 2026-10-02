@@ -15,6 +15,7 @@ local myTurn    = false
 local phase     = 'idle'   -- idle | waiting | approach | lining | aim | shooting | holed
 local turnName  = nil
 local power     = 0.0
+local hitThisHole = false  -- the arrow over the ball only shows until the first putt of a hole
 local myId      = GetPlayerServerId(PlayerId())
 local scoreboardOpen = false
 
@@ -72,6 +73,7 @@ end
 local function stopAiming()
     DrawLineActive = false
     Ui:displayPowerBar(false, 0)
+    Ui:displayControls(false)
 end
 
 --- Heading that faces the cup from where the ball lies (tee uses the course's own heading).
@@ -100,13 +102,8 @@ local shoot   -- forward declaration
 
 local function aimLoop()
     power = 0.0
+    Ui:displayControls(true)
     while inGame and phase == 'aim' and ball do
-        Ui:displayHelpNotification({
-            translation["other_params"],
-            translation["rotate_params"],
-            translation["aim_params"]
-        })
-
         if IsControlPressed(0, 24) then                       -- hold left mouse: charge
             power = math.min(power + 0.01, 1.0)
             Ui:displayPowerBar(true, power)
@@ -169,7 +166,8 @@ function ApproachLoop()
                 return
             end
         else
-            Ui:displayHelpNotification({ translation['walk_to_ball'] })
+            Ui:displayHelpNotification({ hitThisHole and (translation['walk_to_ball_2'] or 'Your turn - walk to your ball')
+                or translation['walk_to_ball'] })
         end
         Wait(0)
     end
@@ -178,6 +176,7 @@ end
 -- ------------------------------------------------------------------ shot
 shoot = function()
     phase = 'shooting'
+    hitThisHole = true
     stopAiming()
 
     local target = Utils:rayCastGamePlayCamera(90.0)
@@ -245,6 +244,7 @@ RegisterNetEvent("mrw_minigolf:st_game")
 AddEventHandler("mrw_minigolf:st_game", function(startHole)
     if inGame then return end
     inGame, hole, myTurn, phase = true, startHole or 1, false, 'waiting'
+    hitThisHole = false
 
     RequestScriptAudioBank("GOLF_I", 0)
     s = s or Scaleform()
@@ -264,6 +264,7 @@ RegisterNetEvent("mrw_minigolf:newHole")
 AddEventHandler("mrw_minigolf:newHole", function(newHole)
     if not inGame then return end
     hole, myTurn, phase = newHole, false, 'waiting'
+    hitThisHole = false
     spawnBall(track().start)
     SetNewWaypoint(track().start.x, track().start.y)
     Ui:displayNotification((translation['hole_start'] or 'Hole %s'):format(hole))
@@ -363,11 +364,14 @@ CreateThread(function()
             if ball and DoesEntityExist(ball.object) then
                 local bpos = GetEntityCoords(ball.object)
 
-                -- arrow over our ball: orange when it's our turn
-                local r, g, b = 255, 255, 255
-                if myTurn then r, g, b = 240, 122, 26 end
-                DrawMarker(2, bpos.x, bpos.y, bpos.z + 0.55, 0.0, 0.0, 0.0, 180.0, 0.0, 0.0,
-                    0.18, 0.18, 0.18, r, g, b, 200, true, true, 2, false, nil, nil, false)
+                -- arrow over our ball until the first putt of the hole (orange on our turn),
+                -- never while lined up or putting
+                if not hitThisHole and phase ~= 'aim' and phase ~= 'lining' and phase ~= 'shooting' then
+                    local r, g, b = 255, 255, 255
+                    if myTurn then r, g, b = 240, 122, 26 end
+                    DrawMarker(2, bpos.x, bpos.y, bpos.z + 0.55, 0.0, 0.0, 0.0, 180.0, 0.0, 0.0,
+                        0.18, 0.18, 0.18, r, g, b, 200, true, true, 2, false, nil, nil, false)
+                end
 
                 -- nobody else can knock our ball: no collision with other players or other balls
                 if GetGameTimer() - lastScan > 500 then

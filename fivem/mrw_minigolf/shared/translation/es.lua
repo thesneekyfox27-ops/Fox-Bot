@@ -63,6 +63,13 @@ if language == "es" then
         ["aim_params"] = "~INPUT_VEH_DUCK~ apartarse\n ~INPUT_CELLPHONE_OPTION~ salir del juego",
         ["hole_start"] = "Hoyo %s - ve a la salida",
         ["you_timeout"] = "Se acabo el tiempo - el hoyo cuenta con el maximo",
-        ["group_timeout"] = "A %s se le acabo el tiempo en este hoyo"
+        ["group_timeout"] = "A %s se le acabo el tiempo en este hoyo",
+        ["controls_title"] = "Controles",
+        ["ctl_putt"] = "Manten para cargar, suelta para tirar",
+        ["ctl_turn"] = "Girar alrededor de la bola",
+        ["ctl_step"] = "Apartarse",
+        ["ctl_card"] = "Tarjeta (mantener)",
+        ["ctl_quit"] = "Salir del juego",
+        ["walk_to_ball_2"] = "Tu turno - camina a tu bola"
     }
 end

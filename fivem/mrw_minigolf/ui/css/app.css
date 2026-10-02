@@ -263,3 +263,38 @@ html, body {
 .sc-title { font-size: 46px; }
 .sc-name { margin-left: -60px; margin-right: -46px; }
 .sc-logo { width: 66px; height: 66px; top: 14px; left: 14px; }
+
+/* ============================ controls card (right side, centred) ============================ */
+#Controls {
+    position: fixed; top: 50%; right: 2.2vw;
+    transform: translateY(-50%);
+    width: 290px;
+    background: rgba(255, 255, 255, .96);
+    border: 3px solid var(--pine);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 14px 34px rgba(0,0,0,.45);
+    animation: slideIn .2s ease;
+}
+@keyframes slideIn { from { transform: translate(30px, -50%); opacity: 0; } to { transform: translate(0, -50%); opacity: 1; } }
+.ctl-head {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--pine); color: #fff;
+    padding: 8px 14px;
+    font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: 1px;
+}
+.ctl-head img { width: 34px; height: 34px; border-radius: 8px; object-fit: cover; border: 2px solid #fff; }
+#ctlList { padding: 8px 12px 10px; }
+.ctl-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 7px 2px; border-bottom: 1px dashed #d5ddd4;
+}
+.ctl-row:last-child { border-bottom: none; }
+.ctl-key {
+    min-width: 62px; text-align: center;
+    font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: .5px;
+    color: #fff; background: var(--orange);
+    border-radius: 7px; padding: 4px 8px;
+    box-shadow: 0 2px 0 #b8560c;
+}
+.ctl-label { font-size: 14px; color: var(--ink); line-height: 1.25; }

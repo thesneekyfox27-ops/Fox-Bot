@@ -275,6 +275,14 @@ window.addEventListener('message', (event) => {
             break;
         }
 
+        case 'Controls':
+            if (!status) { $('Controls').classList.add('hidden'); break; }
+            $('ctlTitle').textContent = String(item.title || 'Controls').toUpperCase();
+            $('ctlList').innerHTML = arr(item.items).map((c) => `
+                <div class="ctl-row"><span class="ctl-key">${esc(c.key)}</span><span class="ctl-label">${esc(c.label)}</span></div>`).join('');
+            $('Controls').classList.remove('hidden');
+            break;
+
         case 'Quit':
             $('qTitle').textContent = t('quit_title', 'Quit the game?').toUpperCase();
             $('qText').textContent = fmt(t('quit_text', 'You have %s strokes so far.'), item.strokes || 0);

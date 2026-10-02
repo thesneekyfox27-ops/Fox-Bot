@@ -89,3 +89,24 @@ function Ui:displayPowerBar(display, power)
         }))
     end
 end
+
+--- Controls card on the right side while lined up to putt.
+function Ui:displayControls(display)
+    if not display then
+        SendNuiMessage(json.encode({ ui = 'Controls', status = false }))
+        return
+    end
+    local k = Config.control_keys or {}
+    SendNuiMessage(json.encode({
+        ui = 'Controls',
+        status = true,
+        title = translation['controls_title'] or 'Controls',
+        items = {
+            { key = k.putt or 'LMB',          label = translation['ctl_putt'] or 'Hold to charge, release to putt' },
+            { key = k.turn or '\u{2190} \u{2192}', label = translation['ctl_turn'] or 'Turn around the ball' },
+            { key = k.step or 'X',            label = translation['ctl_step'] or 'Step away' },
+            { key = k.card or 'INSERT',       label = translation['ctl_card'] or 'Scorecard (hold)' },
+            { key = Config.quit_key or 'DELETE', label = translation['ctl_quit'] or 'Quit game' },
+        }
+    }))
+end

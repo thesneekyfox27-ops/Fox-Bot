@@ -63,6 +63,13 @@ if language == "en" then
         ["aim_params"] = "~INPUT_VEH_DUCK~ step away\n ~INPUT_CELLPHONE_OPTION~ quit the game",
         ["hole_start"] = "Hole %s - head to the tee",
         ["you_timeout"] = "Out of time - this hole is scored at the limit",
-        ["group_timeout"] = "%s ran out of time on this hole"
+        ["group_timeout"] = "%s ran out of time on this hole",
+        ["controls_title"] = "Controls",
+        ["ctl_putt"] = "Hold to charge, release to putt",
+        ["ctl_turn"] = "Turn around the ball",
+        ["ctl_step"] = "Step away",
+        ["ctl_card"] = "Scorecard (hold)",
+        ["ctl_quit"] = "Quit game",
+        ["walk_to_ball_2"] = "Your turn - walk to your ball"
     }
 end

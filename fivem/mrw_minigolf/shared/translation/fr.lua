@@ -63,6 +63,13 @@ if language == "fr" then
         ["aim_params"] = "~INPUT_VEH_DUCK~ s'ecarter\n ~INPUT_CELLPHONE_OPTION~ quitter la partie",
         ["hole_start"] = "Trou %s - allez au depart",
         ["you_timeout"] = "Temps ecoule - ce trou compte au maximum",
-        ["group_timeout"] = "%s a manque de temps sur ce trou"
+        ["group_timeout"] = "%s a manque de temps sur ce trou",
+        ["controls_title"] = "Commandes",
+        ["ctl_putt"] = "Maintenir pour charger, relacher pour jouer",
+        ["ctl_turn"] = "Tourner autour de la balle",
+        ["ctl_step"] = "S'ecarter",
+        ["ctl_card"] = "Carte de score (maintenir)",
+        ["ctl_quit"] = "Quitter la partie",
+        ["walk_to_ball_2"] = "A vous - allez a votre balle"
     }
 end

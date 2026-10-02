@@ -53,6 +53,7 @@ Config.allow_bank_fallback = true -- QBCore: if cash is short, take it from the 
 Config.turn_seconds = 90          -- in a group, a turn not taken in this long is scored at the stroke limit
 Config.max_group = 4              -- players per group (everyone rents their own clubs)
 Config.invite_range = 8.0         -- how close friends must be to get invited
+Config.control_keys = { putt = 'LMB', turn = '\u{2190} \u{2192}', step = 'X', card = 'INSERT' }  -- labels on the controls card
 Config.quit_key = 'DELETE'        -- default key to quit early (players can rebind it in Settings > Key Bindings > FiveM)
 
 do
