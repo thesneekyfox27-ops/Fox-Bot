@@ -18,7 +18,7 @@ if Config == nil then
         PedModel = 'a_m_y_business_01', PedScenario = 'WORLD_HUMAN_CLIPBOARD',
         ReturnRadius = 30.0,
         DepositRefundPct = 0.75, DamagePenalty = true, MaxActiveRentals = 1,
-        Contract = { enabled = true, requireAgree = true, requireSignature = true, company = 'Clipboard Rentals LLC', terms = {} },
+        Contract = { enabled = true, requireAgree = true, requireSignature = true, mustMatchName = true, company = 'Clipboard Rentals LLC', terms = {} },
         TempRegistration = { enabled = true, minutes = 60, notifyOnExpire = true, authority = 'Los Santos DMV' },
         VehicleKeys = { enabled = true, system = 'auto', debug = true },
         Vehicles = {
@@ -102,6 +102,23 @@ local function getCharName(src)
     local n = GetPlayerName(src)
     return n and n or 'Renter'
 end
+
+-- "Bob  Myers", "bob myers", "Bob Myers." all count as the same name
+local function normName(s)
+    s = tostring(s or ''):lower():gsub("[^%a%s'%-]", ''):gsub('%s+', ' ')
+    return (s:gsub('^%s+', ''):gsub('%s+$', ''))
+end
+
+local function mustMatchName()
+    return Config.Contract and Config.Contract.mustMatchName ~= false
+end
+
+-- the client asks for the name the renter has to sign with
+RegisterNetEvent('clipboard_rentals:server:getSignerName', function()
+    local src = source
+    TriggerClientEvent('clipboard_rentals:client:signerName', src,
+        getCharName(src), mustMatchName() and Config.Contract and Config.Contract.requireSignature or false)
+end)
 
 -- ===================== HELPERS =====================
 local function findVehicleConfig(model)
@@ -256,6 +273,17 @@ RegisterNetEvent('clipboard_rentals:requestRent', function(model, signature)
             return
         end
         if #signature > 32 then signature = signature:sub(1, 32) end
+
+        -- must be the character's real name, not a made up one
+        if mustMatchName() then
+            local real = getCharName(src)
+            if normName(signature) ~= normName(real) then
+                TriggerClientEvent('clipboard_rentals:notify', src,
+                    ('Sign with your real name: %s'):format(real), 'error')
+                return
+            end
+            signature = real
+        end
     else
         signature = getCharName(src)
     end

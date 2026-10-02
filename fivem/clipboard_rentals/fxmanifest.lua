@@ -15,7 +15,6 @@ files {
     'html/index.html',
     'html/style.css',
     'html/script.js',
-    'html/pages.js',
     'html/fonts.css',
     'html/fonts/*.woff2'
 }

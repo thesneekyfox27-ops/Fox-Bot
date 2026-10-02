@@ -564,6 +564,17 @@ body {
   line-height: 1.1;
 }
 .sign-input::placeholder { color: #b9b09a; font-family: var(--sans); font-size: 13px; font-weight: 400; }
+.sign-hint {
+  font-size: 11.5px; color: var(--paper-muted);
+  margin-top: 6px;
+}
+.sign-hint b { color: var(--ink); }
+.sign-hint.bad { color: var(--bad); }
+.sign-hint.bad b { color: var(--bad); }
+.sign-hint.good { color: var(--ok); }
+.sign-hint.good b { color: var(--ok); }
+.sign-hint.good::after { content: '  \2713'; font-weight: 800; }
+
 .agree {
   display: flex; align-items: flex-start; gap: 8px;
   font-size: 11.5px; color: #3a362d; margin-top: 10px;
@@ -626,6 +637,11 @@ body {
 }
 
 .contract-doc { padding-bottom: 70px; }
+
+/* fallback if the paging script ever fails: stack the papers and scroll,
+   never squeeze them side by side */
+.papers-wrap:not(.paged) { flex-direction: column; gap: 14px; overflow-y: auto; }
+.papers-wrap:not(.paged) .doc { flex: none; }
 .reg-doc .reg-timer { padding-bottom: 70px; }
 
 .contract-doc .doc-head {
@@ -749,8 +765,9 @@ body {
    TOASTS - sticky notes
    ===================================================================== */
 #toasts {
-  position: fixed; top: 24px; right: 24px;
-  display: flex; flex-direction: column; gap: 12px;
+  position: fixed; top: 24px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
   z-index: 99;
 }
 .toast {
@@ -774,9 +791,9 @@ body {
 }
 .toast.success { background: #c9f2cf; }
 .toast.error { background: #ffc9c4; }
-@keyframes slideIn { from { transform: translateX(40px) rotate(-1deg); opacity: 0; } to { transform: rotate(-1deg); opacity: 1; } }
+@keyframes slideIn { from { transform: translateY(-30px) rotate(-1deg); opacity: 0; } to { transform: rotate(-1deg); opacity: 1; } }
 .toast.out { animation: slideOut .25s ease forwards; }
-@keyframes slideOut { to { transform: translateX(40px) rotate(-1deg); opacity: 0; } }
+@keyframes slideOut { to { transform: translateY(-30px) rotate(-1deg); opacity: 0; } }
 
 /* =====================================================================
    INTERACTION PROMPT - a little clipboard tag

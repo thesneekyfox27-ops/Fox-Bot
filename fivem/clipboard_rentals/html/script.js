@@ -12,6 +12,7 @@ let activeCat = 'All';
 let selected = null;
 let contractCfg = { enabled: false, requireAgree: false, requireSignature: false, company: '', terms: [], duration: 60 };
 let countdownTimer = null;
+let signer = { name: '', required: false };   // real name the renter must sign with
 
 const post = (name, data = {}) =>
   fetch(`https://${GetParentResourceName()}/${name}`, {
@@ -69,6 +70,11 @@ window.addEventListener('message', ({ data }) => {
 
     case 'notify':
       toast(data.message, data.type);
+      break;
+
+    case 'signerName':
+      signer = { name: data.name || '', required: !!data.required };
+      if (!confirmEl.classList.contains('hidden')) { showSignHint(); updateConfirmState(); }
       break;
   }
 });
@@ -163,6 +169,7 @@ function openConfirm(v) {
     confirmBtn.textContent = 'Sign & drive';
     sig.oninput = updateConfirmState;
     chk.onchange = updateConfirmState;
+    showSignHint();
     updateConfirmState();
   } else {
     pane.classList.add('hidden');
@@ -179,8 +186,27 @@ function updateConfirmState() {
   const agreed = document.getElementById('agreeChk').checked;
   let ok = true;
   if (contractCfg.requireSignature && sig.length === 0) ok = false;
+  if (contractCfg.requireSignature && signer.required && signer.name) {
+    const match = normName(sig) === normName(signer.name);
+    if (!match) ok = false;
+    const hint = document.getElementById('signHint');
+    if (hint) hint.classList.toggle('bad', sig.length > 0 && !match);
+    if (hint) hint.classList.toggle('good', match);
+  }
   if (contractCfg.requireAgree && !agreed) ok = false;
   confirmBtn.disabled = !ok;
+}
+
+function normName(s) {
+  return String(s || '').toLowerCase().replace(/[^a-z\s'-]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function showSignHint() {
+  const hint = document.getElementById('signHint');
+  if (!hint) return;
+  const show = contractCfg.requireSignature && signer.required && signer.name;
+  hint.classList.toggle('hidden', !show);
+  if (show) document.getElementById('signHintName').textContent = signer.name;
 }
 
 function closeConfirm() {

@@ -67,6 +67,7 @@ Config.Contract = {
     enabled = true,
     requireAgree = true,        -- must tick "I agree" to rent
     requireSignature = true,    -- must type a signature to rent
+    mustMatchName = true,       -- signature must be the character's real name (checked on the server)
     company = 'Clipboard Rentals LLC',
     -- {label} tokens are filled in live from the rental. Edit freely.
     terms = {

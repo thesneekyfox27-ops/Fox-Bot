@@ -18,7 +18,7 @@ if Config == nil then
         PedModel = 'a_m_y_business_01', PedScenario = 'WORLD_HUMAN_CLIPBOARD',
         ReturnRadius = 30.0,
         DepositRefundPct = 0.75, DamagePenalty = true, MaxActiveRentals = 1,
-        Contract = { enabled = true, requireAgree = true, requireSignature = true, company = 'Clipboard Rentals LLC', terms = {} },
+        Contract = { enabled = true, requireAgree = true, requireSignature = true, mustMatchName = true, company = 'Clipboard Rentals LLC', terms = {} },
         TempRegistration = { enabled = true, minutes = 60, notifyOnExpire = true, authority = 'Los Santos DMV' },
         Vehicles = {
             { model = 'panto',  label = 'Panto',  category = 'Economy', price = 50,  deposit = 50,  desc = 'Technically a car.' },
@@ -231,7 +231,12 @@ end)
 -- ===================== NUI: RENTAL BROWSER =====================
 local uiConfirmed = false
 
+RegisterNetEvent('clipboard_rentals:client:signerName', function(name, required)
+    SendNUIMessage({ action = 'signerName', name = name, required = required })
+end)
+
 function OpenRentalUI()
+    TriggerServerEvent('clipboard_rentals:server:getSignerName')
     local ok, err = pcall(function()
         uiOpen = true
         uiConfirmed = false
