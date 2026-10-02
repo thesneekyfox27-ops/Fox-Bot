@@ -49,7 +49,7 @@ function Ui:displayScoreboard(display)
         if not rows or #rows == 0 then
             local strokes = {}
             for i, h in ipairs(allGame or {}) do strokes[i] = h.stroke or 0 end
-            rows = { { name = GetPlayerName(PlayerId()), strokes = strokes, me = true } }
+            rows = { { id = GetPlayerServerId(PlayerId()), name = GetPlayerName(PlayerId()), strokes = strokes, me = true } }
         end
         SendNuiMessage(json.encode({
             status = true,
@@ -57,7 +57,13 @@ function Ui:displayScoreboard(display)
             holes = #Config.golf_track,
             rows = rows,
             myId = GetPlayerServerId(PlayerId()),
-            labels = { hole = translation["hole"] or "Hole", total = translation["total"] or "Total" }
+            course = Config.course_name,
+            labels = {
+                hole = translation["hole"] or "Hole", total = translation["total"] or "Total",
+                card_title = translation["card_title"] or "Scorecard", card_name = translation["card_name"] or "Participant's name",
+                card_holeno = translation["card_holeno"] or "Hole no", card_score = translation["card_score"] or "Score",
+                card_total = translation["card_total"] or "Total", card_group = translation["card_group"] or "Your group"
+            }
         }))
     else
         SendNuiMessage(json.encode({

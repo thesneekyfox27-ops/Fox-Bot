@@ -4,6 +4,14 @@
 local currentPosition, ScoreboardIsOpen, power, gameCamPosition = nil, false, 0.0, nil
 DrawLineActive, ScaleformActive = false, false
 
+function CheapestTicket()
+    local low
+    for _, tk in ipairs(Config.tickets or {}) do
+        if not low or tk.price < low then low = tk.price end
+    end
+    return low or Config.club_price or 0
+end
+
 function ScoreboardIsShowing()
     return ScoreboardIsOpen
 end
@@ -30,7 +38,7 @@ function ZoneThread()
             d = 1
 
             Ui:displayHelpNotification({
-                translation['locate_club']:format(Config.club_price or 0)
+                translation['locate_club']:format(CheapestTicket())
             })
 
             if IsControlJustPressed(0, 38) then

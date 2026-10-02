@@ -6,51 +6,103 @@
     <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
-    <!-- scorecard (hold the scorecard key while playing) -->
-    <div id="Scoreboard" class="card hidden">
-        <div class="Scoreboard-header">Portside Minigolf</div>
-        <table id="ScoreTable"></table>
+    <!-- ======================= paper scorecard ======================= -->
+    <div id="CardWrap" class="hidden">
+        <div class="scorecard" id="Card">
+            <div class="sc-top">
+                <div class="sc-course" id="cCourse">PORTSIDE MINIGOLF</div>
+                <div class="sc-title" id="cTitle">SCORECARD</div>
+                <div class="sc-name">
+                    <span class="sc-name-label" id="cNameLabel">Participant's name :</span>
+                    <span class="sc-name-line" id="cName"></span>
+                </div>
+                <svg class="sc-flag" viewBox="0 0 60 90" aria-hidden="true">
+                    <line x1="12" y1="6" x2="12" y2="86" stroke="#5b3a1e" stroke-width="3"/>
+                    <path d="M13 8 C30 2 40 16 56 8 L50 22 C38 30 28 18 13 26 Z" fill="#1f63b8"/>
+                    <ellipse cx="12" cy="86" rx="9" ry="3" fill="#3b2a18"/>
+                </svg>
+            </div>
+            <div class="sc-course-art">
+                <div class="sc-panel">
+                    <table class="sc-table" id="cTable"></table>
+                    <div class="sc-total"><span id="cTotalLabel">TOTAL</span><b id="cTotal">0</b></div>
+                </div>
+                <div class="sc-ball"></div>
+                <div class="sc-bush"></div>
+            </div>
+            <div class="sc-foot" id="cFoot"></div>
+            <div class="sc-stamp hidden" id="cStamp">LEFT EARLY</div>
+        </div>
+        <div class="sc-col">
+            <div class="sc-side" id="cSide"></div>
+            <div class="sc-buttons" id="cButtons">
+                <button class="btn orange" id="cKeep">Keep scorecard</button>
+                <button class="btn ghost" id="cClose">Close</button>
+            </div>
+        </div>
     </div>
 
-    <!-- shot power -->
+    <!-- ======================= shot power ======================= -->
     <div id="Bar" class="hidden"><div id="PowerBar"></div></div>
 
-    <!-- E at the rental -->
-    <div id="Start" class="card modal hidden">
-        <div class="title" id="sTitle">Portside Minigolf</div>
-        <div class="price-row">
-            <span id="sPriceLabel">Club rental</span>
-            <b id="sPrice">$200</b>
+    <!-- ======================= pricing board (E at the rental) ======================= -->
+    <div id="Start" class="pricing modal hidden">
+        <div class="pr-head">
+            <span class="pr-ball"></span>
+            <span class="pr-title" id="sTitle">MINI GOLF PRICING</span>
         </div>
-        <div class="sub" id="sHoles">12 holes</div>
-        <div class="section" id="sInviteLabel">Bring friends:</div>
-        <div id="sPlayers" class="players"></div>
-        <button class="link" id="sRefresh">refresh</button>
-        <div class="mode" id="sMode"></div>
-        <div class="buttons">
-            <button class="btn ghost" id="sCancel">Cancel</button>
-            <button class="btn primary" id="sStart">Rent clubs &amp; start</button>
+        <div class="pr-body">
+            <svg class="pr-art" viewBox="0 0 220 230" aria-hidden="true">
+                <path d="M30 150 C10 120 40 95 80 108 C110 80 175 88 190 125 C215 150 200 200 150 205 C110 215 70 210 45 195 C20 185 25 165 30 150 Z" fill="#1e5a26"/>
+                <path d="M34 146 C16 120 42 100 80 112 C110 86 172 94 186 126 C208 150 196 196 150 200 C110 208 72 204 48 190 C26 182 30 162 34 146 Z" fill="#3f9a3a"/>
+                <ellipse cx="95" cy="128" rx="17" ry="7" fill="#e9f0e6"/><ellipse cx="95" cy="129" rx="13" ry="5" fill="#2a2a2a"/>
+                <ellipse cx="80" cy="172" rx="17" ry="7" fill="#e9f0e6"/><ellipse cx="80" cy="173" rx="13" ry="5" fill="#2a2a2a"/>
+                <line x1="82" y1="30" x2="82" y2="172" stroke="#d9d9d9" stroke-width="5"/>
+                <circle cx="82" cy="28" r="6" fill="#7a7a7a"/>
+                <path d="M85 34 L150 50 L85 68 Z" fill="#f07a1a"/>
+                <circle cx="150" cy="168" r="14" fill="#f07a1a"/><circle cx="146" cy="163" r="4" fill="#ffb27a"/>
+            </svg>
+            <div class="pr-divider"></div>
+            <div class="pr-list" id="sTickets"></div>
+        </div>
+        <div class="pr-extra">
+            <div class="pr-info" id="sInfo"></div>
+            <div class="section" id="sInviteLabel">Bring friends:</div>
+            <div id="sPlayers" class="players"></div>
+            <button class="link" id="sRefresh">refresh</button>
+            <div class="buttons">
+                <button class="btn ghost" id="sCancel">Cancel</button>
+                <button class="btn orange" id="sStart">Buy ticket</button>
+            </div>
         </div>
     </div>
 
-    <!-- someone invited you -->
-    <div id="Invite" class="card modal hidden">
-        <div class="title" id="iTitle">Minigolf invite</div>
-        <p class="text" id="iText"></p>
-        <div class="timer"><span id="iBar"></span></div>
-        <div class="buttons">
-            <button class="btn ghost" id="iNo">No thanks</button>
-            <button class="btn primary" id="iYes">Join</button>
+    <!-- ======================= invite ======================= -->
+    <div id="Invite" class="pricing modal small hidden">
+        <div class="pr-head">
+            <span class="pr-ball"></span>
+            <span class="pr-title" id="iTitle">MINIGOLF INVITE</span>
+        </div>
+        <div class="pr-extra">
+            <p class="text" id="iText"></p>
+            <div class="pr-list compact" id="iTickets"></div>
+            <div class="timer"><span id="iBar"></span></div>
+            <div class="buttons">
+                <button class="btn ghost" id="iNo">No thanks</button>
+                <button class="btn orange" id="iYes">Join</button>
+            </div>
         </div>
     </div>
 
-    <!-- quit early -->
-    <div id="Quit" class="card modal hidden">
-        <div class="title" id="qTitle">Quit the game?</div>
-        <p class="text" id="qText"></p>
-        <div class="buttons">
-            <button class="btn ghost" id="qNo">Keep playing</button>
-            <button class="btn danger" id="qYes">Quit</button>
+    <!-- ======================= quit early ======================= -->
+    <div id="Quit" class="pricing modal small hidden">
+        <div class="pr-head"><span class="pr-ball"></span><span class="pr-title" id="qTitle">QUIT THE GAME?</span></div>
+        <div class="pr-extra">
+            <p class="text" id="qText"></p>
+            <div class="buttons">
+                <button class="btn ghost" id="qNo">Keep playing</button>
+                <button class="btn danger" id="qYes">Quit</button>
+            </div>
         </div>
     </div>
 

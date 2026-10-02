@@ -31,8 +31,39 @@ end
 
 CreateThread(function()
     Framework = detectFramework()
-    print(('[mrw_minigolf] framework: %s, clubs cost $%d'):format(Framework, Config.club_price or 0))
+    print(('[mrw_minigolf] framework: %s, %d ticket types'):format(Framework, #(Config.tickets or {})))
+
+    -- qb-inventory style: using the scorecard item opens it
+    local item = Config.scorecard_item
+    if Framework == 'qb' and item and item.enabled then
+        QBCore.Functions.CreateUseableItem(item.name, function(source, it)
+            TriggerClientEvent('mrw_minigolf:viewCard', source, it and (it.info or it.metadata) or nil)
+        end)
+    end
 end)
+
+--- The ticket a player picked, if they are allowed to buy it.
+local function ticketFor(src, id)
+    for _, t in ipairs(Config.tickets or {}) do
+        if t.id == id then
+            if t.jobs then
+                local job
+                if Framework == 'qb' then
+                    local P = QBCore.Functions.GetPlayer(src)
+                    job = P and P.PlayerData.job and P.PlayerData.job.name
+                elseif Framework == 'esx' then
+                    local x = ESX.GetPlayerFromId(src)
+                    job = x and x.job and x.job.name
+                end
+                local ok = false
+                for _, j in ipairs(t.jobs) do if j == job then ok = true break end end
+                if not ok then return nil end
+            end
+            return t
+        end
+    end
+    return nil
+end
 
 --- Take the club rental from the player. Returns true if paid.
 local function charge(src, price)
@@ -110,14 +141,97 @@ local function broadcast(gid)
     end
 end
 
-local function addToGroup(gid, src)
+local function addToGroup(gid, src, ticket)
     local g = Groups[gid]
     local strokes = {}
     for i = 1, HOLES do strokes[i] = 0 end
-    g.players[src] = { name = nameOf(src), strokes = strokes, status = 'playing' }
+    g.players[src] = { name = nameOf(src), strokes = strokes, status = 'playing', ticket = ticket.label }
     g.order[#g.order + 1] = src
     PlayerGroup[src] = gid
 end
+
+-- ---------------------------------------------------------------------------
+-- scorecards: built from the server's own record, so they can't be faked
+-- ---------------------------------------------------------------------------
+local PendingCard = {}   -- [src] = card they can still choose to keep
+
+local function sumStrokes(strokes)
+    local total, played = 0, 0
+    for i = 1, HOLES do
+        local v = strokes[i] or 0
+        total = total + v
+        if v > 0 then played = played + 1 end
+    end
+    return total, played
+end
+
+local function buildCard(g, src)
+    local p = g.players[src]
+    local total, played = sumStrokes(p.strokes)
+    local list, others = {}, {}
+    for i = 1, HOLES do list[i] = tostring(p.strokes[i] or 0) end
+    for _, m in ipairs(g.order) do
+        if m ~= src then
+            local o = g.players[m]
+            local t = sumStrokes(o.strokes)
+            others[#others + 1] = ('%s: %d%s'):format(o.name, t, o.status == 'quit' and ' (left)' or '')
+        end
+    end
+    local date = os.date('%b %d, %Y')
+    return {
+        course   = Config.course_name or 'Minigolf',
+        name     = p.name,
+        date     = date,
+        ticket   = p.ticket,
+        strokes  = table.concat(list, ','),   -- plain string: safe in any inventory's metadata
+        total    = total,
+        holes    = HOLES,
+        played   = played,
+        finished = p.status == 'done',
+        group    = table.concat(others, '; '),
+        description = ('%s - %d strokes over %d holes%s'):format(date, total, played,
+            p.status == 'done' and '' or ' (left early)')
+    }
+end
+
+local function inventoryType()
+    local want = (Config.scorecard_item and Config.scorecard_item.inventory) or 'auto'
+    if want == 'ox' or (want == 'auto' and GetResourceState('ox_inventory') == 'started') then return 'ox' end
+    if want == 'qb' or (want == 'auto' and Framework == 'qb') then return 'qb' end
+    return nil
+end
+
+local function giveCard(src, card)
+    local item = Config.scorecard_item
+    if not (item and item.enabled) then return false end
+    local inv, ok = inventoryType(), false
+
+    if inv == 'ox' then
+        ok = pcall(function() ok = exports.ox_inventory:AddItem(src, item.name, 1, card) end) and ok
+    elseif inv == 'qb' and QBCore then
+        local Player = QBCore.Functions.GetPlayer(src)
+        if Player then
+            ok = Player.Functions.AddItem(item.name, 1, false, card) ~= false
+            if ok and QBCore.Shared.Items[item.name] then
+                TriggerClientEvent('inventory:client:ItemBox', src, QBCore.Shared.Items[item.name], 'add')
+            end
+        end
+    end
+    return ok and true or false
+end
+
+RegisterNetEvent("mrw_minigolf:keepCard")
+AddEventHandler("mrw_minigolf:keepCard", function()
+    local src = source
+    local card = PendingCard[src]
+    PendingCard[src] = nil
+    if not card then return end
+    if giveCard(src, card) then
+        notify(src, translation['card_saved'] or 'Scorecard saved to your inventory')
+    else
+        notify(src, translation['card_failed'] or "Couldn't save the scorecard - inventory full or item missing")
+    end
+end)
 
 --- player is done with the game (finished, quit or left the server)
 local function leaveGroup(src, status)
@@ -127,6 +241,15 @@ local function leaveGroup(src, status)
     if not g or not g.players[src] then return end
 
     g.players[src].status = status
+
+    -- show them their card and let them keep it
+    if status ~= 'dropped' then
+        local card = buildCard(g, src)
+        PendingCard[src] = card
+        TriggerClientEvent('mrw_minigolf:finalCard', src, card,
+            Config.scorecard_item and Config.scorecard_item.enabled or false)
+    end
+    if status == 'dropped' then g.players[src].status = 'quit' status = 'quit' end
     if status == 'quit' then
         for _, m in ipairs(g.order) do
             if m ~= src and g.players[m].status == 'playing' then
@@ -142,29 +265,33 @@ local function leaveGroup(src, status)
     if anyone then broadcast(gid) else Groups[gid] = nil end
 end
 
-local function startGame(src)
+local function startGame(src, ticket)
     TriggerClientEvent("mrw_minigolf:st_game", src, 1)
-    notify(src, (translation['game_started'] or 'Clubs rented for $%s - have fun!'):format(Config.club_price or 0))
+    notify(src, (translation['game_started'] or 'Clubs rented for $%s - have fun!'):format(ticket.price))
 end
 
 -- E at the rental -> start card -> Start
 RegisterNetEvent("mrw_minigolf:requestStart")
-AddEventHandler("mrw_minigolf:requestStart", function(invite)
+AddEventHandler("mrw_minigolf:requestStart", function(invite, ticketId)
     local src, now = source, GetGameTimer()
     if lastPress[src] and now - lastPress[src] < 3000 then return end
     lastPress[src] = now
 
     if PlayerGroup[src] or not nearRental(src) then return end
 
-    if not charge(src, Config.club_price or 0) then
+    local ticket = ticketFor(src, ticketId)
+    if not ticket then
+        return notify(src, translation['ticket_denied'] or "You can't buy that ticket")
+    end
+    if not charge(src, ticket.price) then
         return notify(src, translation["no_money"])
     end
 
     nextGroup = nextGroup + 1
     local gid = nextGroup
     Groups[gid] = { host = src, players = {}, order = {} }
-    addToGroup(gid, src)
-    startGame(src)
+    addToGroup(gid, src, ticket)
+    startGame(src, ticket)
     broadcast(gid)
 
     -- invites, checked server side: nearby, not already playing, group not full
@@ -179,7 +306,7 @@ AddEventHandler("mrw_minigolf:requestStart", function(invite)
                 local ped = GetPlayerPed(t)
                 if ped and ped ~= 0 and #(GetEntityCoords(ped) - hostPos) <= (Config.invite_range or 8.0) + 4.0 then
                     Invites[t] = { gid = gid, from = src, expires = now + 30000 }
-                    TriggerClientEvent('mrw_minigolf:invited', t, nameOf(src), Config.club_price or 0, 30)
+                    TriggerClientEvent('mrw_minigolf:invited', t, nameOf(src), 30)
                     sent = sent + 1
                 end
             end
@@ -191,7 +318,7 @@ AddEventHandler("mrw_minigolf:requestStart", function(invite)
 end)
 
 RegisterNetEvent("mrw_minigolf:inviteAnswer")
-AddEventHandler("mrw_minigolf:inviteAnswer", function(accept)
+AddEventHandler("mrw_minigolf:inviteAnswer", function(accept, ticketId)
     local src = source
     local inv = Invites[src]
     Invites[src] = nil
@@ -208,12 +335,16 @@ AddEventHandler("mrw_minigolf:inviteAnswer", function(accept)
     end
     if PlayerGroup[src] or not nearRental(src, 25.0) then return end
 
-    if not charge(src, Config.club_price or 0) then
+    local ticket = ticketFor(src, ticketId)
+    if not ticket then
+        return notify(src, translation['ticket_denied'] or "You can't buy that ticket")
+    end
+    if not charge(src, ticket.price) then
         return notify(src, translation["no_money"])
     end
 
-    addToGroup(inv.gid, src)
-    startGame(src)
+    addToGroup(inv.gid, src, ticket)
+    startGame(src, ticket)
     notify(inv.from, (translation['invite_joined'] or '%s joined the game'):format(nameOf(src)))
     broadcast(inv.gid)
 end)
@@ -241,6 +372,6 @@ end)
 
 AddEventHandler('playerDropped', function()
     local src = source
-    lastPress[src], Invites[src] = nil, nil
-    leaveGroup(src, 'quit')
+    lastPress[src], Invites[src], PendingCard[src] = nil, nil, nil
+    leaveGroup(src, 'dropped')
 end)

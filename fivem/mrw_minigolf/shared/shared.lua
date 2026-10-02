@@ -14,7 +14,22 @@ Config.__index = Config
 --   'none' : no framework, playing is free
 Config.Framework = 'auto'
 
-Config.club_price = 200          -- what renting the clubs costs
+-- Tickets shown on the pricing board. Everyone picks their own.
+-- Add  jobs = { 'police', 'army' }  to a ticket to limit who can buy it.
+Config.tickets = {
+    { id = 'adult',  label = 'Adults',            price = 15 },
+    { id = 'kid',    label = 'Kids',              price = 12 },
+    { id = 'senior', label = 'Seniors/Military',  price = 10 },
+}
+Config.club_price = 15           -- fallback if a ticket can't be found
+
+-- Scorecard item: at the end of a round you can keep your scorecard.
+Config.scorecard_item = {
+    enabled   = true,
+    name      = 'minigolf_scorecard',   -- must exist in your inventory's item list (see README)
+    inventory = 'auto'                  -- 'auto', 'ox' or 'qb'
+}
+Config.course_name = 'Portside Minigolf'
 Config.pay_account = 'cash'      -- QBCore: 'cash' or 'bank'
 Config.allow_bank_fallback = true -- QBCore: if cash is short, take it from the bank
 

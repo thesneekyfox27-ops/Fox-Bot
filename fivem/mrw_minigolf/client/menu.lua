@@ -19,7 +19,9 @@ end
 local function labels()
     local keys = { 'menu_title', 'menu_price', 'menu_holes', 'menu_invite', 'menu_nobody', 'menu_start',
         'menu_cancel', 'menu_refresh', 'invite_title', 'invite_text', 'invite_accept', 'invite_decline',
-        'quit_title', 'quit_text', 'quit_yes', 'quit_no', 'hole', 'score', 'total', 'menu_solo', 'menu_group' }
+        'quit_title', 'quit_text', 'quit_yes', 'quit_no', 'hole', 'score', 'total', 'menu_solo', 'menu_group',
+        'pricing', 'card_title', 'card_name', 'card_keep', 'card_close', 'card_left', 'card_group', 'card_total',
+        'card_ticket', 'card_holeno', 'card_score' }
     local out = {}
     for _, k in ipairs(keys) do out[k] = translation[k] or k end
     return out
@@ -36,8 +38,9 @@ function OpenStartMenu()
     setFocus(true)
     SendNUIMessage({
         ui = 'Start', status = true,
-        price = Config.club_price or 0,
+        tickets = Config.tickets,
         holes = #Config.golf_track,
+        course = Config.course_name,
         players = nearbyPlayers(),
         maxGroup = Config.max_group or 4,
         labels = labels()
@@ -58,7 +61,7 @@ RegisterNUICallback('start', function(data, cb)
             if tonumber(id) then ids[#ids + 1] = tonumber(id) end
         end
     end
-    TriggerServerEvent('mrw_minigolf:requestStart', ids)
+    TriggerServerEvent('mrw_minigolf:requestStart', ids, tostring(data.ticket or ''))
     cb('ok')
 end)
 
@@ -73,19 +76,19 @@ end)
 
 -- ---------------------------------------------------------------- invites
 RegisterNetEvent('mrw_minigolf:invited')
-AddEventHandler('mrw_minigolf:invited', function(hostName, price, seconds)
+AddEventHandler('mrw_minigolf:invited', function(hostName, seconds)
     if IsPlayingGolf() then return end
     setFocus(true)
     SendNUIMessage({
         ui = 'Invite', status = true,
-        host = hostName, price = price, seconds = seconds or 30,
+        host = hostName, tickets = Config.tickets, seconds = seconds or 30,
         labels = labels()
     })
 end)
 
 RegisterNUICallback('inviteAnswer', function(data, cb)
     setFocus(false)
-    TriggerServerEvent('mrw_minigolf:inviteAnswer', data.accept == true)
+    TriggerServerEvent('mrw_minigolf:inviteAnswer', data.accept == true, tostring(data.ticket or ''))
     cb('ok')
 end)
 
@@ -114,6 +117,35 @@ RegisterNetEvent('mrw_minigolf:groupScores')
 AddEventHandler('mrw_minigolf:groupScores', function(rows)
     GroupRows = rows or {}
     if ScoreboardIsShowing and ScoreboardIsShowing() then Ui:displayScoreboard(true) end
+end)
+
+-- --------------------------------------------------------------- scorecard
+-- end of a round: show the card, offer to keep it
+RegisterNetEvent('mrw_minigolf:finalCard')
+AddEventHandler('mrw_minigolf:finalCard', function(card, canKeep)
+    Wait(800)   -- let the "nice shot" banner and fade finish first
+    setFocus(true)
+    SendNUIMessage({ ui = 'Card', status = true, card = card, canKeep = canKeep, labels = labels() })
+end)
+
+-- using the scorecard item (qb-inventory from the server, ox_inventory client.event)
+RegisterNetEvent('mrw_minigolf:viewCard')
+AddEventHandler('mrw_minigolf:viewCard', function(data, slot)
+    local meta = (slot and slot.metadata) or (data and (data.metadata or data.info)) or data
+    if type(meta) ~= 'table' or not meta.strokes then return end
+    setFocus(true)
+    SendNUIMessage({ ui = 'Card', status = true, card = meta, canKeep = false, labels = labels() })
+end)
+
+RegisterNUICallback('keepCard', function(_, cb)
+    setFocus(false)
+    TriggerServerEvent('mrw_minigolf:keepCard')
+    cb('ok')
+end)
+
+RegisterNUICallback('closeCard', function(_, cb)
+    setFocus(false)
+    cb('ok')
 end)
 
 AddEventHandler('onResourceStop', function(name)
