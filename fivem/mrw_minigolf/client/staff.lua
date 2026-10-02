@@ -16,55 +16,126 @@ local function pickTarget()
     return nil
 end
 
+local function staffPos()
+    local cfg = Config.staff or {}
+    return cfg.coords or Config.locate_club
+end
+
+local function addTarget()
+    if not targetSystem then return end
+    local label = (translation['talk_staff'] or 'Talk to %s staff'):format(Config.course_name or 'Minigolf')
+    local canInteract = function() return not IsPlayingGolf() end
+
+    local ok, err = pcall(function()
+        if targetSystem == 'qb-target' then
+            exports['qb-target']:AddTargetEntity(staffPed, {
+                options = { { icon = 'fas fa-golf-ball-tee', label = label, action = OpenStartMenu, canInteract = canInteract } },
+                distance = 2.5
+            })
+        else
+            exports[targetSystem]:addLocalEntity(staffPed, {
+                {
+                    name = 'mrw_minigolf_staff', icon = 'fa-solid fa-golf-ball-tee', label = label,
+                    distance = 2.5, canInteract = canInteract,
+                    onSelect = function() OpenStartMenu() end
+                }
+            })
+        end
+    end)
+    if not ok then
+        print(('^1[mrw_minigolf] could not add %s target to the staff ped: %s - using the [E] prompt^7'):format(targetSystem, tostring(err)))
+        targetSystem = nil
+    end
+end
+
+local function despawnStaff()
+    if staffPed and DoesEntityExist(staffPed) then
+        if targetSystem == 'qb-target' then
+            pcall(function() exports['qb-target']:RemoveTargetEntity(staffPed) end)
+        elseif targetSystem then
+            pcall(function() exports[targetSystem]:removeLocalEntity(staffPed, 'mrw_minigolf_staff') end)
+        end
+        DeleteEntity(staffPed)
+    end
+    staffPed = nil
+end
+
+--- Only called once the player is close, so the area (and its ground) is loaded.
 local function spawnStaff()
     local cfg = Config.staff or {}
-    local pos = cfg.coords or Config.locate_club
+    local pos = staffPos()
     local model = GetHashKey(cfg.model or 'a_f_y_beach_01')
 
+    if not IsModelInCdimage(model) then
+        print(('^1[mrw_minigolf] staff ped model "%s" does not exist - set Config.staff.model^7'):format(tostring(cfg.model)))
+        return false
+    end
     RequestModel(model)
     local timeout = GetGameTimer() + 5000
     while not HasModelLoaded(model) and GetGameTimer() < timeout do Wait(10) end
     if not HasModelLoaded(model) then
         print('^1[mrw_minigolf] staff ped model failed to load: ' .. tostring(cfg.model) .. '^7')
-        return
+        return false
     end
 
-    -- the configured spot is where a player stands (about 1m above the ground)
+    -- the configured spot is where a player stands (about 1m above the ground);
+    -- only trust the ground probe if it lands near there
+    RequestCollisionAtCoord(pos.x, pos.y, pos.z)
     local z = pos.z - 1.0
     local found, ground = GetGroundZFor_3dCoord(pos.x, pos.y, pos.z + 1.0, false)
-    if found then z = ground end
+    if found and math.abs(ground - (pos.z - 1.0)) < 2.5 then z = ground end
 
     staffPed = CreatePed(4, model, pos.x, pos.y, z, cfg.heading or 0.0, false, true)
     SetModelAsNoLongerNeeded(model)
+    if not staffPed or staffPed == 0 or not DoesEntityExist(staffPed) then
+        staffPed = nil
+        return false
+    end
+
     SetEntityAsMissionEntity(staffPed, true, true)
     SetBlockingOfNonTemporaryEvents(staffPed, true)
     SetEntityInvincible(staffPed, true)
-    FreezeEntityPosition(staffPed, true)
     SetPedCanRagdoll(staffPed, false)
     SetPedFleeAttributes(staffPed, 0, false)
+    SetPedDiesWhenInjured(staffPed, false)
+    FreezeEntityPosition(staffPed, true)
     if cfg.scenario then TaskStartScenarioInPlace(staffPed, cfg.scenario, 0, true) end
 
+    addTarget()
+    return true
+end
+
+-- spawn when you get near the course, remove when you leave
+local SPAWN_DIST, DESPAWN_DIST = 80.0, 120.0
+local function streamThread()
     targetSystem = pickTarget()
-    if not targetSystem then return end
-
-    local label = (translation['talk_staff'] or 'Talk to %s staff'):format(Config.course_name or 'Minigolf')
-    local canInteract = function() return not IsPlayingGolf() end
-
-    if targetSystem == 'qb-target' then
-        exports['qb-target']:AddTargetEntity(staffPed, {
-            options = { { icon = 'fas fa-golf-ball-tee', label = label, action = OpenStartMenu, canInteract = canInteract } },
-            distance = 2.5
-        })
-    else
-        exports[targetSystem]:addLocalEntity(staffPed, {
-            {
-                name = 'mrw_minigolf_staff', icon = 'fa-solid fa-golf-ball-tee', label = label,
-                distance = 2.5, canInteract = canInteract,
-                onSelect = function() OpenStartMenu() end
-            }
-        })
+    while true do
+        local d = #(GetEntityCoords(PlayerPedId()) - staffPos())
+        if d < SPAWN_DIST and not (staffPed and DoesEntityExist(staffPed)) then
+            targetSystem = pickTarget()
+            if not spawnStaff() then Wait(5000) end
+        elseif d > DESPAWN_DIST and staffPed then
+            despawnStaff()
+        end
+        Wait(1000)
     end
 end
+
+-- /golfstaff        -> where the staff member is and whether they spawned
+-- /golfstaff here   -> print your spot, ready to paste into Config.staff.coords
+RegisterCommand('golfstaff', function(_, args)
+    local me = GetEntityCoords(PlayerPedId())
+    if args[1] == 'here' then
+        local line = ('coords = vector3(%.2f, %.2f, %.2f), heading = %.1f,'):format(me.x, me.y, me.z, GetEntityHeading(PlayerPedId()))
+        print('[mrw_minigolf] ' .. line)
+        Ui:displayNotification('Staff spot printed in F8')
+        return
+    end
+    local pos = staffPos()
+    print(('[mrw_minigolf] staff spot %.2f, %.2f, %.2f | you are %.1fm away | spawned: %s | target: %s'):format(
+        pos.x, pos.y, pos.z, #(me - pos), tostring(staffPed ~= nil and DoesEntityExist(staffPed)), tostring(targetSystem or 'E prompt')))
+    Ui:displayNotification('Staff info printed in F8')
+end, false)
 
 local function createBlip()
     local cfg = Config.blip or {}
@@ -101,21 +172,12 @@ local function faceThread()
     end
 end
 
-CreateThread(function()
-    createBlip()
-    spawnStaff()
-    faceThread()
-end)
+CreateThread(createBlip)
+CreateThread(streamThread)
+CreateThread(faceThread)
 
 AddEventHandler('onResourceStop', function(name)
     if name ~= GetCurrentResourceName() then return end
-    if staffPed and DoesEntityExist(staffPed) then
-        if targetSystem == 'qb-target' then
-            pcall(function() exports['qb-target']:RemoveTargetEntity(staffPed) end)
-        elseif targetSystem then
-            pcall(function() exports[targetSystem]:removeLocalEntity(staffPed, 'mrw_minigolf_staff') end)
-        end
-        DeleteEntity(staffPed)
-    end
+    despawnStaff()
     if blip then RemoveBlip(blip) end
 end)
