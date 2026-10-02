@@ -4,12 +4,9 @@ import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { MessageTemplates } from '../../utils/messageTemplates.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-import { jobPayouts } from '../../config/economy/payouts.js';
+import { getGuildJobPayouts } from '../../services/jobPayouts.js';
 
 const FISH_COOLDOWN = 45 * 60 * 1000; 
-const BASE_MIN_REWARD = jobPayouts.fish.min;
-const BASE_MAX_REWARD = jobPayouts.fish.max;
-const FISHING_ROD_MULTIPLIER = jobPayouts.fish.fishingRodMultiplier;
 
 const FISH_TYPES = [
     { name: 'Bass', emoji: '🐟', rarity: 'common' },
@@ -42,6 +39,10 @@ export default {
             
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
+            const payouts = await getGuildJobPayouts(client, guildId);
+            const BASE_MIN_REWARD = payouts.fish.min;
+            const BASE_MAX_REWARD = payouts.fish.max;
+            const FISHING_ROD_MULTIPLIER = payouts.fish.fishingRodMultiplier;
             const now = Date.now();
 
             const userData = await getEconomyData(client, guildId, userId);
@@ -94,7 +95,7 @@ export default {
             
             if (hasFishingRod > 0) {
                 finalEarned = Math.floor(baseEarned * FISHING_ROD_MULTIPLIER);
-                multiplierMessage = `\n🎣 **Fishing Rod Bonus: +50%**`;
+                multiplierMessage = `\n🎣 **Fishing Rod Bonus: x${FISHING_ROD_MULTIPLIER}**`;
             }
 
             const catchMessage = CATCH_MESSAGES[Math.floor(Math.random() * CATCH_MESSAGES.length)];

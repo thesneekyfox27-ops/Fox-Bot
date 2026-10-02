@@ -6,11 +6,9 @@ import { formatDuration } from '../../utils/helpers.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-import { jobPayouts } from '../../config/economy/payouts.js';
+import { getGuildJobPayouts } from '../../services/jobPayouts.js';
 
 const DAILY_COOLDOWN = 24 * 60 * 60 * 1000;
-const DAILY_AMOUNT = jobPayouts.daily.amount;
-const PREMIUM_BONUS_PERCENTAGE = jobPayouts.daily.premiumBonus;
 
 export default {
     data: new SlashCommandBuilder()
@@ -23,6 +21,9 @@ export default {
             
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
+            const payouts = await getGuildJobPayouts(client, guildId);
+            const DAILY_AMOUNT = payouts.daily.amount;
+            const PREMIUM_BONUS_PERCENTAGE = payouts.daily.premiumBonus;
             const now = Date.now();
 
             logger.debug(`[ECONOMY] Daily claimed started for ${userId}`, { userId, guildId });

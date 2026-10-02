@@ -4,13 +4,9 @@ import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { MessageTemplates } from '../../utils/messageTemplates.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-import { jobPayouts } from '../../config/economy/payouts.js';
+import { getGuildJobPayouts } from '../../services/jobPayouts.js';
 
 const MINE_COOLDOWN = 60 * 60 * 1000;
-const BASE_MIN_REWARD = jobPayouts.mine.min;
-const BASE_MAX_REWARD = jobPayouts.mine.max;
-const PICKAXE_MULTIPLIER = jobPayouts.mine.pickaxeMultiplier;
-const DIAMOND_PICKAXE_MULTIPLIER = jobPayouts.mine.diamondPickaxeMultiplier;
 
 const MINE_LOCATIONS = [
     "abandoned gold mine",
@@ -31,6 +27,11 @@ export default {
             
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
+            const payouts = await getGuildJobPayouts(client, guildId);
+            const BASE_MIN_REWARD = payouts.mine.min;
+            const BASE_MAX_REWARD = payouts.mine.max;
+            const PICKAXE_MULTIPLIER = payouts.mine.pickaxeMultiplier;
+            const DIAMOND_PICKAXE_MULTIPLIER = payouts.mine.diamondPickaxeMultiplier;
             const now = Date.now();
 
             const userData = await getEconomyData(client, guildId, userId);
@@ -63,10 +64,10 @@ export default {
 
             if (hasDiamondPickaxe > 0) {
                 finalEarned = Math.floor(baseEarned * DIAMOND_PICKAXE_MULTIPLIER);
-                multiplierMessage = `\n💎 **Diamond Pickaxe Bonus: +100%**`;
+                multiplierMessage = `\n💎 **Diamond Pickaxe Bonus: x${DIAMOND_PICKAXE_MULTIPLIER}**`;
             } else if (hasPickaxe > 0) {
                 finalEarned = Math.floor(baseEarned * PICKAXE_MULTIPLIER);
-                multiplierMessage = `\n⛏️ **Pickaxe Bonus: +20%**`;
+                multiplierMessage = `\n⛏️ **Pickaxe Bonus: x${PICKAXE_MULTIPLIER}**`;
             }
 
             const location =

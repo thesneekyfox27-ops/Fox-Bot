@@ -37,4 +37,4 @@ const line = r => cols.map(c => r[c].padEnd(width[c])).join('  ').trimEnd();
 console.log(line(headers));
 console.log(cols.map(c => '-'.repeat(width[c])).join('  '));
 for (const r of rows) console.log(line(r));
-console.log('\nEdit src/config/economy/payouts.js to change these, then restart the bot.');
+console.log('\nThese are the defaults. Use /payout in Discord to change them for a server,\nor edit src/config/economy/payouts.js to change the defaults.');

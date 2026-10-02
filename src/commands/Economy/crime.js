@@ -5,6 +5,7 @@ import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHan
 import { MessageTemplates } from '../../utils/messageTemplates.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { jobPayouts } from '../../config/economy/payouts.js';
+import { getGuildJobPayouts, toSlug } from '../../services/jobPayouts.js';
 
 const CRIME_COOLDOWN = 60 * 60 * 1000;
 const MIN_CRIME_AMOUNT = 100;
@@ -13,8 +14,6 @@ const FAILURE_RATE = 0.4;
 const JAIL_TIME = 2 * 60 * 60 * 1000;
 
 const CRIME_TYPES = jobPayouts.crime.types;
-
-const toCrimeValue = name => name.toLowerCase().replace(/\s+/g, '-');
 
 export default {
     data: new SlashCommandBuilder()
@@ -26,7 +25,7 @@ export default {
                 .setDescription('Type of crime to commit')
                 .setRequired(true)
                 .addChoices(
-                    ...CRIME_TYPES.map(c => ({ name: c.name, value: toCrimeValue(c.name) })),
+                    ...CRIME_TYPES.map(c => ({ name: c.name, value: toSlug(c.name) })),
                 )
         ),
 
@@ -62,8 +61,9 @@ export default {
             }
 
             const crimeType = interaction.options.getString("type").toLowerCase();
-            const crime = CRIME_TYPES.find(
-                c => toCrimeValue(c.name) === crimeType
+            const { crime: { types: guildCrimeTypes } } = await getGuildJobPayouts(client, guildId);
+            const crime = guildCrimeTypes.find(
+                c => toSlug(c.name) === crimeType
             );
 
             if (!crime) {

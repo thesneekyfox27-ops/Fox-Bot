@@ -2,7 +2,8 @@
 // JOB PAYOUTS
 // =========================
 // Every economy command that pays out reads its numbers from this file.
-// Edit the values here and restart the bot to apply them.
+// These are the defaults. Admins can override them per server with /payout;
+// edit the values here and restart the bot to change the defaults.
 // Run `npm run payouts` to print a summary table of everything below.
 //
 // Chances are decimals: 0.4 = 40%. Multipliers: 1.5 = +50%.

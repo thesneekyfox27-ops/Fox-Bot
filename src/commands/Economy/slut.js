@@ -4,11 +4,10 @@ import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-import { jobPayouts } from '../../config/economy/payouts.js';
+import { getGuildJobPayouts } from '../../services/jobPayouts.js';
 
 const SLUT_COOLDOWN = 45 * 60 * 1000;
 
-const SLUT_ACTIVITIES = jobPayouts.slut.activities;
 
 const POSITIVE_OUTCOMES = [
     "Your stream blew up and tips poured in.",
@@ -107,6 +106,8 @@ export default {
 
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
+            const payouts = await getGuildJobPayouts(client, guildId);
+            const SLUT_ACTIVITIES = payouts.slut.activities;
             const now = Date.now();
 
             logger.debug(`[ECONOMY] Slut command started for ${userId}`, { userId, guildId });

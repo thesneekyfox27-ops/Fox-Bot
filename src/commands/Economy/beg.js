@@ -5,12 +5,9 @@ import { botConfig } from '../../config/bot.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { MessageTemplates } from '../../utils/messageTemplates.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-import { jobPayouts } from '../../config/economy/payouts.js';
+import { getGuildJobPayouts } from '../../services/jobPayouts.js';
 
 const COOLDOWN = 30 * 60 * 1000;
-const MIN_WIN = jobPayouts.beg.min;
-const MAX_WIN = jobPayouts.beg.max;
-const SUCCESS_CHANCE = jobPayouts.beg.successChance;
 
 export default {
     data: new SlashCommandBuilder()
@@ -23,6 +20,10 @@ export default {
             
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
+            const payouts = await getGuildJobPayouts(client, guildId);
+            const MIN_WIN = payouts.beg.min;
+            const MAX_WIN = payouts.beg.max;
+            const SUCCESS_CHANCE = payouts.beg.successChance;
 
             let userData = await getEconomyData(client, guildId, userId);
             

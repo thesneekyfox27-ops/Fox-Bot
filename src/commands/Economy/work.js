@@ -4,12 +4,9 @@ import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-import { jobPayouts } from '../../config/economy/payouts.js';
+import { getGuildJobPayouts } from '../../services/jobPayouts.js';
 
 const WORK_COOLDOWN = 30 * 60 * 1000;
-const MIN_WORK_AMOUNT = jobPayouts.work.min;
-const MAX_WORK_AMOUNT = jobPayouts.work.max;
-const LAPTOP_MULTIPLIER = jobPayouts.work.laptopMultiplier;
 const WORK_JOBS = [
     "Software Developer",
     "Barista",
@@ -34,6 +31,10 @@ export default {
             
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
+            const payouts = await getGuildJobPayouts(client, guildId);
+            const MIN_WORK_AMOUNT = payouts.work.min;
+            const MAX_WORK_AMOUNT = payouts.work.max;
+            const LAPTOP_MULTIPLIER = payouts.work.laptopMultiplier;
             const now = Date.now();
 
             const userData = await getEconomyData(client, guildId, userId);
@@ -79,7 +80,7 @@ export default {
             let multiplierMessage = "";
             if (hasLaptop > 0) {
                 earned = Math.floor(earned * LAPTOP_MULTIPLIER);
-                multiplierMessage = "\n💻 **Laptop Bonus:** +50% earnings!";
+                multiplierMessage = `\n💻 **Laptop Bonus:** x${LAPTOP_MULTIPLIER} earnings!`;
             }
 
             userData.wallet = (userData.wallet || 0) + earned;

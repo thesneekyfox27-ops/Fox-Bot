@@ -4,12 +4,9 @@ import { getEconomyData, setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { MessageTemplates } from '../../utils/messageTemplates.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-import { jobPayouts } from '../../config/economy/payouts.js';
+import { getGuildJobPayouts } from '../../services/jobPayouts.js';
 
 const ROB_COOLDOWN = 4 * 60 * 60 * 1000;
-const BASE_ROB_SUCCESS_CHANCE = jobPayouts.rob.successChance;
-const ROB_PERCENTAGE = jobPayouts.rob.stealPercentage;
-const FINE_PERCENTAGE = jobPayouts.rob.finePercentage;
 
 export default {
     data: new SlashCommandBuilder()
@@ -29,6 +26,10 @@ export default {
             const robberId = interaction.user.id;
             const victimUser = interaction.options.getUser("user");
             const guildId = interaction.guildId;
+            const payouts = await getGuildJobPayouts(client, guildId);
+            const BASE_ROB_SUCCESS_CHANCE = payouts.rob.successChance;
+            const ROB_PERCENTAGE = payouts.rob.stealPercentage;
+            const FINE_PERCENTAGE = payouts.rob.finePercentage;
             const now = Date.now();
 
             if (robberId === victimUser.id) {
