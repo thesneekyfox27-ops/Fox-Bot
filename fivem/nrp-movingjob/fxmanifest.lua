@@ -26,6 +26,16 @@ server_scripts {
     'server/main.lua'
 }
 
+ui_page 'html/index.html'
+
+files {
+    'html/index.html',
+    'html/style.css',
+    'html/script.js',
+    'html/fonts.css',
+    'html/fonts/*.woff2'
+}
+
 dependencies {
     'ox_lib',
     'qb-core'

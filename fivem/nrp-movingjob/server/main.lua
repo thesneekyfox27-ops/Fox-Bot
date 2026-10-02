@@ -153,7 +153,13 @@ end)
 -- ---------------------------------------------------------------------------
 -- accept / abandon
 -- ---------------------------------------------------------------------------
-RegisterNetEvent('nrp-movingjob:server:accept', function(id)
+--- "Bob  Myers", "bob myers", "Bob Myers." all count as the same name
+local function normName(s)
+    s = tostring(s or ''):lower():gsub("[^%a%s'%-]", ''):gsub('%s+', ' ')
+    return (s:gsub('^%s+', ''):gsub('%s+$', ''))
+end
+
+RegisterNetEvent('nrp-movingjob:server:accept', function(id, signature)
     local src = source
     if throttled(src) then return end
     if Members[src] then return end
@@ -162,6 +168,23 @@ RegisterNetEvent('nrp-movingjob:server:accept', function(id)
     if not offer then return warn(src, 'accepted a contract that was never offered') end
     if not near(src, vector3(Config.Boss.coords.x, Config.Boss.coords.y, Config.Boss.coords.z)) then
         return warn(src, 'accepted a contract from off site')
+    end
+
+    -- The clipboard contract has to be signed with the character's real name.
+    local pw = Config.Paperwork
+    if pw and pw.enabled ~= false and pw.mustMatchName ~= false then
+        local Player = QBCore.Functions.GetPlayer(src)
+        local ci = Player and Player.PlayerData and Player.PlayerData.charinfo
+        local real = ci and normName(('%s %s'):format(ci.firstname or '', ci.lastname or '')) or ''
+        if real ~= '' and normName(signature) ~= real then
+            TriggerClientEvent('ox_lib:notify', src, {
+                title = Config.CompanyName,
+                description = ('Sign the contract with your real name: %s %s')
+                    :format(ci.firstname or '', ci.lastname or ''),
+                type = 'error'
+            })
+            return
+        end
     end
 
     Offers[src] = nil

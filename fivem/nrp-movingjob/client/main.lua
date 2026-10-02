@@ -685,9 +685,157 @@ local function refreshPallet()
 end
 
 -- ---------------------------------------------------------------------------
+-- clipboard paperwork (NUI)
+-- Set Config.Paperwork.enabled = false to go back to the ox_lib menus below.
+-- ---------------------------------------------------------------------------
+local paperOpen = false
+
+local function charName()
+    local data = QBCore.Functions.GetPlayerData()
+    local ci = data and data.charinfo
+    if ci then
+        local n = (('%s %s'):format(ci.firstname or '', ci.lastname or '')):gsub('^%s+', ''):gsub('%s+$', '')
+        if n ~= '' then return n end
+    end
+    return GetPlayerName(PlayerId())
+end
+
+--- A stable made-up phone number for the client line of the contract.
+local function phoneFor(id, customer)
+    local h = 0
+    for i = 1, #customer do h = (h * 31 + customer:byte(i)) % 10000 end
+    return ('(555) %03d-%04d'):format(100 + (id * 37) % 900, h)
+end
+
+local function jobPayload()
+    local c = Job.contract
+    local items = {}
+    for i, idx in ipairs(c.items) do
+        local cargo = Config.Cargo[idx] or {}
+        items[i] = { label = cargo.label or 'Item', weight = cargo.weight, fragile = cargo.weight == 'fragile' }
+    end
+    local drop = Config.Drops[c.drop]
+    return {
+        customer = c.customer, address = drop and drop.label or '', plate = Job.plate,
+        stage = Job.stage, items = items, delivered = Job.delivered,
+        payPerItem = c.payPerItem, bonus = c.bonus
+    }
+end
+
+local function closePaper()
+    if not paperOpen then return end
+    paperOpen = false
+    SetNuiFocus(false, false)
+    SendNUIMessage({ action = 'close' })
+end
+
+local function openPaper()
+    local p = Config.Paperwork or {}
+    local msg = {
+        action  = 'open',
+        company = {
+            name    = Config.CompanyName,
+            address = p.address or 'Haulaway Yard',
+            phone   = p.phone or '',
+            yard    = p.yardLabel or 'the yard'
+        },
+        penalty = Config.Contracts.damagePenalty or 0,
+        signer  = { name = charName(), required = p.mustMatchName ~= false }
+    }
+
+    if Job.active then
+        msg.mode     = 'active'
+        msg.job      = jobPayload()
+        msg.isLeader = Job.leader and true or false
+        msg.canHire  = (Config.Crew.enabled and Job.leader) and true or false
+        msg.splitPay = Config.Crew.splitPay
+    else
+        local contracts = lib.callback.await('nrp-movingjob:server:getContracts', false)
+        if not contracts then return end
+
+        local here, list = GetEntityCoords(cache.ped), {}
+        for _, c in ipairs(contracts) do
+            local drop = Config.Drops[c.drop]
+            list[#list + 1] = {
+                id = c.id, customer = c.customer, address = drop.label,
+                itemCount = c.itemCount, payPerItem = c.payPerItem, bonus = c.bonus,
+                miles = miles(#(drop.arrival - here)), phone = phoneFor(c.id, c.customer)
+            }
+        end
+        msg.mode = 'board'
+        msg.contracts = list
+    end
+
+    paperOpen = true
+    SetNuiFocus(true, true)
+    SendNUIMessage(msg)
+end
+
+RegisterNUICallback('close', function(_, cb)
+    closePaper()
+    cb('ok')
+end)
+
+RegisterNUICallback('accept', function(data, cb)
+    closePaper()
+    TriggerServerEvent('nrp-movingjob:server:accept', tonumber(data.id), tostring(data.signature or ''))
+    cb('ok')
+end)
+
+RegisterNUICallback('finish', function(_, cb)
+    closePaper()
+    TriggerEvent('nrp-movingjob:client:finish')
+    cb('ok')
+end)
+
+RegisterNUICallback('abandon', function(_, cb)
+    closePaper()
+    TriggerServerEvent('nrp-movingjob:server:abandon')
+    cb('ok')
+end)
+
+RegisterNUICallback('nearby', function(_, cb)
+    local out = {}
+    if Config.Crew.enabled and Job.leader then
+        for _, pl in ipairs(lib.getNearbyPlayers(GetEntityCoords(cache.ped), Config.Crew.inviteRange, false)) do
+            out[#out + 1] = { id = GetPlayerServerId(pl.id), name = GetPlayerName(pl.id) }
+        end
+    end
+    cb(out)
+end)
+
+RegisterNUICallback('invite', function(data, cb)
+    if Config.Crew.enabled and Job.leader and tonumber(data.id) then
+        TriggerServerEvent('nrp-movingjob:server:invite', tonumber(data.id))
+        notify('Invite sent.', 'inform')
+    end
+    cb('ok')
+end)
+
+-- keep the work order live while it is open; close it if the job ends
+CreateThread(function()
+    while true do
+        if paperOpen and Job.active and Job.contract then
+            SendNUIMessage({ action = 'update', job = jobPayload() })
+            Wait(500)
+        else
+            Wait(1000)
+        end
+    end
+end)
+
+AddEventHandler('onResourceStop', function(res)
+    if res == GetCurrentResourceName() and paperOpen then SetNuiFocus(false, false) end
+end)
+
+-- ---------------------------------------------------------------------------
 -- contract board
 -- ---------------------------------------------------------------------------
 local function openBoard()
+    if Config.Paperwork and Config.Paperwork.enabled ~= false then
+        return openPaper()
+    end
+
     if Job.active then
         local opts = {
             {

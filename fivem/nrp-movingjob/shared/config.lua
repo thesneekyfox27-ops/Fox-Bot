@@ -7,6 +7,15 @@ Config.CompanyName = 'Haulaway Moving Co.'
 
 -- Set to a job name to gate the work behind employment, or false for open work.
 Config.RequireJob = false          -- e.g. 'mover'
+
+-- Clipboard paperwork (the contract board UI). false = the old ox_lib menus.
+Config.Paperwork = {
+    enabled       = true,
+    address       = 'Haulaway Yard, Elysian Island',   -- printed on the contract
+    phone         = '(555) 010-4285',
+    yardLabel     = 'the Haulaway yard',
+    mustMatchName = true    -- the contract must be signed with the character's real name
+}
 Config.PayAccount = 'cash'         -- cash | bank
 
 -- ---------------------------------------------------------------------------

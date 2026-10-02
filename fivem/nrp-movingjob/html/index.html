@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app" class="hidden">
+  <div class="board">
+    <div class="clip" aria-hidden="true"><span class="clip-hanger"></span><span class="clip-bar"></span><span class="clip-wire"></span><span class="clip-grip l"></span><span class="clip-grip r"></span></div>
+    <button class="board-x" id="closeBtn" aria-label="Close">&times;</button>
+
+    <!-- ================= PAGE: WORK ORDERS ================= -->
+    <section class="sheet page" id="pgOrders">
+      <header class="band top">
+        <span class="truck" aria-hidden="true"></span>
+        <div>
+          <h1 class="co-name">Haulaway Moving Co.</h1>
+          <p class="co-tag">Work orders &middot; pick one up at the yard</p>
+        </div>
+      </header>
+
+      <div class="body">
+        <h2 class="doc-title">TODAY'S WORK ORDERS</h2>
+        <p class="lead">Each order is one household. Load the van at the yard pallet, drive it across town,
+          stack everything on the client's step and bring the van back to get paid.</p>
+        <ol class="orders" id="orderList"></ol>
+        <p class="empty hidden" id="ordersEmpty">Nothing on the board right now. Check back shortly.</p>
+      </div>
+
+      <footer class="band bottom"><b class="co-short">Haulaway</b> &nbsp;Careful hands. Fair prices.</footer>
+    </section>
+
+    <!-- ================= PAGE: MOVING CONTRACT ================= -->
+    <section class="sheet page hidden" id="pgContract">
+      <header class="band top slim">
+        <span class="truck" aria-hidden="true"></span>
+        <h1 class="band-title">Moving Contract</h1>
+      </header>
+
+      <div class="body contract">
+        <h2 class="doc-title">MOVING CONTRACT</h2>
+        <p class="para">This Moving Contract (the <b>"Contract"</b>) is entered into on
+          <span class="fill" id="kDate">&nbsp;</span> (the <b>"Effective Date"</b>) by and between:</p>
+
+        <div class="parties">
+          <div class="party">
+            <h3>SERVICE PROVIDER:</h3>
+            <p class="the">(the <b>"Service Provider"</b>),</p>
+            <div class="line"><label>Name:</label><span class="fill co-name">Haulaway Moving Co.</span></div>
+            <div class="line"><label>Address:</label><span class="fill" id="kCoAddr"></span></div>
+            <div class="line"><label>Representative:</label><span class="fill" id="kRep"></span></div>
+            <div class="line"><label>Email/Phone number:</label><span class="fill" id="kCoPhone"></span></div>
+          </div>
+          <div class="party">
+            <h3>CLIENT:</h3>
+            <p class="the">(the <b>"Client"</b>),</p>
+            <div class="line"><label>Name:</label><span class="fill" id="kClient"></span></div>
+            <div class="line"><label>Address:</label><span class="fill" id="kAddr"></span></div>
+            <div class="line"><label>Representative:</label><span class="fill" id="kClientRep"></span></div>
+            <div class="line"><label>Email/Phone number:</label><span class="fill" id="kClientPhone"></span></div>
+          </div>
+        </div>
+
+        <p class="para"><b>SUBJECT OF THE CONTRACT.</b> The Service Provider agrees to perform the following
+          services (the <b>"Services"</b>) for the Client's move in compliance with all applicable laws,
+          regulations, and codes:</p>
+
+        <ul class="services">
+          <li><span class="box ticked"></span><p><b>Loading:</b> The Service Provider will load all
+            <span class="fill sm" id="kItems"></span> Packed Items (the <b>"Packed Items"</b>) into the truck
+            at the yard using safe and efficient methods, so they are secured and protected during transportation.</p></li>
+          <li><span class="box ticked"></span><p><b>Transportation:</b> The Service Provider will transport all
+            Packed Items from <span class="fill" id="kFrom"></span> to <span class="fill" id="kTo"></span>,
+            about <span class="fill sm" id="kMiles"></span> miles.</p></li>
+          <li><span class="box ticked"></span><p><b>Unloading:</b> The Service Provider will stack every Packed
+            Item on the Client's doorstep and return the truck to the yard.</p></li>
+        </ul>
+
+        <p class="para"><b>COMPENSATION.</b> <span class="fill sm" id="kPer"></span> per item delivered, plus a
+          completion bonus of <span class="fill sm" id="kBonus"></span>, for an estimated total of
+          <span class="fill sm total" id="kTotal"></span>. Fragile items damaged in transit cost
+          <span id="kPenalty">45</span>% of that item's pay.</p>
+
+        <div class="sign-row">
+          <div class="sign">
+            <input id="sigInput" class="sign-input" type="text" maxlength="40"
+                   placeholder="Sign your full name" autocomplete="off" spellcheck="false">
+            <span class="sign-label">Service Provider representative</span>
+            <p class="sign-hint hidden" id="signHint">Sign with your real name: <b id="signName"></b></p>
+          </div>
+          <div class="stamp-spot"><span class="stamp" id="stamp">APPROVED</span></div>
+        </div>
+
+        <div class="actions">
+          <button class="btn ghost" id="backBtn">Back to orders</button>
+          <button class="btn primary" id="acceptBtn" disabled>Sign &amp; take the job</button>
+        </div>
+      </div>
+
+      <footer class="band bottom"><b class="co-short">Haulaway</b> &nbsp;Legal paperwork for every load</footer>
+    </section>
+
+    <!-- ================= PAGE: ACTIVE WORK ORDER ================= -->
+    <section class="sheet page hidden" id="pgActive">
+      <header class="band top slim">
+        <span class="truck" aria-hidden="true"></span>
+        <h1 class="band-title">Work Order <span id="aPlate"></span></h1>
+      </header>
+
+      <div class="body">
+        <h2 class="doc-title">JOB IN PROGRESS</h2>
+
+        <div class="parties two">
+          <div class="line"><label>Client:</label><span class="fill" id="aClient"></span></div>
+          <div class="line"><label>Address:</label><span class="fill" id="aAddr"></span></div>
+        </div>
+
+        <h3 class="section">PROGRESS</h3>
+        <ul class="steps" id="aSteps"></ul>
+
+        <h3 class="section">PACKED ITEMS <span class="count" id="aCount"></span></h3>
+        <ol class="items" id="aItems"></ol>
+
+        <div class="pay-row">
+          <span>Pay so far</span><b class="fill total" id="aPay"></b>
+        </div>
+
+        <div class="actions">
+          <button class="btn danger-ghost" id="abandonBtn">Abandon</button>
+          <button class="btn primary" id="finishBtn">Hand in the contract</button>
+        </div>
+        <div class="confirm-strip hidden" id="abandonConfirm">
+          <p>Walk away? You will not be paid for anything already delivered.</p>
+          <button class="btn ghost" id="abandonNo">Keep working</button>
+          <button class="btn danger" id="abandonYes">Abandon</button>
+        </div>
+      </div>
+
+      <footer class="band bottom"><b class="co-short">Haulaway</b> &nbsp;Careful hands. Fair prices.</footer>
+    </section>
+
+    <!-- ================= PAGE: CREW SHEET ================= -->
+    <section class="sheet page hidden" id="pgCrew">
+      <header class="band top slim">
+        <span class="truck" aria-hidden="true"></span>
+        <h1 class="band-title">Crew Sheet</h1>
+      </header>
+
+      <div class="body">
+        <h2 class="doc-title">HIRE A HAND</h2>
+        <p class="lead" id="crewLead">People standing near you right now.</p>
+        <ul class="crew" id="crewList"></ul>
+        <p class="empty hidden" id="crewEmpty">Nobody nearby. Get them to stand next to you and refresh.</p>
+        <div class="actions">
+          <button class="btn ghost" id="crewRefresh">Refresh</button>
+        </div>
+      </div>
+
+      <footer class="band bottom"><b class="co-short">Haulaway</b> &nbsp;Many hands, light work.</footer>
+    </section>
+
+    <button class="page-corner prev hidden" id="cornerPrev" aria-label="Previous page"><span></span></button>
+    <button class="page-corner next hidden" id="cornerNext" aria-label="Next page"><span></span></button>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

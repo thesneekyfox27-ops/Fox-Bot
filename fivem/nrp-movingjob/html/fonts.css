@@ -1,0 +1,5 @@
+/* Bundled locally so the UI looks right even without internet access.
+   Caveat, Inter and Special Elite - SIL Open Font License / Apache 2.0 */
+@font-face { font-family: 'Caveat'; font-style: normal; font-weight: 400 700; font-display: block; src: url('fonts/Caveat.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 100 900; font-display: block; src: url('fonts/Inter.woff2') format('woff2'); }
+@font-face { font-family: 'Special Elite'; font-style: normal; font-weight: 400; font-display: block; src: url('fonts/SpecialElite.woff2') format('woff2'); }
