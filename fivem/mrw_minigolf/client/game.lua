@@ -57,6 +57,7 @@ function Game:addStroke()
             break
         end
     end
+    TriggerServerEvent("mrw_minigolf:score", self.hole, self.stroke)
 
     if hasMaxStroke then
         DrawLineActive, self.ball, self.club = false, self.ball:delete(), self.club:delete()
@@ -76,7 +77,7 @@ function Game:addStroke()
             s:addContent(translation["congrats"], ("%s %s %s"):format(translation["finish_game"], total_stroke, translation["stroke"]))
 
             SetTimeout(2500, function()
-                TriggerEvent("mrw_minigolf:cut_game")
+                TriggerEvent("mrw_minigolf:cut_game", "done")
             end)
         end
 
@@ -107,6 +108,11 @@ function Game:shoot()
         Utils:createCamera()
 
         while true do Wait(100)
+            if not inGame or not self.ball or not DoesEntityExist(self.ball.object) then
+                Utils:deleteCamera()
+                return
+            end
+
             if power > 0.00 then
                 power = power - 0.01
             else
@@ -117,7 +123,8 @@ function Game:shoot()
                     FreezeEntityPosition(self.ball.object, true)
 
                     local material = Utils:groundMaterial()
-                    local objectAtCoords = DoesObjectOfTypeExistAtCoords(Config.golf_track[self.hole].hole, 0.1, `prop_golf_ball`, false)
+                    -- only OUR ball counts, so other players on the course can't sink our hole
+                    local objectAtCoords = #(GetEntityCoords(self.ball.object) - Config.golf_track[self.hole].hole) <= 0.15
 
                     Utils:deleteCamera()
 
@@ -148,7 +155,7 @@ function Game:finishGame()
         s:addContent(translation["congrats"], ("%s %s %s"):format(translation["finish_game"], total_stroke, translation["stroke"]))
 
         SetTimeout(2500, function()
-            TriggerEvent("mrw_minigolf:cut_game")
+            TriggerEvent("mrw_minigolf:cut_game", "done")
             self = nil
         end)
     else
@@ -157,6 +164,7 @@ function Game:finishGame()
         s:addContent(translation["congrats"], ("%s %s %s"):format(translation["round_win"], self.stroke, translation["stroke"]))
 
         SetTimeout(2500, function()
+            if not inGame then return end
             Utils:freezeEntity(self.ped(), false)
             TriggerEvent("mrw_minigolf:st_game", self.hole)
             self = nil
@@ -180,6 +188,7 @@ function Game:reroll()
     Ui:fadeOut(500)
 
     SetTimeout(1000, function()
+        if not inGame or not c then Ui:fadeIn() return end
         setCurrentPosition(coords)
         Utils:placePed(angle)
         Utils:playAnimation("mini@golfai", "wedge_idle_a", {}, -1, 1)
@@ -210,6 +219,7 @@ function Game:returnToStart()
     Utils:placePed(data.heading)
 
     SetTimeout(2000, function()
+        if not inGame or not c then Ui:fadeIn() return end
 
         Utils:playAnimation("mini@golfai", "wedge_idle_a", {}, -1, 1)
         Utils:freezeEntity(self.ped(), true)
@@ -223,11 +233,27 @@ function Game:returnToStart()
 end
 
 function Game:quit()
+    QuitGolf()
+end
+
+--- Leave the game right now, wherever we are in it (aiming, mid-shot, fading).
+function QuitGolf()
+    if not inGame then return end
+    inGame = false
+
+    DrawLineActive, ScaleformActive = false, false
+    Utils:deleteCamera()
+    Ui:displayPowerBar(false, 0)
+    Ui:displayScoreboard(false)
+
+    local ped = PlayerPedId()
+    DetachEntity(ped, true, true)
+    FreezeEntityPosition(ped, false)
+    ClearPedTasksImmediately(ped)
+    if IsScreenFadedOut() or IsScreenFadingOut() then DoScreenFadeIn(300) end
+
     Ui:displayNotification(translation['quit'])
-    Utils:freezeEntity(c.ped(), false)
-    ClearPedTasksImmediately(c.ped())
-    TriggerEvent("mrw_minigolf:cut_game")
-    self = nil
+    TriggerEvent("mrw_minigolf:cut_game", "quit")
 end
 
 RegisterNetEvent("mrw_minigolf:st_game")
@@ -256,6 +282,7 @@ AddEventHandler("mrw_minigolf:st_game", function(index)
     Utils:placePed(data.heading)
 
     SetTimeout(2000, function()
+        if not inGame or not c then Ui:fadeIn() return end
         Utils:playAnimation("mini@golfai", "wedge_idle_a", {}, -1, 1)
         Utils:freezeEntity(c.ped(), true)
         Ui:fadeIn()
@@ -268,14 +295,15 @@ AddEventHandler("mrw_minigolf:st_game", function(index)
 end)
 
 RegisterNetEvent("mrw_minigolf:cut_game")
-AddEventHandler("mrw_minigolf:cut_game", function()
+AddEventHandler("mrw_minigolf:cut_game", function(reason)
     ScaleformActive, DrawLineActive = false, false
+    TriggerServerEvent(reason == "quit" and "mrw_minigolf:leave" or "mrw_minigolf:finished")
 
     Wait(1)
 
-    s:destruct()
+    if s then s:destruct() end
 
-    if c.ball and c.club then
+    if c and c.ball and c.club then
         c.ball, c.club = c.ball:delete(), c.club:delete()
     end
 

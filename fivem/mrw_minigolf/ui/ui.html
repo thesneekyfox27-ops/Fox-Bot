@@ -1,34 +1,59 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <title>Scoreboard</title>
-        <link rel="stylesheet" href="css/app.css">
-    </head>
+<head>
+    <meta charset="UTF-8">
+    <title>Minigolf</title>
+    <link rel="stylesheet" href="css/app.css">
+</head>
 <body>
-    <div id="Scoreboard">
+    <!-- scorecard (hold the scorecard key while playing) -->
+    <div id="Scoreboard" class="card hidden">
         <div class="Scoreboard-header">Portside Minigolf</div>
+        <table id="ScoreTable"></table>
+    </div>
 
-        <div id="Scoreboard-grid-hole">
+    <!-- shot power -->
+    <div id="Bar" class="hidden"><div id="PowerBar"></div></div>
 
-            <div class="Scoreboard-grid-hole-header">
-                <div class="Scoreboard-grid-hole-header-content" id="labelHole">Hole</div>
-            </div>
-    
+    <!-- E at the rental -->
+    <div id="Start" class="card modal hidden">
+        <div class="title" id="sTitle">Portside Minigolf</div>
+        <div class="price-row">
+            <span id="sPriceLabel">Club rental</span>
+            <b id="sPrice">$200</b>
         </div>
-
-        <div id="Scoreboard-grid-score">
-
-            <div class="Scoreboard-grid-score-header">
-                <div class="Scoreboard-grid-score-header-content" id="labelScore">Score</div>
-            </div>
-
+        <div class="sub" id="sHoles">12 holes</div>
+        <div class="section" id="sInviteLabel">Bring friends:</div>
+        <div id="sPlayers" class="players"></div>
+        <button class="link" id="sRefresh">refresh</button>
+        <div class="mode" id="sMode"></div>
+        <div class="buttons">
+            <button class="btn ghost" id="sCancel">Cancel</button>
+            <button class="btn primary" id="sStart">Rent clubs &amp; start</button>
         </div>
     </div>
 
-    <div id="Bar">
-        <div id="PowerBar"></div>
+    <!-- someone invited you -->
+    <div id="Invite" class="card modal hidden">
+        <div class="title" id="iTitle">Minigolf invite</div>
+        <p class="text" id="iText"></p>
+        <div class="timer"><span id="iBar"></span></div>
+        <div class="buttons">
+            <button class="btn ghost" id="iNo">No thanks</button>
+            <button class="btn primary" id="iYes">Join</button>
+        </div>
     </div>
-    
+
+    <!-- quit early -->
+    <div id="Quit" class="card modal hidden">
+        <div class="title" id="qTitle">Quit the game?</div>
+        <p class="text" id="qText"></p>
+        <div class="buttons">
+            <button class="btn ghost" id="qNo">Keep playing</button>
+            <button class="btn danger" id="qYes">Quit</button>
+        </div>
+    </div>
+
     <script type="text/javascript" src="script/app.js"></script>
 </body>
 </html>

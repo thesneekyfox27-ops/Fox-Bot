@@ -4,6 +4,10 @@
 local currentPosition, ScoreboardIsOpen, power, gameCamPosition = nil, false, 0.0, nil
 DrawLineActive, ScaleformActive = false, false
 
+function ScoreboardIsShowing()
+    return ScoreboardIsOpen
+end
+
 function setCurrentPosition(p)
     currentPosition = p
 end
@@ -30,7 +34,7 @@ function ZoneThread()
             })
 
             if IsControlJustPressed(0, 38) then
-                TriggerServerEvent("mrw_minigolf:locateClub")
+                OpenStartMenu()
             end
         end
 
@@ -50,6 +54,7 @@ function ProcessThread()
     if totalStroke then return end
 
     while true do
+        if not IsPlayingGolf() or not c then return end
         local d = 500
         local pcoords = Utils:getEntityCoords(c.ped())
         local distance = #(pcoords - currentPosition)
@@ -95,9 +100,6 @@ function ProcessThread()
                 Utils:setEntityHeading(c.ball.object, baseHeading - 1.0)
                 DetachEntity(c.ped(), true, true)
 
-            elseif IsControlJustPressed(0, 178) then
-                c:quit()
-                return
             elseif IsControlJustPressed(0, 82) then
                 c:returnToStart()
                 return
@@ -118,7 +120,7 @@ function DisplayDrawLine()
 
     while DrawLineActive do Wait(1)
 
-        if c.ball == nil then
+        if not c or c.ball == nil then
             return
         end
 

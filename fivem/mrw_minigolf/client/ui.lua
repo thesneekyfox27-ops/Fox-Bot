@@ -44,11 +44,20 @@ end
 
 function Ui:displayScoreboard(display)
     if display then
+        -- the group's scorecard from the server, or just our own if it hasn't arrived
+        local rows = GroupRows
+        if not rows or #rows == 0 then
+            local strokes = {}
+            for i, h in ipairs(allGame or {}) do strokes[i] = h.stroke or 0 end
+            rows = { { name = GetPlayerName(PlayerId()), strokes = strokes, me = true } }
+        end
         SendNuiMessage(json.encode({
             status = true,
-            data = allGame,
             ui = 'Scoreboard',
-            labels = { hole = translation["hole"] or "Hole", score = translation["score"] or "Score" }
+            holes = #Config.golf_track,
+            rows = rows,
+            myId = GetPlayerServerId(PlayerId()),
+            labels = { hole = translation["hole"] or "Hole", total = translation["total"] or "Total" }
         }))
     else
         SendNuiMessage(json.encode({

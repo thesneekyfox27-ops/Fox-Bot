@@ -1,149 +1,146 @@
+@font-face { font-family: 'Segoe UI Regular'; src: local('Segoe UI'), url('../font/Segoe UI.woff') format('woff'); }
+@font-face { font-family: 'Segoe UI Bold'; src: local('Segoe UI Bold'), url('../font/Segoe UI Bold.woff') format('woff'); }
 
-@font-face {
-    font-family: 'Segoe UI Regular';
-    font-style: normal;
-    font-weight: normal;
-    src: local('Segoe UI Regular'), url('Segoe UI.woff') format('woff');
-}
-    
-
-@font-face {
-    font-family: 'Segoe UI Italic';
-    font-style: normal;
-    font-weight: normal;
-    src: local('Segoe UI Italic'), url('Segoe UI Italic.woff') format('woff');
-}
-    
-
-@font-face {
-    font-family: 'Segoe UI Bold';
-    font-style: normal;
-    font-weight: normal;
-    src: local('Segoe UI Bold'), url('Segoe UI Bold.woff') format('woff');
-}
-    
-
-@font-face {
-    font-family: 'Segoe UI Bold Italic';
-    font-style: normal;
-    font-weight: normal;
-    src: local('Segoe UI Bold Italic'), url('Segoe UI Bold Italic.woff') format('woff');
+:root {
+    --navy: #14213d;
+    --navy-2: #1d2d52;
+    --orange: #fca311;
+    --line: rgba(255, 255, 255, .14);
+    --text: #f2f4f8;
+    --muted: #9aa5bd;
+    --red: #e5534b;
+    --green: #3fbf7f;
 }
 
-html, body{
-    width: 60%;
-    height: 60%;
-    position: absolute;
-    left: 50%;
-    right: 50%;
-    transform: translate(-50%, 50%);
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: transparent;
+    font-family: 'Segoe UI Regular', 'Segoe UI', Arial, sans-serif;
+    color: var(--text);
+    user-select: none;
 }
 
-#Scoreboard{
-    display: none;
-    width: 100%;
-    height: 45%;
-    background-color: #14213d;
-    border-radius: 5px;
-    opacity: 0.9;
-    box-shadow: 10px 5px 5px black;
-    position: absolute;
-    bottom: 60%;
+.hidden { display: none !important; }
+
+.card {
+    background: var(--navy);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, .55);
 }
 
-.Scoreboard-header{
-    color: #fca311;
-    font-size: 20px;
-    text-align: center;
-    width: 100%;
-    height: 20%;
-    font-family: 'Segoe UI Bold';
+/* ---------------- scorecard ---------------- */
+#Scoreboard {
+    position: fixed; top: 6vh; left: 50%;
+    transform: translateX(-50%);
+    min-width: 640px;
+    max-width: 92vw;
+    padding: 14px 18px 16px;
+    opacity: .96;
+}
+.Scoreboard-header {
+    color: var(--orange);
+    font-family: 'Segoe UI Bold', 'Segoe UI', sans-serif;
+    font-size: 20px; letter-spacing: .5px;
+    text-align: center; margin-bottom: 10px;
+}
+#ScoreTable { border-collapse: collapse; width: 100%; font-size: 14px; }
+#ScoreTable th, #ScoreTable td {
+    border: 1px solid var(--line);
+    padding: 6px 8px; text-align: center; min-width: 34px;
+}
+#ScoreTable th { color: var(--orange); font-family: 'Segoe UI Bold', 'Segoe UI', sans-serif; font-weight: normal; }
+#ScoreTable td.name { text-align: left; white-space: nowrap; min-width: 140px; }
+#ScoreTable td.total { color: var(--orange); font-family: 'Segoe UI Bold', 'Segoe UI', sans-serif; }
+#ScoreTable td.empty { color: var(--muted); }
+#ScoreTable tr.me td { background: rgba(252, 163, 17, .10); }
+#ScoreTable .tag {
+    font-size: 10px; text-transform: uppercase; letter-spacing: .6px;
+    margin-left: 6px; padding: 1px 6px; border-radius: 3px;
+}
+#ScoreTable .tag.done { background: rgba(63, 191, 127, .2); color: var(--green); }
+#ScoreTable .tag.quit { background: rgba(229, 83, 75, .2); color: var(--red); }
+
+/* ---------------- power bar ---------------- */
+#Bar {
+    position: fixed; bottom: 12vh; left: 50%;
+    transform: translateX(-50%);
+    width: 32vw; height: 18px;
+    background: rgba(255, 255, 255, .9);
+    border-radius: 9px; overflow: hidden;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .45);
+}
+#PowerBar {
+    width: 0; height: 100%;
+    background: linear-gradient(90deg, #3fbf7f, #fca311 60%, #e5534b);
 }
 
-#Scoreboard-grid-hole{
-    height: 30%;
-    width: 100%;
-    border-top: 1px solid white;
-    border-bottom: 1px solid white;
-    display: flex;
-    flex-direction: row;
+/* ---------------- cards (start / invite / quit) ---------------- */
+.modal {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 420px;
+    padding: 22px 24px 20px;
+    animation: pop .18s ease;
 }
+@keyframes pop { from { transform: translate(-50%, -46%); opacity: 0; } to { transform: translate(-50%, -50%); opacity: 1; } }
 
-.Scoreboard-grid-hole-header{
-    width: 50px;
-    height: 100%;
-    text-align: center;
-    border-right: 1px solid white;
+.title {
+    font-family: 'Segoe UI Bold', 'Segoe UI', sans-serif;
+    font-size: 22px; color: var(--orange);
+    margin-bottom: 12px;
 }
+.price-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 15px; padding: 10px 0;
+    border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+}
+.price-row b { font-family: 'Segoe UI Bold', 'Segoe UI', sans-serif; font-size: 22px; color: var(--orange); }
+.sub { font-size: 13px; color: var(--muted); margin: 6px 0 14px; }
+.section { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+.text { font-size: 15px; line-height: 1.5; margin-bottom: 16px; }
 
-.Scoreboard-grid-hole-header-content{
-    margin-top: 25%;
-    color: #fca311;
-    font-family: 'Segoe UI Bold';
+.players { display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto; }
+.player {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: 6px;
+    background: var(--navy-2); border: 1px solid transparent;
+    cursor: pointer; font-size: 14px;
 }
+.player:hover { border-color: var(--line); }
+.player .box {
+    width: 16px; height: 16px; border-radius: 3px;
+    border: 2px solid var(--muted); flex-shrink: 0;
+}
+.player.on { border-color: var(--orange); }
+.player.on .box { background: var(--orange); border-color: var(--orange); }
+.player .id { margin-left: auto; font-size: 11px; color: var(--muted); }
+.player.full:not(.on) { opacity: .4; cursor: not-allowed; }
+.nobody { font-size: 13px; color: var(--muted); font-style: italic; padding: 6px 0; }
 
-.Scoreboard-grid-hole-hole{
-    height: 100%;
-    width: 5%;
-    border-right: 1px solid white;
-    text-align: center;
-    color: white;
-    font-family: 'Segoe UI Regular';
+.link {
+    background: none; border: none; color: var(--orange);
+    font-size: 12px; text-decoration: underline; cursor: pointer;
+    margin-top: 6px; font-family: inherit;
 }
+.mode { font-size: 13px; color: var(--text); margin: 12px 0 0; }
+.mode b { color: var(--orange); }
 
-.Scoreboard-grid-hole-hole p{
-    margin-top: 40%;
+.buttons { display: flex; gap: 10px; margin-top: 18px; }
+.btn {
+    flex: 1; padding: 11px 0;
+    border-radius: 6px; border: 1px solid var(--line);
+    font-family: 'Segoe UI Bold', 'Segoe UI', sans-serif; font-size: 14px;
+    cursor: pointer; color: var(--text); background: transparent;
+    transition: filter .12s, background .12s;
 }
+.btn.ghost:hover { background: rgba(255, 255, 255, .06); }
+.btn.primary { background: var(--orange); border-color: var(--orange); color: var(--navy); }
+.btn.danger { background: var(--red); border-color: var(--red); color: #fff; }
+.btn.primary:hover, .btn.danger:hover { filter: brightness(1.08); }
 
-#Scoreboard-grid-score{
-    height: 30%;
-    width: 100%;
-    border-bottom: 1px solid white;
-    display: flex;
-    flex-direction: row;
-}
-
-.Scoreboard-grid-score-header{
-    width: 50px;
-    height: 100%;
-    text-align: center;
-    border-right: 1px solid white;
-}
-
-.Scoreboard-grid-score-header-content{
-    margin-top: 25%;
-    color: #fca311;
-    font-family: 'Segoe UI Bold';
-}
-
-.Scoreboard-grid-score-score{
-    height: 100%;
-    width: 5%;
-    border-right: 1px solid white;
-    text-align: center;
-    color: white;
-    font-family: 'Segoe UI Regular';
-}
-
-.Scoreboard-grid-score-score p{
-    margin-top: 40%;
-}
-
-#Bar{
-    display: none;
-    width: 50%;
-    height: 5%;
-    border-radius: 5px;
-    background-color: white;
-    opacity: 0.9;
-    box-shadow: 10px 5px 5px black;
-    margin-top: 70%;
-    margin-left: 25%;
-}
-
-#PowerBar{
-    width: 10%;
-    height: 100%;
-    border-radius: 5px;
-    background-color: red;
-}
+.timer { height: 4px; background: var(--navy-2); border-radius: 2px; overflow: hidden; }
+.timer span { display: block; height: 100%; width: 100%; background: var(--orange); transition: width 1s linear; }

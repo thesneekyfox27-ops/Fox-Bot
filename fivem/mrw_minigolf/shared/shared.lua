@@ -18,6 +18,10 @@ Config.club_price = 200          -- what renting the clubs costs
 Config.pay_account = 'cash'      -- QBCore: 'cash' or 'bank'
 Config.allow_bank_fallback = true -- QBCore: if cash is short, take it from the bank
 
+Config.max_group = 4              -- players per group (everyone rents their own clubs)
+Config.invite_range = 8.0         -- how close friends must be to get invited
+Config.quit_key = 'DELETE'        -- default key to quit early (players can rebind it in Settings > Key Bindings > FiveM)
+
 do
     Config.max_stroke = 10 -- max stroke
     Config.locate_club = vector3(-1734.24, -1135.17, 12.79) -- locate club position
