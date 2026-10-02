@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============ RENTAL BROWSER ============ -->
+<div id="app" class="hidden">
+  <div class="panel">
+    <header class="head">
+      <div class="brand">
+        <span class="brand-mark"></span>
+        <div>
+          <h1>LS RENTALS</h1>
+          <p>Pick it up here. Bring it back here.</p>
+        </div>
+      </div>
+      <button class="close-x" id="closeBtn" aria-label="Close">&times;</button>
+    </header>
+
+    <nav class="tabs" id="tabs"></nav>
+
+    <div class="grid" id="vehicleList"></div>
+
+    <footer class="foot">
+      <span><b id="refundPct">75</b>% of your deposit comes back if the car returns clean.</span>
+      <span class="foot-note">Damage cuts the refund.</span>
+    </footer>
+  </div>
+
+  <!-- ============ CONTRACT / CONFIRM ============ -->
+  <div class="confirm hidden" id="confirm">
+    <div class="confirm-card">
+      <button class="sheet-x" id="cancelX" aria-label="Back">&times;</button>
+
+      <div class="confirm-grid">
+        <!-- Left: vehicle + costs -->
+        <section class="summary">
+          <div class="pic" id="cPic"><img src="" alt=""
+               onerror="this.parentElement.classList.add('noimg')"></div>
+          <p class="eyebrow">Rental summary</p>
+          <h2 id="cName">Vehicle</h2>
+          <div class="row"><span>Rental fee</span><b id="cPrice">$0</b></div>
+          <div class="row"><span>Deposit (refundable)</span><b id="cDeposit">$0</b></div>
+          <div class="row total"><span>Due now</span><b id="cTotal">$0</b></div>
+          <div class="row back"><span>Back on clean return</span><b id="cRefund">$0</b></div>
+        </section>
+
+        <!-- Right: the agreement -->
+        <section class="contract" id="contractPane">
+          <div class="contract-head">
+            <span class="stamp">AGREEMENT</span>
+            <div>
+              <h3 id="ctCompany">Clipboard Rentals LLC</h3>
+              <p>Rental agreement &amp; temporary permit</p>
+            </div>
+          </div>
+          <ol class="terms" id="ctTerms"></ol>
+          <div class="sign">
+            <label class="sign-label" for="sigInput">Sign here</label>
+            <input id="sigInput" class="sign-input" type="text" maxlength="32"
+                   placeholder="Type your full name" autocomplete="off" spellcheck="false">
+            <label class="agree" id="agreeWrap">
+              <input type="checkbox" id="agreeChk">
+              <span>I have read and agree to the terms above.</span>
+            </label>
+          </div>
+        </section>
+      </div>
+
+      <div class="actions">
+        <button class="btn ghost" id="cancelBtn">Back</button>
+        <button class="btn primary" id="confirmBtn" disabled>Sign &amp; drive</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PAPERS OVERLAY ============ -->
+<div id="papers" class="hidden">
+  <div class="papers-wrap">
+    <button class="close-x papers-close" id="papersClose" aria-label="Close">&times;</button>
+
+    <!-- Contract document -->
+    <article class="doc contract-doc" id="docContract">
+      <div class="doc-head">
+        <div>
+          <h3 id="dcCompany">Clipboard Rentals LLC</h3>
+          <p class="doc-sub">Vehicle Rental Agreement</p>
+        </div>
+        <span class="doc-id" id="dcId">CR-000000</span>
+      </div>
+      <div class="doc-fields">
+        <div><label>Renter</label><b id="dcHolder">—</b></div>
+        <div><label>Vehicle</label><b id="dcVehicle">—</b></div>
+        <div><label>Plate</label><b id="dcPlate">—</b></div>
+        <div><label>Issued</label><b id="dcIssued">—</b></div>
+        <div><label>Fee</label><b id="dcPrice">—</b></div>
+        <div><label>Deposit</label><b id="dcDeposit">—</b></div>
+      </div>
+      <ol class="doc-terms" id="dcTerms"></ol>
+      <div class="doc-sign">
+        <span class="sig" id="dcSignature">—</span>
+        <span class="sig-line">Authorised signature</span>
+      </div>
+    </article>
+
+    <!-- Temporary registration permit -->
+    <article class="doc reg-doc" id="docReg">
+      <div class="reg-head">
+        <div class="reg-title">
+          <span class="reg-seal"></span>
+          <div>
+            <h3 id="drAuthority">Los Santos DMV</h3>
+            <p>Temporary Operating Permit</p>
+          </div>
+        </div>
+        <span class="reg-num" id="drNumber">TMP-000000</span>
+      </div>
+      <div class="reg-body">
+        <div class="reg-row"><label>Holder</label><b id="drHolder">—</b></div>
+        <div class="reg-row"><label>Vehicle</label><b id="drVehicle">—</b></div>
+        <div class="reg-row plate-row"><label>Plate</label><b class="plate" id="drPlate">—</b></div>
+        <div class="reg-row"><label>Issued</label><b id="drIssued">—</b></div>
+        <div class="reg-row"><label>Expires</label><b id="drExpires">—</b></div>
+      </div>
+      <div class="reg-timer" id="drTimer">
+        <span class="reg-timer-label">Valid for</span>
+        <span class="reg-countdown" id="drCountdown">--:--</span>
+        <div class="reg-bar"><span id="drBar"></span></div>
+      </div>
+    </article>
+  </div>
+</div>
+
+<!-- ============ E PROMPT ============ -->
+<div id="prompt" class="hidden">
+  <span class="key">E</span>
+  <span class="prompt-text" id="promptText">Browse rentals</span>
+</div>
+
+<div id="toasts"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
