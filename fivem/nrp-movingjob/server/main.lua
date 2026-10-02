@@ -153,13 +153,39 @@ end)
 -- ---------------------------------------------------------------------------
 -- accept / abandon
 -- ---------------------------------------------------------------------------
+--- Invite `target` onto `src`'s crew. Shared by the crew sheet and the
+--- crew picked on the contract before signing. Returns true if sent.
+local function inviteToCrew(src, job, target)
+    if #job.crew + 1 >= Config.Crew.maxMembers then
+        tell(src, 'The crew is full.')
+        return false
+    end
+
+    target = tonumber(target)
+    if not target or target == src then return false end
+    if Members[target] then
+        tell(src, ('%s is already working.'):format(GetPlayerName(target) or ('ID ' .. target)))
+        return false
+    end
+
+    local a, b = playerCoords(src), playerCoords(target)
+    if not a or not b or #(a - b) > Config.Crew.inviteRange + 3.0 then
+        tell(src, ('%s is too far away to invite.'):format(GetPlayerName(target) or ('ID ' .. target)))
+        return false
+    end
+
+    Invites[target] = { from = src, expires = now() + Config.Crew.inviteMs }
+    TriggerClientEvent('nrp-movingjob:client:invited', target, GetPlayerName(src), src)
+    return true
+end
+
 --- "Bob  Myers", "bob myers", "Bob Myers." all count as the same name
 local function normName(s)
     s = tostring(s or ''):lower():gsub("[^%a%s'%-]", ''):gsub('%s+', ' ')
     return (s:gsub('^%s+', ''):gsub('%s+$', ''))
 end
 
-RegisterNetEvent('nrp-movingjob:server:accept', function(id, signature)
+RegisterNetEvent('nrp-movingjob:server:accept', function(id, signature, crew)
     local src = source
     if throttled(src) then return end
     if Members[src] then return end
@@ -209,6 +235,18 @@ RegisterNetEvent('nrp-movingjob:server:accept', function(id, signature)
         plate = job.plate
     }
     TriggerClientEvent('nrp-movingjob:client:started', src, payload, true)
+
+    -- crew picked on the contract before signing: invite them straight away
+    if Config.Crew.enabled and type(crew) == 'table' then
+        local sent = 0
+        for _, target in ipairs(crew) do
+            if sent >= Config.Crew.maxMembers - 1 then break end
+            if inviteToCrew(src, job, target) then sent = sent + 1 end
+        end
+        if sent > 0 then
+            tell(src, ('Crew invite sent to %d %s.'):format(sent, sent == 1 and 'person' or 'people'), 'success')
+        end
+    end
 end)
 
 local function endJob(job, reason, payload)
@@ -439,27 +477,7 @@ RegisterNetEvent('nrp-movingjob:server:invite', function(target)
 
     local job, leader = jobOf(src)
     if not job or src ~= leader then return end
-    if #job.crew + 1 >= Config.Crew.maxMembers then
-        return TriggerClientEvent('ox_lib:notify', src, {
-            title = Config.CompanyName, description = 'The crew is full.', type = 'error'
-        })
-    end
-
-    target = tonumber(target)
-    if not target or target == src then return end
-    if Members[target] then
-        return TriggerClientEvent('ox_lib:notify', src, {
-            title = Config.CompanyName, description = 'They are already working.', type = 'error'
-        })
-    end
-
-    local a, b = playerCoords(src), playerCoords(target)
-    if not a or not b or #(a - b) > Config.Crew.inviteRange + 3.0 then
-        return warn(src, 'invited a player who is not nearby')
-    end
-
-    Invites[target] = { from = src, expires = now() + Config.Crew.inviteMs }
-    TriggerClientEvent('nrp-movingjob:client:invited', target, GetPlayerName(src), src)
+    inviteToCrew(src, job, target)
 end)
 
 RegisterNetEvent('nrp-movingjob:server:inviteResponse', function(fromSrc, accepted)

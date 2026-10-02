@@ -11,6 +11,7 @@ const cornerNext = $('cornerNext');
 let state = null;        // last payload from the client
 let selected = null;     // contract picked on the orders page
 let current = 'orders';
+let crewPicked = new Set();   // server ids ticked on the contract
 
 const post = (name, data = {}) =>
   fetch(`https://${RES}/${name}`, {
@@ -129,6 +130,8 @@ function fillContract() {
 
   $('sigInput').value = '';
   $('stamp').classList.remove('on');
+  crewPicked = new Set();
+  loadCrewPick();
   const hint = $('signHint');
   hint.classList.toggle('hidden', !(state.signer.required && state.signer.name));
   $('signName').textContent = state.signer.name || '';
@@ -159,9 +162,54 @@ $('acceptBtn').onclick = () => {
   if (!selected || !signatureOk()) return;
   $('stamp').classList.add('on');
   $('acceptBtn').disabled = true;
-  const payload = { id: selected.id, signature: $('sigInput').value.trim() };
+  const payload = { id: selected.id, signature: $('sigInput').value.trim(), crew: [...crewPicked] };
   setTimeout(() => post('accept', payload), 650);   // let the stamp land
 };
+
+/* ------------------------------------------------- crew picked up front */
+async function loadCrewPick() {
+  const box = $('crewPick');
+  const crew = state.crew || {};
+  box.classList.toggle('hidden', !crew.enabled || !crew.max);
+  if (!crew.enabled || !crew.max) return;
+
+  $('crewPickText').textContent = `Bring up to ${crew.max} more ${crew.max === 1 ? 'hand' : 'hands'}`
+    + ` (optional, invited when you sign${crew.splitPay ? ', pay is split' : ''}):`;
+
+  const chips = $('crewChips');
+  chips.innerHTML = '<span class="crew-none">looking around...</span>';
+  const players = (await post('nearby')) || [];
+
+  // forget anyone who walked off
+  const here = new Set(players.map((p) => Number(p.id)));
+  crewPicked.forEach((id) => { if (!here.has(id)) crewPicked.delete(id); });
+
+  chips.innerHTML = players.length
+    ? players.map((p) => `
+        <label class="crew-chip ${crewPicked.has(Number(p.id)) ? 'on' : ''}" data-id="${Number(p.id)}">
+          <span class="box"></span>${esc(p.name)}
+        </label>`).join('')
+    : '<span class="crew-none">nobody standing nearby</span>';
+  markFull();
+}
+
+function markFull() {
+  const max = (state.crew && state.crew.max) || 0;
+  const full = crewPicked.size >= max;
+  document.querySelectorAll('.crew-chip').forEach((c) => c.classList.toggle('full', full));
+}
+
+$('crewChips').addEventListener('click', (e) => {
+  const chip = e.target.closest('.crew-chip');
+  if (!chip) return;
+  e.preventDefault();
+  const id = Number(chip.dataset.id);
+  if (crewPicked.has(id)) crewPicked.delete(id);
+  else if (crewPicked.size < ((state.crew && state.crew.max) || 0)) crewPicked.add(id);
+  chip.classList.toggle('on', crewPicked.has(id));
+  markFull();
+});
+$('crewPickRefresh').onclick = loadCrewPick;
 
 /* ------------------------------------------------------------- active job */
 const STEPS = [
@@ -198,7 +246,6 @@ function renderActive() {
   finish.textContent = !state.isLeader ? 'Your crew boss hands it in'
     : (j.stage === 'returning' ? 'Hand in the contract' : 'Finish the job first');
   $('abandonBtn').classList.toggle('hidden', !state.isLeader);
-  $('abandonConfirm').classList.add('hidden');
 }
 
 $('finishBtn').onclick = () => post('finish');
@@ -247,6 +294,7 @@ window.addEventListener('message', ({ data }) => {
       renderOrders();
       show('orders');
     } else {
+      $('abandonConfirm').classList.add('hidden');
       renderActive();
       show('active');
     }

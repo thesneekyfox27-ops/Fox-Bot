@@ -444,6 +444,34 @@ body {
 .page-corner.prev span::before { content: '\2190 '; }
 
 
+/* ---- crew picked on the contract ---- */
+.crew-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 0 0 2px; }
+.crew-pick .para { width: 100%; margin-bottom: 0 !important; }
+.crew-chips { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.crew-chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 2px 12px 2px 8px;
+  border: 1.5px solid rgba(31,36,48,.4);
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: var(--hand); font-size: 21px; font-weight: 700; color: var(--pen);
+  transition: background .12s, border-color .12s;
+}
+.crew-chip input { display: none; }
+.crew-chip .box { width: 15px; height: 15px; }
+.crew-chip.on { background: rgba(37,87,232,.08); border-color: var(--blue); }
+.crew-chip.on .box::after {
+  content: '\2713'; position: absolute; left: 0; top: -9px;
+  font-family: var(--hand); font-size: 24px; font-weight: 700; color: var(--pen);
+}
+.crew-chip.full:not(.on) { opacity: .4; cursor: not-allowed; }
+.crew-none { font-family: var(--hand); font-size: 19px; color: var(--muted); }
+.link {
+  background: none; border: none; padding: 0;
+  font-family: var(--sans); font-size: 11.5px; font-weight: 700;
+  color: var(--blue); text-decoration: underline; cursor: pointer;
+}
+
 /* ---- contract page is the densest: tighter type so it fits one sheet ---- */
 #pgContract .band.top.slim { padding: 14px 34px 10px; }
 #pgContract .band-title { font-size: 25px; }
@@ -458,8 +486,9 @@ body {
 #pgContract .services { margin: 2px 0 8px 18px; }
 #pgContract .services li { margin-bottom: 4px; }
 #pgContract .services p { font-size: 12.6px; line-height: 1.55; }
-#pgContract .sign-row { margin: 8px 0 0; }
-#pgContract .sign-input { font-size: 30px; }
+#pgContract .sign-row { margin: 2px 0 0; }
+#pgContract .sign-input { font-size: 28px; }
+#pgContract .stamp-spot { height: 48px; }
 #pgContract .stamp-spot { height: 56px; }
 #pgContract .actions { margin-top: 10px; }
 

@@ -777,6 +777,11 @@ local function openPaper()
         end
         msg.mode = 'board'
         msg.contracts = list
+        msg.crew = {
+            enabled  = Config.Crew.enabled and true or false,
+            max      = math.max(0, (Config.Crew.maxMembers or 1) - 1),
+            splitPay = Config.Crew.splitPay and true or false
+        }
     end
 
     paperOpen = true
@@ -818,7 +823,13 @@ end)
 
 RegisterNUICallback('accept', function(data, cb)
     closePaper()
-    TriggerServerEvent('nrp-movingjob:server:accept', tonumber(data.id), tostring(data.signature or ''))
+    local crew = {}
+    if type(data.crew) == 'table' then
+        for _, id in ipairs(data.crew) do
+            if tonumber(id) then crew[#crew + 1] = tonumber(id) end
+        end
+    end
+    TriggerServerEvent('nrp-movingjob:server:accept', tonumber(data.id), tostring(data.signature or ''), crew)
     cb('ok')
 end)
 
@@ -836,7 +847,8 @@ end)
 
 RegisterNUICallback('nearby', function(_, cb)
     local out = {}
-    if Config.Crew.enabled and Job.leader then
+    -- before a job (picking a crew on the contract) or as the crew boss during one
+    if Config.Crew.enabled and (Job.leader or not Job.active) then
         for _, pl in ipairs(lib.getNearbyPlayers(GetEntityCoords(cache.ped), Config.Crew.inviteRange, false)) do
             out[#out + 1] = { id = GetPlayerServerId(pl.id), name = GetPlayerName(pl.id) }
         end
