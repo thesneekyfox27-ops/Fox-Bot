@@ -100,7 +100,7 @@ body {
   transform: translateX(-50%);
   width: min(300px, 58%);
   height: 62px;
-  z-index: 5;
+  z-index: 8;
   pointer-events: none;
   filter: drop-shadow(0 5px 4px rgba(0,0,0,.35));
 }
@@ -154,19 +154,79 @@ body {
   position: relative;
   display: flex; flex-direction: column;
   min-height: 0; flex: 1;
+  /* plain white sheet, soft light falling from the top like real paper */
   background:
-    linear-gradient(90deg, transparent 38px, var(--margin) 38px, var(--margin) 39.5px, transparent 39.5px),
-    repeating-linear-gradient(180deg, transparent 0 27px, var(--rule) 27px 28px),
-    var(--sheet);
-  background-attachment: local;
-  border-radius: 3px;
+    radial-gradient(ellipse at 30% 0%, rgba(255,255,255,.9), transparent 60%),
+    linear-gradient(178deg, #ffffff 0%, #f7f7f6 55%, #efefed 100%);
+  border-radius: 2px;
   box-shadow:
-    0 1px 0 rgba(0,0,0,.05),
-    0 3px 0 -1px #f2efe6,         /* sheets underneath */
-    0 3px 1px -1px rgba(0,0,0,.12),
-    0 6px 0 -2px #ece8dc,
-    0 6px 2px -2px rgba(0,0,0,.12),
-    0 10px 18px rgba(0,0,0,.18);
+    0 0 0 1px rgba(0,0,0,.04),
+    0 3px 0 -1px #f4f4f2,         /* sheets underneath */
+    0 3px 1px -1px rgba(0,0,0,.10),
+    0 6px 0 -2px #ecece9,
+    0 6px 2px -2px rgba(0,0,0,.10),
+    6px 10px 18px rgba(0,0,0,.22);
+}
+.page-off { display: none !important; }
+
+/* ---- page turn ---- */
+.turn-next { animation: turnNext .32s cubic-bezier(.2,.8,.3,1); transform-origin: left center; }
+.turn-prev { animation: turnPrev .32s cubic-bezier(.2,.8,.3,1); transform-origin: right center; }
+@keyframes turnNext {
+  from { transform: perspective(1400px) rotateY(-14deg) translateX(18px); opacity: .2; }
+  to   { transform: none; opacity: 1; }
+}
+@keyframes turnPrev {
+  from { transform: perspective(1400px) rotateY(14deg) translateX(-18px); opacity: .2; }
+  to   { transform: none; opacity: 1; }
+}
+
+/* ---- folded page corner (click to flip) ---- */
+.page-corner {
+  position: absolute;
+  bottom: 22px;                 /* sits exactly on the sheet's corner */
+  width: 58px; height: 58px;
+  border: none; padding: 0;
+  cursor: pointer;
+  z-index: 6;
+  background: transparent;
+  transition: width .18s ease, height .18s ease;
+}
+.page-corner::before {          /* the board showing where the page lifts */
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(var(--board-dark), var(--board-dark));
+}
+.page-corner::after {           /* the back of the lifted page */
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, #ffffff 0%, #e9e9e6 38%, #d5d5d1 49%, rgba(0,0,0,.25) 50%, transparent 54%);
+  filter: drop-shadow(-3px -3px 4px rgba(0,0,0,.18));
+}
+.page-corner.next { right: 20px; }
+.page-corner.next::before { clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+.page-corner.prev { left: 20px; transform: scaleX(-1); }
+.page-corner.prev::before { clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+.page-corner:hover { width: 74px; height: 74px; }
+.page-corner span {
+  position: absolute; bottom: 10px; right: 66px;
+  font-family: var(--hand);
+  font-size: 20px; font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+  pointer-events: none;
+  transition: right .18s ease;
+}
+.page-corner span::after { content: ' \2192'; }
+.page-corner.prev span { transform: scaleX(-1); }
+.page-corner.prev span::after { content: ''; }
+.page-corner.prev span::before { content: '\2190 '; }
+.page-corner:hover span { right: 82px; }
+
+.page-no {
+  position: absolute; bottom: 14px; left: 0; right: 0;
+  text-align: center;
+  font-family: var(--hand);
+  font-size: 17px; color: var(--muted);
+  pointer-events: none;
 }
 
 /* =====================================================================
@@ -174,13 +234,13 @@ body {
    ===================================================================== */
 .panel {
   width: 720px;
-  max-height: 90vh;
+  height: 880px;
   display: flex; flex-direction: column;
 }
 
 .head {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 26px 24px 10px 56px;
+  padding: 30px 28px 8px;
 }
 .brand { display: flex; align-items: center; gap: 14px; }
 .brand-mark {
@@ -220,7 +280,7 @@ body {
 /* ---- tabs: highlighter marks ---- */
 .tabs {
   display: flex; gap: 4px; flex-wrap: wrap;
-  padding: 8px 24px 6px 52px;
+  padding: 8px 24px 4px;
 }
 .tab {
   font-family: var(--hand);
@@ -256,66 +316,67 @@ body {
 }
 .tab.active .count { color: var(--accent); }
 
-/* ---- vehicle cards: index cards clipped to the sheet ---- */
+/* ---- vehicles: sketched straight onto the paper ---- */
 .grid {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  padding: 10px 24px 16px 52px;
+  gap: 8px 18px;
+  align-content: start;
+  padding: 8px 28px 10px;
 }
 .grid::-webkit-scrollbar { width: 7px; }
-.grid::-webkit-scrollbar-thumb { background: #cfc8b6; border-radius: 4px; }
+.grid::-webkit-scrollbar-thumb { background: #d6d6d1; border-radius: 4px; }
 
 .card {
   position: relative;
-  background: #ffffff;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  padding: 12px 13px 11px;
+  background: transparent;
+  padding: 6px 14px 9px;
   cursor: pointer;
-  box-shadow: 0 1px 0 rgba(0,0,0,.04), 0 3px 8px rgba(40,30,10,.08);
-  transition: transform .14s ease, box-shadow .14s ease, border-color .14s;
+  /* wobbly hand-drawn pencil box */
+  border: 1.6px solid rgba(40, 44, 52, .55);
+  border-radius: 255px 14px 225px 14px / 14px 225px 14px 255px;
+  transition: transform .14s ease, background .14s ease, border-color .14s;
 }
-.card:nth-child(odd)  { transform: rotate(-.35deg); }
-.card:nth-child(even) { transform: rotate(.35deg); }
-.card::before {           /* strip of tape */
-  content: ''; position: absolute;
-  top: -8px; left: 50%;
-  width: 54px; height: 16px;
-  transform: translateX(-50%) rotate(-3deg);
-  background: rgba(255, 244, 196, .75);
-  box-shadow: 0 1px 2px rgba(0,0,0,.08);
-  border-left: 1px dashed rgba(0,0,0,.06);
-  border-right: 1px dashed rgba(0,0,0,.06);
-  z-index: 2;
-}
+.card:nth-child(3n+1) { border-radius: 14px 225px 14px 255px / 255px 14px 225px 14px; }
+.card:nth-child(3n+2) { border-radius: 225px 14px 255px 14px / 14px 255px 14px 225px; }
 .card:hover {
-  transform: translateY(-3px) rotate(0deg);
-  border-color: var(--accent-soft);
-  box-shadow: 0 14px 26px rgba(40,30,10,.18), 0 0 0 2px var(--accent-hl);
+  transform: rotate(-.4deg) translateY(-2px);
+  background: rgba(185, 156, 255, .12);
+  border-color: var(--accent);
 }
 
 .card .pic {
-  height: 100px;
-  margin: 0 0 10px;
-  border-radius: 2px;
+  height: 70px;
+  margin: 0 0 2px;
   overflow: hidden;
-  background: linear-gradient(135deg, #ece7da, #ddd6c4);
-  border: 4px solid #fff;
-  outline: 1px solid var(--line);
+  background: transparent;
+  position: relative;
 }
+/* the photo is turned into a pencil sketch on the paper */
 .card .pic img {
   width: 100%; height: 100%;
-  object-fit: cover; display: block;
-  transition: transform .2s ease;
+  object-fit: contain; display: block;
+  filter: grayscale(1) contrast(1.6) brightness(1.12) sepia(.12);
+  mix-blend-mode: multiply;
+  opacity: .9;
+  transition: filter .25s ease, transform .25s ease, opacity .25s;
 }
-.card:hover .pic img { transform: scale(1.05); }
+.card:hover .pic img {
+  filter: none;           /* comes to life in colour on hover */
+  opacity: 1;
+  transform: scale(1.04);
+}
 .card .pic.noimg { display: none; }
 
 .card .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.card .name { font-weight: 800; font-size: 15px; color: var(--ink); }
+.card .name {
+  font-family: var(--hand);
+  font-weight: 700; font-size: 25px; line-height: 1;
+  color: var(--ink);
+}
 .card .cat {
   font-family: var(--type);
   font-size: 10px; letter-spacing: 1px;
@@ -331,43 +392,50 @@ body {
   font-family: var(--hand);
   font-size: 18px; line-height: 1.05;
   color: var(--ink-soft);
-  margin: 6px 0 10px; min-height: 36px;
+  margin: 1px 0 4px; min-height: 19px;
 }
 .card .money {
   display: flex; justify-content: space-between; align-items: baseline;
-  border-top: 1px dashed var(--line);
-  padding-top: 8px;
 }
 .card .fee {
   font-family: var(--hand);
-  font-size: 28px; font-weight: 700; line-height: .9;
+  font-size: 27px; font-weight: 700; line-height: .9;
   color: var(--accent);
+  position: relative;
+}
+.card .fee::after {     /* scribbled underline */
+  content: ''; position: absolute; left: -2px; right: -4px; bottom: -3px; height: 6px;
+  border-bottom: 2px solid var(--accent);
+  border-radius: 0 0 50% 40%;
+  opacity: .5;
 }
 .card .dep { font-size: 11px; color: var(--muted); }
 
 .foot {
   display: flex; justify-content: space-between; gap: 12px;
-  padding: 10px 24px 14px 52px;
-  border-top: 1.5px solid var(--line);
+  padding: 9px 84px 42px;
+  border-top: 1.5px dashed #d9d9d4;
   font-size: 11.5px; color: var(--ink-soft);
 }
 .foot b { color: var(--accent); }
 .foot-note { font-family: var(--hand); font-size: 17px; color: var(--bad); line-height: 1; }
 
 /* =====================================================================
-   CONFIRM / CONTRACT
+   CONFIRM / CONTRACT - page 2 of the same clipboard
    ===================================================================== */
 .confirm {
-  position: fixed; inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(8,9,11,.55);
+  position: absolute;
+  inset: 58px 20px 22px;          /* exactly over page 1 */
+  z-index: 7;                     /* over the page corners, under the clip */
+  display: flex;
 }
 .confirm-card {
-  width: min(780px, 94vw);
-  max-height: 92vh;
-  display: flex; flex-direction: column;
+  flex: 1;
+  padding: 30px 28px 22px;
+  overflow: hidden;
+  animation: turnNext .34s cubic-bezier(.2,.8,.3,1);
+  transform-origin: left center;
 }
-.confirm-card > .sheet { padding: 24px 24px 20px 52px; overflow: hidden; }
 
 .sheet-x {
   position: absolute; top: 10px; right: 12px;
@@ -379,7 +447,7 @@ body {
 
 .confirm-grid {
   display: grid;
-  grid-template-columns: 1fr 1.15fr;
+  grid-template-columns: 230px 1fr;
   gap: 22px;
   overflow: hidden;
   flex: 1; min-height: 0;
@@ -388,14 +456,17 @@ body {
 /* left: summary as a receipt */
 .summary { display: flex; flex-direction: column; }
 .summary .pic {
-  width: 100%; height: 150px;
+  width: 100%; height: 130px;
   overflow: hidden; margin-bottom: 14px;
-  background: linear-gradient(135deg, #ece7da, #ddd6c4);
-  border: 6px solid #fff;
-  box-shadow: 0 6px 14px rgba(40,30,10,.18);
-  transform: rotate(-1.2deg);
+  background: transparent;
+  border: 1.6px solid rgba(40, 44, 52, .55);
+  border-radius: 255px 14px 225px 14px / 14px 225px 14px 255px;
 }
-.summary .pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.summary .pic img {
+  width: 100%; height: 100%; object-fit: contain; display: block;
+  filter: grayscale(1) contrast(1.6) brightness(1.12) sepia(.12);
+  mix-blend-mode: multiply;
+}
 .summary .pic.noimg { display: none; }
 .eyebrow {
   font-family: var(--type);
@@ -528,10 +599,11 @@ body {
   background: rgba(8,9,11,.6);
 }
 .papers-wrap {
-  display: flex; gap: 18px;
-  align-items: stretch;
-  max-width: 94vw; max-height: 92vh;
-  padding: 60px 20px 22px;
+  display: flex;
+  width: 440px;
+  max-width: 94vw;
+  height: min(640px, 92vh);
+  padding: 58px 20px 22px;
 }
 .papers-close {
   position: absolute; top: 8px; right: 10px;
@@ -541,23 +613,20 @@ body {
 .papers-close:hover { color: #000; background: rgba(255,255,255,.25); }
 
 .doc {
-  background: var(--paper);
+  background: linear-gradient(178deg, #ffffff 0%, #f7f7f6 55%, #efefed 100%);
   color: var(--paper-ink);
-  width: 330px;
-  border-radius: 3px;
+  flex: 1;
+  min-width: 0;
+  border-radius: 2px;
   padding: 20px 22px;
   box-shadow: 0 1px 0 rgba(0,0,0,.06), 0 3px 0 -1px #f0ece0, 0 3px 1px -1px rgba(0,0,0,.14), 0 12px 24px rgba(0,0,0,.2);
   display: flex; flex-direction: column;
   position: relative;
   overflow: hidden;
 }
-.doc::before {
-  content: ''; position: absolute; inset: 0;
-  background: repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(0,0,0,.025) 28px);
-  pointer-events: none;
-}
-.contract-doc { transform: rotate(-.6deg); }
-.reg-doc { transform: rotate(.5deg); }
+
+.contract-doc { padding-bottom: 70px; }
+.reg-doc .reg-timer { padding-bottom: 70px; }
 
 .contract-doc .doc-head {
   display: flex; align-items: flex-start; justify-content: space-between;
@@ -586,7 +655,7 @@ body {
   font-size: 10px; line-height: 1.45; color: #443f34;
   border-top: 1px dashed var(--paper-line);
   padding-top: 10px; margin-bottom: 12px;
-  max-height: 150px; overflow-y: auto;
+  flex: 1; min-height: 0; overflow-y: auto;
 }
 .doc-terms::-webkit-scrollbar { width: 4px; }
 .doc-terms::-webkit-scrollbar-thumb { background: var(--paper-line); }
@@ -674,9 +743,7 @@ body {
 }
 .reg-bar span.low { background: var(--bad); }
 
-@media (max-width: 900px) {
-  .papers-wrap { flex-direction: column; overflow-y: auto; }
-}
+
 
 /* =====================================================================
    TOASTS - sticky notes
@@ -745,6 +812,14 @@ body {
   font-size: 21px; font-weight: 700;
   line-height: 1;
 }
+
+/* scale the whole clipboard down on smaller screens so a page always
+   shows the same 6 cars, no scrolling */
+@media (max-height: 950px) { .board { zoom: .9; } }
+@media (max-height: 870px) { .board { zoom: .82; } }
+@media (max-height: 790px) { .board { zoom: .74; } }
+@media (max-height: 700px) { .board { zoom: .66; } }
+@media (max-height: 600px) { .board { zoom: .56; } }
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }

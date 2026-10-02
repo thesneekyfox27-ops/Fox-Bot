@@ -31,58 +31,60 @@
       <span><b id="refundPct">75</b>% of your deposit comes back if the car returns clean.</span>
       <span class="foot-note">Damage cuts the refund.</span>
     </footer>
+    <span class="page-no" id="listPageNo"></span>
     </div>
-  </div>
 
-  <!-- ============ CONTRACT / CONFIRM ============ -->
-  <div class="confirm hidden" id="confirm">
-    <div class="confirm-card board">
-      <div class="clip" aria-hidden="true"><span class="clip-hanger"></span><span class="clip-bar"></span><span class="clip-wire"></span><span class="clip-grip l"></span><span class="clip-grip r"></span></div>
-      <div class="sheet">
-      <button class="sheet-x" id="cancelX" aria-label="Back">&times;</button>
+    <button class="page-corner prev hidden" id="listPrev" aria-label="Previous page"><span>Page 1</span></button>
+    <button class="page-corner next hidden" id="listNext" aria-label="Next page"><span>Page 2</span></button>
 
-      <div class="confirm-grid">
-        <!-- Left: vehicle + costs -->
-        <section class="summary">
-          <div class="pic" id="cPic"><img src="" alt=""
-               onerror="this.parentElement.classList.add('noimg')"></div>
-          <p class="eyebrow">Rental summary</p>
-          <h2 id="cName">Vehicle</h2>
-          <div class="row"><span>Rental fee</span><b id="cPrice">$0</b></div>
-          <div class="row"><span>Deposit (refundable)</span><b id="cDeposit">$0</b></div>
-          <div class="row total"><span>Due now</span><b id="cTotal">$0</b></div>
-          <div class="row back"><span>Back on clean return</span><b id="cRefund">$0</b></div>
-        </section>
+    <!-- ============ CONTRACT / CONFIRM ============ -->
+    <div class="confirm hidden" id="confirm">
+      <div class="confirm-card sheet page">
+        <button class="sheet-x" id="cancelX" aria-label="Back">&times;</button>
 
-        <!-- Right: the agreement -->
-        <section class="contract" id="contractPane">
-          <div class="contract-head">
-            <span class="stamp">AGREEMENT</span>
-            <div>
-              <h3 id="ctCompany">Clipboard Rentals LLC</h3>
-              <p>Rental agreement &amp; temporary permit</p>
+        <div class="confirm-grid">
+          <!-- Left: vehicle + costs -->
+          <section class="summary">
+            <div class="pic" id="cPic"><img src="" alt=""
+                 onerror="this.parentElement.classList.add('noimg')"></div>
+            <p class="eyebrow">Rental summary</p>
+            <h2 id="cName">Vehicle</h2>
+            <div class="row"><span>Rental fee</span><b id="cPrice">$0</b></div>
+            <div class="row"><span>Deposit (refundable)</span><b id="cDeposit">$0</b></div>
+            <div class="row total"><span>Due now</span><b id="cTotal">$0</b></div>
+            <div class="row back"><span>Back on clean return</span><b id="cRefund">$0</b></div>
+          </section>
+
+          <!-- Right: the agreement -->
+          <section class="contract" id="contractPane">
+            <div class="contract-head">
+              <span class="stamp">AGREEMENT</span>
+              <div>
+                <h3 id="ctCompany">Clipboard Rentals LLC</h3>
+                <p>Rental agreement &amp; temporary permit</p>
+              </div>
             </div>
-          </div>
-          <ol class="terms" id="ctTerms"></ol>
-          <div class="sign">
-            <label class="sign-label" for="sigInput">Sign here</label>
-            <input id="sigInput" class="sign-input" type="text" maxlength="32"
-                   placeholder="Type your full name" autocomplete="off" spellcheck="false">
-            <label class="agree" id="agreeWrap">
-              <input type="checkbox" id="agreeChk">
-              <span>I have read and agree to the terms above.</span>
-            </label>
-          </div>
-        </section>
-      </div>
+            <ol class="terms" id="ctTerms"></ol>
+            <div class="sign">
+              <label class="sign-label" for="sigInput">Sign here</label>
+              <input id="sigInput" class="sign-input" type="text" maxlength="32"
+                     placeholder="Type your full name" autocomplete="off" spellcheck="false">
+              <label class="agree" id="agreeWrap">
+                <input type="checkbox" id="agreeChk">
+                <span>I have read and agree to the terms above.</span>
+              </label>
+            </div>
+          </section>
+        </div>
 
-      <div class="actions">
-        <button class="btn ghost" id="cancelBtn">Back</button>
-        <button class="btn primary" id="confirmBtn" disabled>Sign &amp; drive</button>
-      </div>
+        <div class="actions">
+          <button class="btn ghost" id="cancelBtn">Back</button>
+          <button class="btn primary" id="confirmBtn" disabled>Sign &amp; drive</button>
+        </div>
       </div>
     </div>
   </div>
+
 </div>
 
 <!-- ============ PAPERS OVERLAY ============ -->
@@ -114,6 +116,9 @@
         <span class="sig-line">Authorised signature</span>
       </div>
     </article>
+
+    <button class="page-corner prev hidden" id="papersPrev" aria-label="Previous page"><span>Agreement</span></button>
+    <button class="page-corner next hidden" id="papersNext" aria-label="Next page"><span>Permit</span></button>
 
     <!-- Temporary registration permit -->
     <article class="doc reg-doc" id="docReg">
@@ -152,5 +157,6 @@
 <div id="toasts"></div>
 
 <script src="script.js"></script>
+<script src="pages.js"></script>
 </body>
 </html>
