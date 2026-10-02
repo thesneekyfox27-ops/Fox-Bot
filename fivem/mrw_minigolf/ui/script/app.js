@@ -44,7 +44,7 @@ function fillCard({ course, name, strokes, holes, footer, leftEarly }) {
     holes = holes || strokes.length || 12;
     const half = Math.ceil(holes / 2);
 
-    $('cCourse').textContent = String(course || 'Minigolf').toUpperCase();
+    $('cCourse').textContent = String(course || 'Crazy Golf').toUpperCase();
     $('cTitle').textContent = t('card_title', 'Scorecard').toUpperCase();
     $('cNameLabel').textContent = `${t('card_name', "Participant's name")} :`;
     $('cName').textContent = name || '';

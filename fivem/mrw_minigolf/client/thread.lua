@@ -34,7 +34,7 @@ function ZoneThread()
         local pcoords = Utils:getEntityCoords(PlayerPedId())
         local distance = #(pcoords - Config.locate_club)
 
-        if distance <= 1.5 and not IsPlayingGolf() then
+        if distance <= 1.8 and not IsPlayingGolf() and not UsingTarget() then
             d = 1
 
             Ui:displayHelpNotification({

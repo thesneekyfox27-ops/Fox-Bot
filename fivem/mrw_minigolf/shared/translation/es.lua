@@ -4,7 +4,7 @@ if language == "es" then
         ["round_win"] = "Terminaste este hoyo con ",
         ["finish_game"] = "Se acabo el juego, hiciste un total de : ",
         ["stroke"] = "Tiro",
-        ["locate_club"] = "~INPUT_CONTEXT~ Minigolf - boletos desde $%s",
+        ["locate_club"] = "~INPUT_CONTEXT~ Hablar con el personal de Crazy Golf (boletos desde $%s)",
         ["other_params"] = "~INPUT_ATTACK~ para cargar el golpe !\n ~INPUT_VEH_FLY_ATTACK_CAMERA~ mostrar los puntos ! \n",
         ["rotate_params"] = "~INPUT_CELLPHONE_LEFT~ ~INPUT_CELLPHONE_RIGHT~ rotar alrededor de la bola !\n",
         ["games_params"] = "~INPUT_VEH_PREV_RADIO~ para reiniciar el nivel !\n ~INPUT_CELLPHONE_OPTION~ quitar el juego !",
@@ -15,7 +15,7 @@ if language == "es" then
         ["play_your"] = "Total de Tiros: ",
         ["hole"] = "Hoyo",
         ["score"] = "Puntuacion",
-        ["menu_title"] = "Portside Minigolf",
+        ["menu_title"] = "Crazy Golf",
         ["menu_price"] = "Renta de palos",
         ["menu_holes"] = "hoyos",
         ["menu_invite"] = "Invitar amigos (cada uno paga sus palos):",
@@ -53,6 +53,7 @@ if language == "es" then
         ["card_score"] = "Tiros",
         ["ticket_denied"] = "No puedes comprar ese boleto",
         ["card_saved"] = "Tarjeta guardada en tu inventario",
-        ["card_failed"] = "No se pudo guardar la tarjeta"
+        ["card_failed"] = "No se pudo guardar la tarjeta",
+        ["talk_staff"] = "Hablar con el personal de %s"
     }
 end

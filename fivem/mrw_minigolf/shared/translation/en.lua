@@ -4,7 +4,7 @@ if language == "en" then
         ["round_win"] = "You finished this hole in ",
         ["finish_game"] = "Game over, your total is ",
         ["stroke"] = "strokes",
-        ["locate_club"] = "~INPUT_CONTEXT~ Minigolf - tickets from $%s",
+        ["locate_club"] = "~INPUT_CONTEXT~ Talk to the Crazy Golf staff (tickets from $%s)",
         ["other_params"] = "~INPUT_ATTACK~ hold to charge your shot\n ~INPUT_VEH_FLY_ATTACK_CAMERA~ show the scorecard\n",
         ["rotate_params"] = "~INPUT_CELLPHONE_LEFT~ ~INPUT_CELLPHONE_RIGHT~ walk around the ball\n",
         ["games_params"] = "~INPUT_VEH_PREV_RADIO~ restart this hole\n ~INPUT_CELLPHONE_OPTION~ quit the game",
@@ -15,7 +15,7 @@ if language == "en" then
         ["play_your"] = "Stroke",
         ["hole"] = "Hole",
         ["score"] = "Score",
-        ["menu_title"] = "Portside Minigolf",
+        ["menu_title"] = "Crazy Golf",
         ["menu_price"] = "Club rental",
         ["menu_holes"] = "holes",
         ["menu_invite"] = "Bring friends (they pay their own clubs):",
@@ -53,6 +53,7 @@ if language == "en" then
         ["card_score"] = "Score",
         ["ticket_denied"] = "You can't buy that ticket",
         ["card_saved"] = "Scorecard saved to your inventory",
-        ["card_failed"] = "Couldn't save the scorecard - inventory full or item missing"
+        ["card_failed"] = "Couldn't save the scorecard - inventory full or item missing",
+        ["talk_staff"] = "Talk to %s staff"
     }
 end

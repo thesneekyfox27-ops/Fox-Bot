@@ -4,7 +4,7 @@ if language == "fr" then
         ["round_win"] = "Manche gagné en ",
         ["finish_game"] = "La partie est terminé, vous avez fait un total de : ",
         ["stroke"] = "coups",
-        ["locate_club"] = "~INPUT_CONTEXT~ Minigolf - billets des $%s",
+        ["locate_club"] = "~INPUT_CONTEXT~ Parler au personnel de Crazy Golf (billets des $%s)",
         ["other_params"] = "~INPUT_ATTACK~ pour charger le tir !\n ~INPUT_VEH_FLY_ATTACK_CAMERA~ pour afficher les scores ! \n",
         ["rotate_params"] = "~INPUT_CELLPHONE_LEFT~ ~INPUT_CELLPHONE_RIGHT~ pour tourner autour de la balle !\n",
         ["games_params"] = "~INPUT_VEH_PREV_RADIO~ pour relancer le niveau !\n ~INPUT_CELLPHONE_OPTION~ pour quitter la partie !",
@@ -15,7 +15,7 @@ if language == "fr" then
         ["play_your"] = "Vous jouez votre coups n°",
         ["hole"] = "Trou",
         ["score"] = "Score",
-        ["menu_title"] = "Portside Minigolf",
+        ["menu_title"] = "Crazy Golf",
         ["menu_price"] = "Location des clubs",
         ["menu_holes"] = "trous",
         ["menu_invite"] = "Inviter des amis (chacun paie ses clubs) :",
@@ -53,6 +53,7 @@ if language == "fr" then
         ["card_score"] = "Coups",
         ["ticket_denied"] = "Vous ne pouvez pas acheter ce billet",
         ["card_saved"] = "Carte enregistree dans votre inventaire",
-        ["card_failed"] = "Impossible d'enregistrer la carte"
+        ["card_failed"] = "Impossible d'enregistrer la carte",
+        ["talk_staff"] = "Parler au personnel de %s"
     }
 end

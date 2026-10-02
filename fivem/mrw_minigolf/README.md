@@ -36,13 +36,13 @@ The item has to exist in your inventory before it can be given. Add ONE of these
 **tgiann-inventory** (`tgiann-inventory/items/items.lua`, inside `itemsData`):
 
 ```lua
-minigolf_scorecard = { name = 'minigolf_scorecard', label = 'Minigolf Scorecard', weight = 10, type = 'item', image = 'minigolf_scorecard.png', unique = true, useable = true, shouldClose = true, description = 'Your round at Portside Minigolf.' },
+minigolf_scorecard = { name = 'minigolf_scorecard', label = 'Minigolf Scorecard', weight = 10, type = 'item', image = 'minigolf_scorecard.png', unique = true, useable = true, shouldClose = true, description = 'Your round at Crazy Golf.' },
 ```
 
 **qb-inventory** (`qb-core/shared/items.lua`):
 
 ```lua
-minigolf_scorecard = { name = 'minigolf_scorecard', label = 'Minigolf Scorecard', weight = 10, type = 'item', image = 'minigolf_scorecard.png', unique = true, useable = true, shouldClose = true, description = 'Your round at Portside Minigolf.' },
+minigolf_scorecard = { name = 'minigolf_scorecard', label = 'Minigolf Scorecard', weight = 10, type = 'item', image = 'minigolf_scorecard.png', unique = true, useable = true, shouldClose = true, description = 'Your round at Crazy Golf.' },
 ```
 
 **ox_inventory** (`ox_inventory/data/items.lua`):
@@ -53,7 +53,7 @@ minigolf_scorecard = { name = 'minigolf_scorecard', label = 'Minigolf Scorecard'
     weight = 10,
     stack = false,
     close = true,
-    description = 'Your round at Portside Minigolf.',
+    description = 'Your round at Crazy Golf.',
     client = { event = 'mrw_minigolf:viewCard' },
 },
 ```

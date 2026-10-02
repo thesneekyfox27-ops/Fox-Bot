@@ -23,7 +23,8 @@ files{
     'ui/script/app.js',
     'ui/css/app.css',
     'ui/font/*.woff',
-    'ui/font/*.woff2'
+    'ui/font/*.woff2',
+    'ui/img/*.png'
 }
 
 ui_page 'ui/ui.html'

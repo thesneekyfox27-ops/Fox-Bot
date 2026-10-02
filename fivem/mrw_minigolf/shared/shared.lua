@@ -29,7 +29,24 @@ Config.scorecard_item = {
     name      = 'minigolf_scorecard',   -- must exist in your inventory's item list (see README)
     inventory = 'auto'                  -- 'auto', 'tgiann', 'ox' or 'qb'
 }
-Config.course_name = 'Portside Minigolf'
+Config.course_name = 'Crazy Golf'
+
+-- Staff member at the club rental. Stands at Config.locate_club unless you set coords.
+Config.staff = {
+    model    = 'a_f_y_beach_01',
+    heading  = 0.0,                       -- turns to face players anyway
+    scenario = 'WORLD_HUMAN_CLIPBOARD',   -- nil for just standing
+    target   = 'auto',                    -- 'auto', 'nrp-target', 'ox_target', 'qb-target' or 'none' for an [E] prompt
+    -- coords = vector3(-1734.24, -1135.17, 12.79),
+}
+
+Config.blip = {
+    enabled = true,
+    sprite  = 109,      -- golf
+    colour  = 2,        -- green
+    scale   = 0.8,
+    label   = 'Crazy Golf',
+}
 Config.pay_account = 'cash'      -- QBCore: 'cash' or 'bank'
 Config.allow_bank_fallback = true -- QBCore: if cash is short, take it from the bank
 
