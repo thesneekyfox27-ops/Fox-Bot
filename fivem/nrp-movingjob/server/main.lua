@@ -102,6 +102,38 @@ end
 -- ---------------------------------------------------------------------------
 -- contract generation
 -- ---------------------------------------------------------------------------
+--- Price a contract from its items and how far the address is from the yard.
+local function priceContract(items, drop)
+    local P = Config.Pay
+    local itemPay, byWeight = 0, {}
+    for _, idx in ipairs(items) do
+        local weight = (Config.Cargo[idx] and Config.Cargo[idx].weight) or 'medium'
+        itemPay = itemPay + (P.perItem[weight] or P.perItem.medium or 0)
+        byWeight[weight] = (byWeight[weight] or 0) + 1
+    end
+
+    local a, b = Config.Drops[drop].arrival, Config.Boss.coords
+    local miles = #(vector3(a.x, a.y, a.z) - vector3(b.x, b.y, b.z)) * 0.000621371
+    local mileage = math.floor(miles * (P.perMile or 0) + 0.5)
+
+    return {
+        itemPay  = itemPay,
+        byWeight = byWeight,
+        callout  = P.callout or 0,
+        miles    = math.floor(miles * 10 + 0.5) / 10,
+        mileage  = mileage,
+        total    = itemPay + (P.callout or 0) + mileage
+    }
+end
+
+--- What one person takes home with `size` people on the job.
+local function shareFor(total, size)
+    size = math.max(1, size)
+    if not Config.Crew.splitPay then return total end
+    local boosted = total * (1 + (Config.Pay.crewBonus or 0) * (size - 1))
+    return math.floor(boosted / size)
+end
+
 local function makeContract(id)
     local count = math.random(Config.Contracts.minItems, Config.Contracts.maxItems)
     count = math.min(count, #Config.Van.slots)
@@ -111,14 +143,19 @@ local function makeContract(id)
         items[i] = math.random(#Config.Cargo)
     end
 
+    local drop  = math.random(#Config.Drops)
+    local price = priceContract(items, drop)
+
     return {
         id         = id,
         customer   = Config.Customers[math.random(#Config.Customers)],
-        drop       = math.random(#Config.Drops),
+        drop       = drop,
         items      = items,
         itemCount  = count,
-        payPerItem = math.random(Config.Contracts.payPerItem.min, Config.Contracts.payPerItem.max),
-        bonus      = math.random(Config.Contracts.bonus.min, Config.Contracts.bonus.max)
+        price      = price,
+        -- kept for the ox_lib menus: average per item, and the part paid on completion
+        payPerItem = math.floor(price.itemPay / count + 0.5),
+        bonus      = price.callout + price.mileage
     }
 end
 
@@ -144,7 +181,8 @@ lib.callback.register('nrp-movingjob:server:getContracts', function(src)
         -- The item list stays server side until the contract is accepted.
         public[#public + 1] = {
             id = c.id, customer = c.customer, drop = c.drop,
-            itemCount = c.itemCount, payPerItem = c.payPerItem, bonus = c.bonus
+            itemCount = c.itemCount, payPerItem = c.payPerItem, bonus = c.bonus,
+            price = c.price
         }
     end
     return public
@@ -232,7 +270,7 @@ RegisterNetEvent('nrp-movingjob:server:accept', function(id, signature, crew)
     local payload = {
         id = offer.id, customer = offer.customer, drop = offer.drop,
         items = offer.items, payPerItem = offer.payPerItem, bonus = offer.bonus,
-        plate = job.plate
+        price = offer.price, plate = job.plate
     }
     TriggerClientEvent('nrp-movingjob:client:started', src, payload, true)
 
@@ -396,12 +434,18 @@ RegisterNetEvent('nrp-movingjob:server:finish', function(vanNet)
     end
 
     local contract = job.contract
-    local gross = (contract.payPerItem * job.delivered) + contract.bonus
-    local penalty = math.floor(contract.payPerItem * Config.Contracts.damagePenalty * job.damaged)
-    local total = math.max(0, gross - penalty)
+    local price    = contract.price
+    local count    = #contract.items
+    local avgItem  = price.itemPay / count
 
-    local crew = crewOf(job)
-    local share = Config.Crew.splitPay and math.floor(total / #crew) or total
+    -- items are paid for what actually arrived; the callout and mileage come
+    -- with the finished job. Broken pieces cost part of an item's pay.
+    local gross   = avgItem * math.min(job.delivered, count) + price.callout + price.mileage
+    local penalty = avgItem * Config.Contracts.damagePenalty * job.damaged
+    local total   = math.max(0, math.floor(gross - penalty + 0.5))
+
+    local crew  = crewOf(job)
+    local share = shareFor(total, #crew)
 
     for _, member in ipairs(crew) do
         local Player = QBCore.Functions.GetPlayer(member)
@@ -503,7 +547,7 @@ RegisterNetEvent('nrp-movingjob:server:inviteResponse', function(fromSrc, accept
     TriggerClientEvent('nrp-movingjob:client:started', src, {
         id = contract.id, customer = contract.customer, drop = contract.drop,
         items = contract.items, payPerItem = contract.payPerItem, bonus = contract.bonus,
-        plate = job.plate
+        price = contract.price, plate = job.plate
     }, false)
     TriggerClientEvent('nrp-movingjob:client:stageChanged', src, job.stage)
 
@@ -518,6 +562,12 @@ RegisterNetEvent('nrp-movingjob:server:inviteResponse', function(fromSrc, accept
         description = ('%s is on the crew.'):format(GetPlayerName(src)),
         type = 'success'
     })
+
+    -- everyone's paperwork shows their share, so tell them the crew size
+    local members = crewOf(job)
+    for _, member in ipairs(members) do
+        TriggerClientEvent('nrp-movingjob:client:crewSize', member, #members)
+    end
 end)
 
 -- ---------------------------------------------------------------------------

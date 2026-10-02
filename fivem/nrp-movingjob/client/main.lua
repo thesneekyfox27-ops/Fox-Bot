@@ -731,7 +731,8 @@ local function jobPayload()
     return {
         customer = c.customer, address = drop and drop.label or '', plate = Job.plate,
         stage = Job.stage, items = items, delivered = Job.delivered,
-        payPerItem = c.payPerItem, bonus = c.bonus
+        payPerItem = c.payPerItem, bonus = c.bonus, price = c.price,
+        crewSize = Job.crewSize or 1
     }
 end
 
@@ -753,7 +754,13 @@ local function openPaper()
             yard    = p.yardLabel or 'the yard'
         },
         penalty = Config.Contracts.damagePenalty or 0,
-        signer  = { name = charName(), required = p.mustMatchName ~= false }
+        signer  = { name = charName(), required = p.mustMatchName ~= false },
+        rates   = {
+            perItem   = Config.Pay.perItem,
+            perMile   = Config.Pay.perMile,
+            crewBonus = Config.Pay.crewBonus,
+            splitPay  = Config.Crew.splitPay and true or false
+        }
     }
 
     if Job.active then
@@ -772,7 +779,8 @@ local function openPaper()
             list[#list + 1] = {
                 id = c.id, customer = c.customer, address = drop.label,
                 itemCount = c.itemCount, payPerItem = c.payPerItem, bonus = c.bonus,
-                miles = miles(#(drop.arrival - here)), phone = phoneFor(c.id, c.customer)
+                price = c.price, miles = c.price and c.price.miles or miles(#(drop.arrival - here)),
+                phone = phoneFor(c.id, c.customer)
             }
         end
         msg.mode = 'board'
@@ -964,6 +972,10 @@ end
 -- ---------------------------------------------------------------------------
 -- job lifecycle
 -- ---------------------------------------------------------------------------
+RegisterNetEvent('nrp-movingjob:client:crewSize', function(size)
+    Job.crewSize = tonumber(size) or 1
+end)
+
 RegisterNetEvent('nrp-movingjob:client:started', function(contract, isLeader)
     Job.active    = true
     Job.leader    = isLeader
@@ -973,6 +985,7 @@ RegisterNetEvent('nrp-movingjob:client:started', function(contract, isLeader)
     Job.delivered = 0
     Job.damaged   = 0
     Job.plate     = contract.plate
+    Job.crewSize  = 1
 
     wearUniform()
 

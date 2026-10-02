@@ -79,14 +79,14 @@
             Item on the Client's doorstep and return the truck to the yard.</p></li>
         </ul>
 
-        <p class="para"><b>COMPENSATION.</b> <span class="fill sm" id="kPer"></span> per item delivered, plus a
-          completion bonus of <span class="fill sm" id="kBonus"></span>, for an estimated total of
-          <span class="fill sm total" id="kTotal"></span>. Fragile items damaged in transit cost
-          <span id="kPenalty">45</span>% of that item's pay.</p>
+        <p class="para"><b>COMPENSATION.</b> Packed Items <span class="fill sm" id="kItemPay"></span>
+          (<span id="kItemBreak"></span>), a callout fee of <span class="fill sm" id="kCallout"></span> and mileage of
+          <span class="fill sm" id="kMileage"></span> (<span id="kMileTxt"></span>), for a contract total of
+          <span class="fill sm total" id="kTotal"></span>. Damaged fragile items cost <span id="kPenalty">45</span>% of an item's pay.</p>
+        <div class="shares" id="kShares"></div>
 
         <div class="crew-pick" id="crewPick">
-          <p class="para"><b>CREW.</b> <span id="crewPickText">The Service Provider may bring the following hands
-            (optional, they get an invite the moment you sign):</span></p>
+          <span class="crew-lbl"><b>CREW</b> (optional, invited when you sign):</span>
           <div class="crew-chips" id="crewChips"></div>
           <button class="link" id="crewPickRefresh">refresh nearby</button>
         </div>
@@ -132,7 +132,7 @@
         <ol class="items" id="aItems"></ol>
 
         <div class="pay-row">
-          <span>Pay so far</span><b class="fill total" id="aPay"></b>
+          <span id="aPayLabel">Your share so far</span><b class="fill total" id="aPay"></b>
         </div>
 
         <div class="actions">

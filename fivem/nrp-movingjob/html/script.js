@@ -23,6 +23,14 @@ const post = (name, data = {}) =>
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+/* what one person takes home with `size` people on the job (mirrors the server) */
+function shareFor(total, size) {
+  const r = (state && state.rates) || {};
+  size = Math.max(1, size);
+  if (!r.splitPay) return Math.floor(total);
+  return Math.floor(total * (1 + (r.crewBonus || 0) * (size - 1)) / size);
+}
+
 const money = (n) => `$${Math.round(Number(n) || 0).toLocaleString('en-US')}`;
 
 function normName(s) {
@@ -85,11 +93,11 @@ function renderOrders() {
         <div class="where">${esc(c.address)}</div>
         <div class="who">Client: <b>${esc(c.customer)}</b></div>
       </div>
-      <div class="pay"><b>${money(c.itemCount * c.payPerItem + c.bonus)}</b><span>est. with bonus</span></div>
+      <div class="pay"><b>${money(c.price.total)}</b><span>contract total</span></div>
       <div class="meta">
         <span class="boxes">${boxesFor(c.itemCount)} ${c.itemCount} items</span>
         <span>about ${Number(c.miles).toFixed(1)} mi</span>
-        <span>${money(c.payPerItem)} / item</span>
+        <span>${money(c.price.mileage)} trip</span>
       </div>
     </li>`).join('');
 }
@@ -122,9 +130,18 @@ function fillContract() {
   $('kFrom').textContent = state.company.yard;
   $('kTo').textContent = c.address;
   $('kMiles').textContent = Number(c.miles).toFixed(1);
-  $('kPer').textContent = money(c.payPerItem);
-  $('kBonus').textContent = money(c.bonus);
-  $('kTotal').textContent = money(c.itemCount * c.payPerItem + c.bonus);
+  const p = c.price, rates = state.rates || {};
+  const order = ['light', 'medium', 'fragile', 'heavy'];
+  $('kItemPay').textContent = money(p.itemPay);
+  $('kItemBreak').textContent = order
+    .filter((w) => p.byWeight && p.byWeight[w])
+    .map((w) => `${p.byWeight[w]} ${w} \u00d7 ${money((rates.perItem || {})[w])}`)
+    .join(', ');
+  $('kCallout').textContent = money(p.callout);
+  $('kMileage').textContent = money(p.mileage);
+  $('kMileTxt').textContent = `${Number(p.miles).toFixed(1)} mi \u00d7 ${money(rates.perMile)}`;
+  $('kTotal').textContent = money(p.total);
+
   $('kPenalty').textContent = Math.round((state.penalty || 0) * 100);
   document.querySelectorAll('.co-name').forEach((el) => { el.textContent = state.company.name; });
 
@@ -132,6 +149,7 @@ function fillContract() {
   $('stamp').classList.remove('on');
   crewPicked = new Set();
   loadCrewPick();
+  renderShares();
   const hint = $('signHint');
   hint.classList.toggle('hidden', !(state.signer.required && state.signer.name));
   $('signName').textContent = state.signer.name || '';
@@ -173,8 +191,9 @@ async function loadCrewPick() {
   box.classList.toggle('hidden', !crew.enabled || !crew.max);
   if (!crew.enabled || !crew.max) return;
 
-  $('crewPickText').textContent = `Bring up to ${crew.max} more ${crew.max === 1 ? 'hand' : 'hands'}`
-    + ` (optional, invited when you sign${crew.splitPay ? ', pay is split' : ''}):`;
+  const pct = Math.round(((state.rates || {}).crewBonus || 0) * 100);
+  $('crewPick').title = `Up to ${crew.max} more. Invited when you sign.`
+    + (crew.splitPay && pct ? ` Each extra hand adds ${pct}% to the contract, split evenly.` : '');
 
   const chips = $('crewChips');
   chips.innerHTML = '<span class="crew-none">looking around...</span>';
@@ -183,6 +202,7 @@ async function loadCrewPick() {
   // forget anyone who walked off
   const here = new Set(players.map((p) => Number(p.id)));
   crewPicked.forEach((id) => { if (!here.has(id)) crewPicked.delete(id); });
+  renderShares();
 
   chips.innerHTML = players.length
     ? players.map((p) => `
@@ -191,6 +211,20 @@ async function loadCrewPick() {
         </label>`).join('')
     : '<span class="crew-none">nobody standing nearby</span>';
   markFull();
+}
+
+/* per-person pay for every crew size, the picked size highlighted */
+function renderShares() {
+  if (!selected) return;
+  const crew = state.crew || {};
+  const maxSize = crew.enabled ? 1 + (crew.max || 0) : 1;
+  const size = 1 + crewPicked.size;
+  const label = (n) => (n === 1 ? 'solo' : `crew of ${n}`);
+  let html = `<span class="lbl">EACH PERSON GETS:</span>`;
+  for (let n = 1; n <= maxSize; n++) {
+    html += `<span class="s ${n === size ? 'on' : ''}">${label(n)}<b>${money(shareFor(selected.price.total, n))}</b></span>`;
+  }
+  $('kShares').innerHTML = html;
 }
 
 function markFull() {
@@ -208,6 +242,7 @@ $('crewChips').addEventListener('click', (e) => {
   else if (crewPicked.size < ((state.crew && state.crew.max) || 0)) crewPicked.add(id);
   chip.classList.toggle('on', crewPicked.has(id));
   markFull();
+  renderShares();
 });
 $('crewPickRefresh').onclick = loadCrewPick;
 
@@ -239,7 +274,17 @@ function renderActive() {
       <span class="tag ${it.fragile ? 'fragile' : ''}">${it.fragile ? 'fragile' : esc(it.weight || '')}</span>
     </li>`).join('');
 
-  $('aPay').textContent = money(j.delivered * j.payPerItem + (j.stage === 'returning' ? j.bonus : 0));
+  const p = j.price;
+  if (p) {
+    const soFar = (p.itemPay / total) * j.delivered + (j.stage === 'returning' ? p.callout + p.mileage : 0);
+    const size = j.crewSize || 1;
+    $('aPay').textContent = money(shareFor(soFar, size));
+    $('aPayLabel').innerHTML = size > 1
+      ? `<small>contract ${money(p.total)} &middot; crew of ${size}</small> Your share so far`
+      : `<small>contract ${money(p.total)}</small> Your pay so far`;
+  } else {
+    $('aPay').textContent = money(j.delivered * j.payPerItem + (j.stage === 'returning' ? j.bonus : 0));
+  }
 
   const finish = $('finishBtn');
   finish.disabled = j.stage !== 'returning' || !state.isLeader;

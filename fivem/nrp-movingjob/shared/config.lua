@@ -230,8 +230,6 @@ Config.Contracts = {
     offered      = 3,        -- how many jobs the boss shows on the board
     minItems     = 4,
     maxItems     = 7,
-    payPerItem   = { min = 95,  max = 160 },
-    bonus        = { min = 275, max = 475 },
 
     -- The van has to be near the drop before cargo can come out of it.
     vanDropRange = 30.0,
@@ -239,6 +237,36 @@ Config.Contracts = {
     -- Fragile cargo dropped from a height, or delivered after the van has been
     -- rolled, comes off the final payout.
     damagePenalty = 0.45     -- fraction of one item's pay lost per broken item
+}
+
+-- ---------------------------------------------------------------------------
+-- Pay
+-- ---------------------------------------------------------------------------
+-- Every contract is priced the same way, so more stuff and a longer drive
+-- always pay more:
+--
+--   contract = callout fee + (each item by how heavy it is) + (miles x perMile)
+--
+-- With a crew, every extra hand adds crewBonus to the contract (the job goes
+-- faster, the client pays for the extra labour) and the total is split evenly.
+-- Rough numbers with the defaults below:
+--
+--   solo, 4 items, short drive   ~ $235
+--   solo, 7 items, long drive    ~ $370
+--   crew of 2 on that 7-item job ~ $210 each
+--   crew of 4 on that 7-item job ~ $135 each
+Config.Pay = {
+    callout   = 50,         -- flat fee for taking the job on
+    -- Per piece delivered, a little more for the awkward stuff. Keep heavy no
+    -- more than ~1.16x light, or a few heavy pieces can out-earn a bigger load.
+    perItem   = {
+        light   = 36,
+        medium  = 38,
+        fragile = 40,
+        heavy   = 42
+    },
+    perMile   = 30,         -- yard to the address, covers the drive back too
+    crewBonus = 0.15        -- +15% on the contract for each extra hand
 }
 
 Config.Customers = {

@@ -35,13 +35,34 @@ The coords in `Config.Boss`, `Config.Depot`, `Config.Van.bays` and
 
 ## How the money works
 
-Payout is `(pay per item x items delivered) + completion bonus`, minus a
-penalty for anything fragile that got dropped from height. The server owns all
-of it — the client never sends an amount, only that a step happened, and every
-step is checked against the player's real position before it counts.
+Every contract is priced the same way, from `Config.Pay` in `shared/config.lua`:
 
-With a crew, `Config.Crew.splitPay` divides the total across everyone on the
-job. Only the boss can cash the contract in.
+```
+contract = callout fee + each item (by weight) + miles from the yard x perMile
+```
+
+- **Items** pay by how awkward they are to move (light < medium < fragile < heavy).
+  The spread is kept tight on purpose, so a job with more items always pays more
+  than one with fewer, whatever they are.
+- **Mileage** is the straight-line distance from the yard to the address, priced to
+  cover the drive back as well.
+- **Damage**: each broken fragile piece costs `Config.Contracts.damagePenalty` of an
+  item's pay.
+
+**Crews.** Every extra hand adds `Config.Pay.crewBonus` (15%) to the contract and
+the total is split evenly, so going solo pays the most per head, but a crew finishes
+faster. With the defaults:
+
+| job | solo | crew of 2 | crew of 3 | crew of 4 |
+|---|---|---|---|---|
+| 4 items, short drive | ~$235 | ~$135 | ~$100 | ~$85 |
+| 7 items, long drive  | ~$370 | ~$210 | ~$160 | ~$135 |
+
+The contract shows the full breakdown and what each person gets for every crew
+size before you sign. The server owns all of it — the client never sends an
+amount, only that a step happened, and every step is checked against the
+player's real position before it counts. Only the crew boss can cash the
+contract in.
 
 ## Difficulty knobs
 
