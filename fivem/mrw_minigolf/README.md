@@ -33,6 +33,12 @@ to limit who can buy it.
 
 The item has to exist in your inventory before it can be given. Add ONE of these.
 
+**tgiann-inventory** (`tgiann-inventory/items/items.lua`, inside `itemsData`):
+
+```lua
+minigolf_scorecard = { name = 'minigolf_scorecard', label = 'Minigolf Scorecard', weight = 10, type = 'item', image = 'minigolf_scorecard.png', unique = true, useable = true, shouldClose = true, description = 'Your round at Portside Minigolf.' },
+```
+
 **qb-inventory** (`qb-core/shared/items.lua`):
 
 ```lua

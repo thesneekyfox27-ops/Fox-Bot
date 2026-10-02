@@ -196,6 +196,7 @@ end
 
 local function inventoryType()
     local want = (Config.scorecard_item and Config.scorecard_item.inventory) or 'auto'
+    if want == 'tgiann' or (want == 'auto' and GetResourceState('tgiann-inventory') == 'started') then return 'tgiann' end
     if want == 'ox' or (want == 'auto' and GetResourceState('ox_inventory') == 'started') then return 'ox' end
     if want == 'qb' or (want == 'auto' and Framework == 'qb') then return 'qb' end
     return nil
@@ -206,7 +207,9 @@ local function giveCard(src, card)
     if not (item and item.enabled) then return false end
     local inv, ok = inventoryType(), false
 
-    if inv == 'ox' then
+    if inv == 'tgiann' then
+        ok = pcall(function() ok = exports['tgiann-inventory']:AddItem(src, item.name, 1, nil, card) end) and ok
+    elseif inv == 'ox' then
         ok = pcall(function() ok = exports.ox_inventory:AddItem(src, item.name, 1, card) end) and ok
     elseif inv == 'qb' and QBCore then
         local Player = QBCore.Functions.GetPlayer(src)

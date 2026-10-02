@@ -27,7 +27,7 @@ Config.club_price = 15           -- fallback if a ticket can't be found
 Config.scorecard_item = {
     enabled   = true,
     name      = 'minigolf_scorecard',   -- must exist in your inventory's item list (see README)
-    inventory = 'auto'                  -- 'auto', 'ox' or 'qb'
+    inventory = 'auto'                  -- 'auto', 'tgiann', 'ox' or 'qb'
 }
 Config.course_name = 'Portside Minigolf'
 Config.pay_account = 'cash'      -- QBCore: 'cash' or 'bank'
