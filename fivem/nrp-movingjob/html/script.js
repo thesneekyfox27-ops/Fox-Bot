@@ -251,6 +251,7 @@ window.addEventListener('message', ({ data }) => {
       show('active');
     }
     app.classList.remove('hidden');
+    post('opened');
   }
 
   if (data.action === 'update' && state && state.mode === 'active' && data.job) {
@@ -272,3 +273,10 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowRight' && !cornerNext.classList.contains('hidden')) cornerNext.click();
   if (e.key === 'ArrowLeft' && !cornerPrev.classList.contains('hidden')) cornerPrev.click();
 });
+
+/* tell the game the page loaded; retry in case the game was not listening yet */
+(function hello(tries) {
+  post('nuiReady').then((r) => {
+    if (!(r && r.ok) && tries < 15) setTimeout(() => hello(tries + 1), 2000);
+  });
+})(0);

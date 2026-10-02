@@ -689,6 +689,19 @@ end
 -- Set Config.Paperwork.enabled = false to go back to the ox_lib menus below.
 -- ---------------------------------------------------------------------------
 local paperOpen = false
+local nuiReady  = false     -- the html page reported in
+local nuiAck    = 0         -- bumped every time the page confirms it opened
+local openMenus             -- the ox_lib menus, used as a fallback
+
+RegisterNUICallback('nuiReady', function(_, cb)
+    nuiReady = true
+    cb({ ok = true })
+end)
+
+RegisterNUICallback('opened', function(_, cb)
+    nuiAck = nuiAck + 1
+    cb('ok')
+end)
 
 local function charName()
     local data = QBCore.Functions.GetPlayerData()
@@ -751,7 +764,7 @@ local function openPaper()
         msg.splitPay = Config.Crew.splitPay
     else
         local contracts = lib.callback.await('nrp-movingjob:server:getContracts', false)
-        if not contracts then return end
+        if not contracts then return true end   -- server already told them why
 
         local here, list = GetEntityCoords(cache.ped), {}
         for _, c in ipairs(contracts) do
@@ -767,9 +780,36 @@ local function openPaper()
     end
 
     paperOpen = true
-    SetNuiFocus(true, true)
+    local ack = nuiAck
     SendNUIMessage(msg)
+
+    CreateThread(function()
+        -- let the target eye finish closing first, or it takes the cursor back
+        Wait(150)
+        if paperOpen then SetNuiFocus(true, true) end
+
+        -- the page confirms it drew; if it never does, fall back to the menus
+        local deadline = GetGameTimer() + 1500
+        while nuiAck == ack and GetGameTimer() < deadline do Wait(50) end
+        if nuiAck == ack and paperOpen then
+            print(('^1[nrp-movingjob] clipboard UI did not open (page loaded: %s). Check html/ is on the '
+                .. 'server, fxmanifest.lua has ui_page + files, then restart the resource. Using the menus.^7')
+                :format(tostring(nuiReady)))
+            closePaper()
+            openMenus()
+        end
+    end)
+    return true
 end
+
+-- /movingpaper opens the clipboard directly, handy to test the UI
+RegisterCommand('movingpaper', function()
+    CreateThread(function()
+        print(('[nrp-movingjob] paperwork enabled=%s, page loaded=%s')
+            :format(tostring(not Config.Paperwork or Config.Paperwork.enabled ~= false), tostring(nuiReady)))
+        openPaper()
+    end)
+end, false)
 
 RegisterNUICallback('close', function(_, cb)
     closePaper()
@@ -831,11 +871,7 @@ end)
 -- ---------------------------------------------------------------------------
 -- contract board
 -- ---------------------------------------------------------------------------
-local function openBoard()
-    if Config.Paperwork and Config.Paperwork.enabled ~= false then
-        return openPaper()
-    end
-
+openMenus = function()
     if Job.active then
         local opts = {
             {
@@ -906,6 +942,11 @@ local function openBoard()
         options = opts
     })
     lib.showContext('nrp_moving_board')
+end
+
+local function openBoard()
+    if Config.Paperwork and Config.Paperwork.enabled ~= false and openPaper() then return end
+    openMenus()
 end
 
 -- ---------------------------------------------------------------------------
