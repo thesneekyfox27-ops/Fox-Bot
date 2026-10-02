@@ -151,3 +151,17 @@ end)
 AddEventHandler('onResourceStop', function(name)
     if name == GetCurrentResourceName() then SetNuiFocus(false, false) end
 end)
+
+-- tells you in F8 which version is actually running (handy after an update)
+CreateThread(function()
+    print(('[mrw_minigolf] client v%s loaded'):format(GetResourceMetadata(GetCurrentResourceName(), 'version', 0) or '?'))
+end)
+
+-- /golfui : flash the controls card for a few seconds to check the UI is up to date
+RegisterCommand('golfui', function()
+    Ui:displayControls(true)
+    Ui:displayNotification('Showing the Crazy Golf controls card for 6 seconds')
+    SetTimeout(6000, function()
+        if not IsPlayingGolf() then Ui:displayControls(false) end
+    end)
+end, false)

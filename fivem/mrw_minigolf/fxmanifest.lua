@@ -4,6 +4,7 @@ name 'mrw_minigolf'
 description 'script for patoche golf mapping - QBCore / ESX / standalone'
 author 'Morow'
 lua54 'yes'
+version '2.4.0'
 
 client_scripts{
     'client/*.lua'
