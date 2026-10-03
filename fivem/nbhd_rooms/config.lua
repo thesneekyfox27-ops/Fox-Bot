@@ -104,6 +104,7 @@ Config.Buildings = {
             model    = 'a_f_y_business_02',
             coords   = vector4(-1347.93, -788.87, 20.24, 19.09),
             scenario = nil,
+            zOffset  = 0.0,   -- nudge her up/down if she floats or sinks (e.g. 0.1 / -0.1)
         },
 
         rooms = {

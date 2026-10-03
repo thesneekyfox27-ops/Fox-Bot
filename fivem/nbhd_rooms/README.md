@@ -1,4 +1,4 @@
-# NBHD Rooms v3.1.0
+# NBHD Rooms v3.1.1
 
 Motel room system for QBCore, configured through `Config.Buildings` in `config.lua`.
 
@@ -31,6 +31,7 @@ Motel room system for QBCore, configured through `Config.Buildings` in `config.l
 
 ## Commands
 - `/myroom`: your room, floor, door distance, lock state and whether your safe is spawned (F8)
+- `/deskped`: shows where the front desk girl is (F8) and respawns her
 - `/roomfloors`: prints which rooms are on which floor (F8)
 - `/finddoor`: lists objects within 3 m (for finding door models)
 

@@ -4,7 +4,7 @@ lua54 'yes'
 
 author 'The Neighborhood RP'
 description 'NBHD Rooms - Configurable Multi-Building Room System'
-version '3.1.0'
+version '3.1.1'
 
 ui_page 'ui/index.html'
 

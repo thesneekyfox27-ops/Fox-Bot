@@ -124,6 +124,25 @@ end
 --  RECEPTIONIST
 -- ============================================================
 
+-- floor height under a spot, only if it is close to where we expect it
+local function floorUnder(x, y, z)
+    for _ = 1, 20 do
+        local ok, gz = GetGroundZFor_3dCoord(x, y, z + 0.5, false)
+        if ok and gz > z - 2.5 and gz < z + 0.5 then return gz end
+        Wait(50)
+    end
+    return nil
+end
+
+-- wait for the MLO / interior at a spot to be loaded (otherwise peds inside it are invisible)
+local function waitForInterior(x, y, z)
+    local interior = GetInteriorAtCoords(x, y, z)
+    if interior == 0 then return end
+    PinInteriorInMemory(interior)
+    local t = GetGameTimer() + 5000
+    while not IsInteriorReady(interior) and GetGameTimer() < t do Wait(50) end
+end
+
 local function spawnReceptionist(bKey, b)
     local r = b.receptionist
     if not r then return end
@@ -134,15 +153,34 @@ local function spawnReceptionist(bKey, b)
     end
 
     local c = r.coords
-    local ped = CreatePed(4, model, c.x, c.y, c.z - 1.0, c.w, false, true)
-    SetEntityCoordsNoOffset(ped, c.x, c.y, c.z - 1.0, false, false, false)
-    SetEntityHeading(ped, c.w)
+    RequestCollisionAtCoord(c.x, c.y, c.z)
+    waitForInterior(c.x, c.y, c.z)
+
+    -- feet on the real floor: coords are usually taken standing there (about 1m above the floor)
+    local feet = floorUnder(c.x, c.y, c.z) or (c.z - 1.0)
+    feet = feet + (r.zOffset or 0.0)
+
+    local ped = CreatePed(4, model, c.x, c.y, feet, c.w, false, true)
+    if not ped or ped == 0 then return end
     SetEntityAsMissionEntity(ped, true, true)
+    SetEntityCoords(ped, c.x, c.y, feet, false, false, false, false)
+    SetEntityHeading(ped, c.w)
+    SetEntityVisible(ped, true, false)
+    ResetEntityAlpha(ped)
     SetEntityInvincible(ped, true)
     SetPedCanRagdoll(ped, false)
     SetPedDiesWhenInjured(ped, false)
+    SetPedFleeAttributes(ped, 0, false)
     SetBlockingOfNonTemporaryEvents(ped, true)
+    SetPedDefaultComponentVariation(ped)
+
+    -- let her settle into the building before freezing (freezing too early keeps her
+    -- stuck "outside" the interior, which is what makes her invisible)
+    local t = GetGameTimer() + 3000
+    while not HasCollisionLoadedAroundEntity(ped) and GetGameTimer() < t do Wait(50) end
+    Wait(300)
     FreezeEntityPosition(ped, true)
+
     if r.scenario then TaskStartScenarioInPlace(ped, r.scenario, 0, true) end
     SetModelAsNoLongerNeeded(model)
     receptions[bKey] = ped
@@ -179,12 +217,20 @@ CreateThread(function()
                 end
                 -- (re)spawn anything missing: also acts as the watchdog
                 spawnSafes(bKey, b)
-                local ped = receptions[bKey]
-                if b.receptionist and not (ped and DoesEntityExist(ped)) then spawnReceptionist(bKey, b) end
             elseif spawned[bKey] and dist > (Config.DespawnDistance or 130.0) then
                 despawnSafes(bKey)
-                despawnReceptionist(bKey)
                 spawned[bKey] = nil
+            end
+
+            -- receptionist, by her own distance; respawned if she ever goes missing
+            if b.receptionist then
+                local rd = #(pC - b.receptionist.coords.xyz)
+                local ped = receptions[bKey]
+                if rd < (Config.SpawnDistance or 90.0) then
+                    if not (ped and DoesEntityExist(ped)) then spawnReceptionist(bKey, b) end
+                elseif rd > (Config.DespawnDistance or 130.0) and ped then
+                    despawnReceptionist(bKey)
+                end
             end
         end
         Wait(2000)
@@ -405,6 +451,25 @@ RegisterCommand('myroom', function()
             tostring(s ~= nil and DoesEntityExist(s))))
     end
     if not next(myRooms) then print('[nbhd_rooms] no rooms held') end
+end, false)
+
+RegisterCommand('deskped', function()
+    local pC = GetEntityCoords(PlayerPedId())
+    for bKey, b in pairs(Config.Buildings) do
+        if b.receptionist then
+            local ped = receptions[bKey]
+            if ped and DoesEntityExist(ped) then
+                local p = GetEntityCoords(ped)
+                print(('[nbhd_rooms] %s receptionist: at %.2f, %.2f, %.2f | %.1fm away | visible %s | interior %s'):format(
+                    bKey, p.x, p.y, p.z, #(pC - p), tostring(IsEntityVisible(ped)), tostring(GetInteriorFromEntity(ped))))
+            else
+                print(('[nbhd_rooms] %s receptionist: not spawned (%.1fm away)'):format(bKey, #(pC - b.receptionist.coords.xyz)))
+            end
+            despawnReceptionist(bKey)
+            spawnReceptionist(bKey, b)
+            print(('[nbhd_rooms] %s receptionist respawned'):format(bKey))
+        end
+    end
 end, false)
 
 RegisterCommand('roomfloors', function()
