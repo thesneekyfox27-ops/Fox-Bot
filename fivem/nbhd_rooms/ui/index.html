@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { overflow: hidden; font-family: "Segoe UI", Roboto, sans-serif; background: transparent !important; }
+
+#panel {
+    position: fixed;
+    top: 68%;
+    right: 24px;
+    transform: translateY(-50%) translateX(15px);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 22px;
+    background: linear-gradient(145deg, rgba(16,16,20,0.97), rgba(26,26,32,0.97));
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s ease, transform .25s ease;
+}
+#panel.visible { opacity: 1; transform: translateY(-50%) translateX(0); }
+
+/* doorknob */
+.knob {
+    position: relative;
+    width: 58px; height: 58px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #d8c690, #8d7434 55%, #5d4b1d);
+    box-shadow: inset 0 -4px 8px rgba(0,0,0,0.45), inset 0 3px 6px rgba(255,255,255,0.35), 0 4px 10px rgba(0,0,0,0.5);
+    flex-shrink: 0;
+}
+.keyhole {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -58%);
+    width: 9px; height: 9px;
+    background: #14110a;
+    border-radius: 50%;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.9);
+}
+.keyhole::after {
+    content: '';
+    position: absolute;
+    top: 7px; left: 50%;
+    transform: translateX(-50%);
+    width: 4px; height: 11px;
+    background: #14110a;
+    border-radius: 0 0 2px 2px;
+}
+/* key that turns */
+.key {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 4px; height: 20px;
+    background: linear-gradient(#f4e9bd, #c2ab5e);
+    border-radius: 2px;
+    transform-origin: top center;
+    transform: translate(-50%, -2px) rotate(0deg);
+    opacity: 0;
+}
+.knob.turning .key {
+    animation: turnkey .55s ease forwards;
+}
+@keyframes turnkey {
+    0%   { opacity: 0; transform: translate(-50%, -2px) rotate(0deg); }
+    25%  { opacity: 1; }
+    100% { opacity: 1; transform: translate(-50%, -2px) rotate(95deg); }
+}
+
+.bell {
+    display: none;
+    width: 58px; height: 58px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #2e2e36, #1c1c22);
+    border: 1px solid rgba(255,255,255,0.10);
+    box-shadow: inset 0 2px 6px rgba(255,255,255,0.06), 0 4px 10px rgba(0,0,0,0.5);
+    font-size: 26px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.info { display: flex; flex-direction: column; gap: 6px; }
+.room {
+    color: #f5f2e8;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: .4px;
+}
+.row { display: flex; align-items: center; gap: 10px; }
+
+.state {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    transition: background .3s, color .3s, box-shadow .3s;
+}
+.state.locked {
+    background: rgba(224,60,60,0.16);
+    color: #ff6b6b;
+    box-shadow: 0 0 12px rgba(224,60,60,0.25);
+}
+.state.unlocked {
+    background: rgba(60,220,120,0.14);
+    color: #4be08a;
+    box-shadow: 0 0 12px rgba(60,220,120,0.25);
+}
+
+.hint { display: flex; align-items: center; gap: 6px; color: #b9b4a6; font-size: 12px; }
+.status {
+    margin-top: 2px;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: .3px;
+    height: 14px;
+    opacity: 0;
+    transition: opacity .25s ease;
+}
+.status.show { opacity: 1; }
+.status.locked { color: #ff6b6b; }
+.status.unlocked { color: #4be08a; }
+
+#outfits {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0.97);
+    width: 360px;
+    max-height: 64vh;
+    display: none;
+    flex-direction: column;
+    background: linear-gradient(160deg, rgba(16,16,20,0.98), rgba(26,26,32,0.98));
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 18px;
+    box-shadow: 0 18px 60px rgba(0,0,0,0.65);
+    opacity: 0;
+    transition: opacity .2s ease, transform .2s ease;
+    overflow: hidden;
+}
+#outfits.visible { display: flex; opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+.ohead {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.ohead .oicon {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: linear-gradient(145deg, #2e2e36, #1c1c22);
+    border: 1px solid rgba(255,255,255,0.10);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 19px;
+}
+.ohead .otitle { color: #f5f2e8; font-size: 15px; font-weight: 600; letter-spacing: .3px; }
+.ohead .osub { color: #8d897d; font-size: 11px; margin-top: 2px; }
+.ohead .oclose {
+    margin-left: auto;
+    width: 28px; height: 28px; border-radius: 8px;
+    background: rgba(255,255,255,0.06);
+    color: #b9b4a6; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; border: none;
+}
+.ohead .oclose:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+.olist { overflow-y: auto; padding: 10px; }
+.olist::-webkit-scrollbar { width: 6px; }
+.olist::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+
+.oitem {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background .15s ease;
+}
+.oitem:hover { background: rgba(255,255,255,0.07); }
+.oitem .oava {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: linear-gradient(145deg, #34343d, #232329);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+.oitem .oname { color: #ece8db; font-size: 13.5px; font-weight: 500; }
+.oitem .owear {
+    margin-left: auto; color: #6f6b5f; font-size: 11px;
+    opacity: 0; transition: opacity .15s ease;
+}
+.oitem:hover .owear { opacity: 1; color: #4be08a; }
+
+.oempty { color: #8d897d; font-size: 12.5px; text-align: center; padding: 26px 14px; }
+
+.keycap {
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    width: 22px; height: 22px;
+    background: linear-gradient(#3a3a42, #232329);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-bottom-width: 3px;
+    border-radius: 5px;
+    color: #f0ead6;
+    font-size: 12px;
+    font-weight: 700;
+}
+</style>
+</head>
+<body>
+<div id="panel">
+    <div class="knob" id="knob">
+        <div class="keyhole"></div>
+        <div class="key"></div>
+    </div>
+    <div class="bell" id="bell">🛎️</div>
+    <div class="info">
+        <div class="room" id="room">Room</div>
+        <div class="row">
+            <span class="state locked" id="state">LOCKED</span>
+            <span class="hint"><span class="keycap">K</span> Lock / Unlock</span>
+        </div>
+        <div class="status" id="status"></div>
+    </div>
+</div>
+
+<div id="outfits">
+    <div class="ohead">
+        <div class="oicon">\uD83D\uDC55</div>
+        <div>
+            <div class="otitle" id="otitle">Wardrobe</div>
+            <div class="osub">Select an outfit to wear</div>
+        </div>
+        <button class="oclose" id="oclose">\u2715</button>
+    </div>
+    <div class="olist" id="olist"></div>
+</div>
+
+<script>
+const panel = document.getElementById('panel');
+const knob  = document.getElementById('knob');
+const room  = document.getElementById('room');
+const state = document.getElementById('state');
+const status = document.getElementById('status');
+const bell = document.getElementById('bell');
+let statusTimer = null;
+
+function setState(locked) {
+    state.textContent = locked ? 'LOCKED' : 'UNLOCKED';
+    state.className = 'state ' + (locked ? 'locked' : 'unlocked');
+}
+
+const outfitsEl = document.getElementById('outfits');
+const olist = document.getElementById('olist');
+const otitle = document.getElementById('otitle');
+const post = (name, data) => fetch(`https://${GetParentResourceName()}/${name}`, {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data || {})
+});
+
+document.getElementById('oclose').addEventListener('click', () => post('closeOutfits'));
+window.addEventListener('keydown', (e) => { if (e.key === 'Escape') post('closeOutfits'); });
+
+const OUTFIT_ICONS = ['\uD83D\uDC55','\uD83D\uDC54','\uD83D\uDC57','\uD83E\uDDE5','\uD83D\uDC5F','\uD83E\uDDE2'];
+
+function renderOutfits(list, roomN) {
+    otitle.textContent = 'Room ' + (roomN || '') + ' \u2014 Wardrobe';
+    olist.innerHTML = '';
+    if (!list || list.length === 0) {
+        olist.innerHTML = '<div class="oempty">No saved outfits yet.<br>Save outfits at a clothing store first.</div>';
+        return;
+    }
+    list.forEach((o, i) => {
+        const el = document.createElement('div');
+        el.className = 'oitem';
+        el.innerHTML = '<div class="oava">' + OUTFIT_ICONS[i % OUTFIT_ICONS.length] + '</div>'
+            + '<div class="oname"></div><div class="owear">Wear \u2192</div>';
+        el.querySelector('.oname').textContent = o.name;
+        el.addEventListener('click', () => post('wearOutfit', { id: o.id, skin: o.skin, model: o.model }));
+        olist.appendChild(el);
+    });
+}
+
+window.addEventListener('message', (e) => {
+    const d = e.data;
+    if (d.action === 'show') {
+        if (d.kind === 'wardrobe') {
+            room.textContent = 'Room ' + d.room + ' \u2014 Wardrobe';
+            state.style.display = 'none';
+            knob.style.display = 'none';
+            bell.style.display = 'flex';
+            bell.textContent = '\uD83D\uDC55'; // shirt
+            document.querySelector('.hint').innerHTML = '<span class="keycap">E</span> Change Outfit';
+        } else if (d.kind === 'reception') {
+            room.textContent = (d.label || '') + ' \u2014 Front Desk';
+            state.style.display = 'none';
+            knob.style.display = 'none';
+            bell.style.display = 'flex';
+            bell.textContent = '\uD83D\uDECE\uFE0F'; // desk bell
+            document.querySelector('.hint').innerHTML = '<span class="keycap">E</span> \u201CWhat room am I in?\u201D';
+        } else if (d.kind === 'locker') {
+            room.textContent = 'Room ' + d.room + ' — Personal Locker';
+            state.style.display = 'none';
+            knob.style.display = '';
+            bell.style.display = 'none';
+            document.querySelector('.hint').innerHTML = '<span class="keycap">E</span> Open Locker';
+        } else {
+            room.textContent = (d.label || '') + ' — Room ' + d.room;
+            state.style.display = '';
+            knob.style.display = '';
+            bell.style.display = 'none';
+            document.querySelector('.hint').innerHTML = '<span class="keycap">K</span> Lock / Unlock';
+            setState(d.locked);
+        }
+        panel.classList.add('visible');
+    } else if (d.action === 'hide') {
+        panel.classList.remove('visible');
+    } else if (d.action === 'outfits') {
+        renderOutfits(d.list, d.room);
+        outfitsEl.classList.add('visible');
+        panel.classList.remove('visible');
+    } else if (d.action === 'closeOutfits') {
+        outfitsEl.classList.remove('visible');
+    } else if (d.action === 'state') {
+        setState(d.locked);
+        status.textContent = d.locked ? 'Door locked' : 'Door unlocked';
+        status.className = 'status show ' + (d.locked ? 'locked' : 'unlocked');
+        clearTimeout(statusTimer);
+        statusTimer = setTimeout(() => status.classList.remove('show'), 2200);
+    } else if (d.action === 'turnkey') {
+        knob.classList.remove('turning');
+        void knob.offsetWidth; // restart animation
+        knob.classList.add('turning');
+    }
+});
+</script>
+</body>
+</html>
