@@ -6,15 +6,29 @@
 </head>
 <body>
   <div id="panel" class="hidden">
-    <div class="panel-frame">
-      <div class="panel-header">
-        <img id="panelLogo" class="panel-logo hidden" alt="">
-        <div class="panel-title" id="elevName">ELEVATOR</div>
-        <div class="panel-sub">SELECT FLOOR</div>
+    <div class="steel">
+      <span class="screw tl"></span><span class="screw tr"></span><span class="screw bl"></span><span class="screw br"></span>
+      <img id="panelLogo" class="panel-logo hidden" alt="">
+      <div class="plate-name" id="elevName">ELEVATOR</div>
+      <div class="display">
+        <div class="arrow" id="dispArrow">&#9670;</div>
+        <div class="num" id="dispNum">1</div>
+        <div class="info">
+          <div class="lbl" id="dispLbl">Ground Floor</div>
+          <div class="hint" id="dispHint">You are here</div>
+        </div>
       </div>
       <div class="floor-grid" id="floorGrid"></div>
-      <div class="panel-footer">
-        <button class="close-btn" id="closeBtn">CLOSE</button>
+      <div class="controls">
+        <button class="fbtn ctrl" id="btnClose" title="Close doors"><span class="face">
+          <svg viewBox="0 0 26 26"><path d="M2 5 L11 13 L2 21 Z M24 5 L15 13 L24 21 Z" fill="#15171a"/><rect x="12.2" y="4" width="1.6" height="18" fill="#15171a"/></svg>
+        </span></button>
+        <button class="fbtn ctrl" id="btnOpen" title="Open doors"><span class="face">
+          <svg viewBox="0 0 26 26"><path d="M10 5 L1 13 L10 21 Z M16 5 L25 13 L16 21 Z" fill="#15171a"/><rect x="11.4" y="4" width="1.4" height="18" fill="#15171a"/><rect x="13.2" y="4" width="1.4" height="18" fill="#15171a"/></svg>
+        </span></button>
+        <button class="fbtn ctrl bell" id="btnBell" title="Alarm"><span class="face">
+          <svg viewBox="0 0 26 26"><path d="M13 3 C8.5 3 7 6.5 7 10 L7 15 L4.5 18.5 L21.5 18.5 L19 15 L19 10 C19 6.5 17.5 3 13 3 Z" fill="#ff4a12"/><circle cx="13" cy="21" r="2.2" fill="#ff4a12"/><rect x="12" y="1.5" width="2" height="2.5" rx="1" fill="#ff4a12"/></svg>
+        </span></button>
       </div>
     </div>
   </div>

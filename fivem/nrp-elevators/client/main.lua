@@ -50,6 +50,24 @@ local function panelColor()
     return Config.PanelThemes[Config.Panel.theme] or Config.PanelThemes.teal
 end
 
+-- Button text for every floor of an elevator.
+-- A floor's own `button` (e.g. 'P', 'G', 'R') wins; every other floor counts
+-- up from the elevator's start number (numberFrom = 0 or 1), skipping custom ones.
+local function floorButtons(elev)
+    local start = elev.numberFrom
+    if start ~= 0 and start ~= 1 then start = Config.Panel.firstFloorNumber or 1 end
+    local out, n = {}, start
+    for i, f in ipairs(elev.floors or {}) do
+        if type(f.button) == 'string' and f.button ~= '' then
+            out[i] = f.button
+        else
+            out[i] = tostring(n)
+            n = n + 1
+        end
+    end
+    return out
+end
+
 local function elevMode(elev)
     return elev.interaction or Config.Interaction
 end
@@ -80,10 +98,12 @@ local function openPanel(elevIndex, floorIndex)
 
     playCallAnim() -- reach out and press the call button
 
+    local buttons = floorButtons(elev)
     local floors = {}
     for i, floor in ipairs(elev.floors) do
         floors[#floors + 1] = {
             index   = i,
+            btn     = buttons[i],
             label   = floor.label or ('Floor ' .. i),
             current = (i == floorIndex),
             locked  = not hasJobAccess(floor.jobs),
@@ -100,8 +120,6 @@ local function openPanel(elevIndex, floorIndex)
         floors        = floors,
         color         = elev.color or panelColor(),
         position      = Config.Panel.position,
-        showHereTag   = Config.Panel.showHereTag,
-        topFloorFirst = Config.Panel.topFloorFirst,
         logo          = Config.Panel.logo,
     })
 end
@@ -143,6 +161,23 @@ RegisterNUICallback('selectFloor', function(data, cb)
         end
         doTravel(elevIndex, fromFloor, target, dest)
     end, elevIndex, fromFloor, target)
+end)
+
+-- alarm bell button: everyone near this elevator hears it
+local lastAlarm = 0
+RegisterNUICallback('alarm', function(_, cb)
+    cb('ok')
+    if GetGameTimer() - lastAlarm < 4000 then return end
+    lastAlarm = GetGameTimer()
+    local p = GetEntityCoords(PlayerPedId())
+    TriggerServerEvent('nrp-elevators:alarm', { x = p.x, y = p.y, z = p.z })
+end)
+
+RegisterNetEvent('nrp-elevators:playBell', function(dist, radius)
+    local a = Config.Sounds.alarm
+    if not a or not Config.Transition.sounds then return end
+    local falloff = 1.0 - math.min(1.0, (dist or 0) / (radius or 15.0)) * 0.8
+    SendNUIMessage({ action = 'bell', volume = (a.volume or 0.7) * falloff })
 end)
 
 -- ============================================================
@@ -220,11 +255,12 @@ function doTravel(elevIndex, fromFloor, toFloor, dest)
         for i, f in ipairs(elev.floors) do labels[i] = f.label or ('Floor ' .. i) end
     end
     SendNUIMessage({
-        action = 'travelStart',
-        name   = elev and elev.name or 'Elevator',
-        from   = fromFloor,
-        to     = toFloor,
-        labels = labels,
+        action  = 'travelStart',
+        name    = elev and elev.name or 'Elevator',
+        from    = fromFloor,
+        to      = toFloor,
+        labels  = labels,
+        buttons = elev and floorButtons(elev) or {},
         color  = (elev and elev.color) or panelColor(),
     })
 
@@ -398,8 +434,8 @@ end
 local function stringToJobs(str)
     local jobs = {}
     if not str then return jobs end
-    for job in string.gmatch(str, '([^,]+)') do
-        job = job:gsub('^%%s+', ''):gsub('%%s+$', '')
+    for part in string.gmatch(str, '([^,]+)') do
+        local job = part:gsub('^%s+', ''):gsub('%s+$', '')
         if job ~= '' then jobs[#jobs + 1] = job end
     end
     return jobs
@@ -415,6 +451,7 @@ local function adminPayload()
             jobs        = e.jobs,
             color       = e.color,
             interaction = e.interaction,
+            numberFrom  = e.numberFrom,
             floors      = e.floors,
             source      = e.source,
         }
@@ -435,6 +472,7 @@ local function openAdminPanel()
         action             = 'adminOpen',
         elevators          = adminPayload(),
         interactionDefault = Config.Interaction,
+        numberDefault      = Config.Panel.firstFloorNumber or 1,
         color              = panelColor(),
         logo               = Config.Panel.logo,
     })
@@ -460,6 +498,10 @@ RegisterNUICallback('adminAction', function(data, cb)
         ok, err = lib.callback.await('nrp-elevators:setElevatorJobs', false, di, stringToJobs(data.jobs))
     elseif act == 'interaction' then
         ok, err = lib.callback.await('nrp-elevators:setInteraction', false, di, data.mode)
+    elseif act == 'numbering' then
+        ok, err = lib.callback.await('nrp-elevators:setNumbering', false, di, data.value)
+    elseif act == 'floorButton' then
+        ok, err = lib.callback.await('nrp-elevators:updateFloor', false, di, fi, { button = tostring(data.button or '') })
     elseif act == 'color' then
         ok, err = lib.callback.await('nrp-elevators:setColor', false, di, data.color)
     elseif act == 'delete' then

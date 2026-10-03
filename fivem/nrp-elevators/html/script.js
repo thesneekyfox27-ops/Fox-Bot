@@ -34,46 +34,83 @@ function applyPosition(pos) {
   panel.classList.add('pos-' + (pos || 'right'));
 }
 
+/* ---------- the button board ---------- */
+let P = { floors: [], current: null, busy: false };
+
+function columnsFor(n) {
+  if (n <= 4) return 1;
+  if (n <= 12) return 2;
+  return 3;
+}
+
+function setDisplay(f, hint) {
+  document.getElementById('dispNum').textContent = f ? f.btn : '';
+  document.getElementById('dispLbl').textContent = f ? f.label : '';
+  document.getElementById('dispHint').textContent = hint || '';
+}
+
+function showCurrent() {
+  setDisplay(P.current, P.current ? 'You are here' : '');
+  document.getElementById('dispArrow').innerHTML = '&#9670;';
+}
+
 function openPanel(d) {
   applyTheme(d.color);
   applyPosition(d.position);
-  document.body.classList.toggle('no-here-tag', d.showHereTag === false);
+  P.busy = false;
 
   const logo = document.getElementById('panelLogo');
-  if (d.logo) {
-    logo.src = d.logo;
-    logo.classList.remove('hidden');
-  } else {
-    logo.classList.add('hidden');
-  }
+  if (d.logo) { logo.src = d.logo; logo.classList.remove('hidden'); }
+  else logo.classList.add('hidden');
 
   nameEl.textContent = (d.name || 'ELEVATOR').toUpperCase();
+  P.floors = d.floors || [];
+  P.current = P.floors.find(f => f.current) || null;
+  showCurrent();
+
+  // Real-panel layout: columns filled bottom-up, lowest floors in the first
+  // column; shorter columns sit at the top (like 6-10 next to 1-5 above P).
+  const n = P.floors.length;
+  const cols = columnsFor(n);
+  const rows = Math.ceil(n / cols);
   grid.innerHTML = '';
+  // shrink the buttons on tall panels so everything fits on screen
+  const size = rows <= 4 ? 64 : rows <= 5 ? 58 : rows <= 6 ? 52 : rows <= 7 ? 46 : 42;
+  grid.style.setProperty('--b', size + 'px');
+  grid.style.gridTemplateColumns = `repeat(${cols}, ${size}px)`;
+  grid.style.gridTemplateRows = `repeat(${rows}, ${size}px)`;
 
-  let floors = d.floors || [];
-  if (d.topFloorFirst !== false) floors = [...floors].reverse();
+  P.floors.forEach((f, i) => {
+    const col = Math.floor(i / rows);
+    const inCol = Math.min(rows, n - col * rows);
+    const fromBottom = i - col * rows;
+    const row = inCol - 1 - fromBottom;          // top-aligned short columns
 
-  floors.forEach(f => {
     const btn = document.createElement('button');
-    btn.className = 'floor-btn';
-    if (f.current) btn.classList.add('current');
+    btn.className = 'fbtn' + (String(f.btn).length > 2 ? ' small' : '');
+    if (f.current) btn.classList.add('lit', 'current');
     if (f.locked)  btn.classList.add('locked');
+    btn.style.gridColumn = String(col + 1);
+    btn.style.gridRow = String(row + 1);
+    btn.innerHTML = '<span class="face"><span class="n"></span></span>';
+    btn.querySelector('.n').textContent = f.btn;
 
-    const led = document.createElement('div');
-    led.className = 'led';
-    led.textContent = f.locked ? '\u2715' : f.index;
+    btn.addEventListener('mouseenter', () => {
+      if (P.busy) return;
+      setDisplay(f, f.current ? 'You are here' : f.locked ? 'Restricted' : 'Press to go');
+      const arrow = document.getElementById('dispArrow');
+      if (P.current && !f.current) arrow.innerHTML = f.index > P.current.index ? '&#9650;' : '&#9660;';
+    });
+    btn.addEventListener('mouseleave', () => { if (!P.busy) showCurrent(); });
 
-    const lbl = document.createElement('div');
-    lbl.className = 'lbl';
-    lbl.textContent = f.label;
-
-    btn.appendChild(led);
-    btn.appendChild(lbl);
-
-    if (!f.current && !f.locked) {
-      btn.addEventListener('click', () => post('selectFloor', { index: f.index }));
-    }
-
+    btn.addEventListener('click', () => {
+      if (P.busy || f.current || f.locked) return;
+      P.busy = true;
+      grid.querySelectorAll('.fbtn.lit:not(.current)').forEach(b => b.classList.remove('lit'));
+      btn.classList.add('lit', 'pressed');
+      setDisplay(f, 'Doors closing...');
+      setTimeout(() => post('selectFloor', { index: f.index }), 450);
+    });
     grid.appendChild(btn);
   });
 
@@ -83,6 +120,14 @@ function openPanel(d) {
 function closePanel() {
   panel.classList.add('hidden');
 }
+
+document.getElementById('btnClose').addEventListener('click', () => post('close'));
+document.getElementById('btnOpen').addEventListener('click', () => post('close'));
+document.getElementById('btnBell').addEventListener('click', (e) => {
+  const b = e.currentTarget;
+  b.classList.remove('ringing'); void b.offsetWidth; b.classList.add('ringing');
+  post('alarm');
+});
 
 /* ---------- travel HUD ---------- */
 const travel      = document.getElementById('travel');
@@ -94,48 +139,66 @@ const travelLbl   = document.getElementById('travelFloorLbl');
 const travelDots  = document.getElementById('travelDots');
 
 let travelLabels = [];
-let travelTo = 1;
+let travelButtons = [];
 
 function travelStart(d) {
   applyTheme(d.color);
   travelLabels = d.labels || [];
-  travelTo = d.to;
+  travelButtons = d.buttons || [];
 
   travelName.textContent = (d.name || 'ELEVATOR').toUpperCase();
-  travelDest.textContent = '→ ' + (travelLabels[d.to - 1] || ('Floor ' + d.to)).toUpperCase();
-
-  const goingUp = d.to > d.from;
-  travelArrow.classList.toggle('down', !goingUp);
+  const destBtn = travelButtons[d.to - 1] ?? d.to;
+  travelDest.textContent = '→ ' + destBtn + '  ' + (travelLabels[d.to - 1] || '').toUpperCase();
+  travelArrow.classList.toggle('down', d.to < d.from);
 
   travelDots.innerHTML = '';
   for (let i = 1; i <= travelLabels.length; i++) {
     const dot = document.createElement('div');
     dot.className = 'dot';
     dot.dataset.floor = i;
-    if (i === d.from) dot.classList.add('active');
-    if (i === d.to)   dot.classList.add('dest');
+    if (i === d.to) dot.classList.add('dest');
     travelDots.appendChild(dot);
   }
-
   setTravelFloor(d.from);
   travel.classList.remove('hidden');
 }
 
 function setTravelFloor(floor) {
-  travelNum.textContent = floor;
+  travelNum.textContent = travelButtons[floor - 1] ?? floor;
   travelLbl.textContent = travelLabels[floor - 1] || ('Floor ' + floor);
-
-  travelNum.classList.remove('tick');
-  void travelNum.offsetWidth; // restart animation
-  travelNum.classList.add('tick');
-
-  travelDots.querySelectorAll('.dot').forEach(dot => {
-    dot.classList.toggle('active', Number(dot.dataset.floor) === floor);
-  });
+  travelNum.classList.remove('tick'); void travelNum.offsetWidth; travelNum.classList.add('tick');
+  travelDots.querySelectorAll('.dot').forEach(dot => dot.classList.toggle('active', Number(dot.dataset.floor) === floor));
 }
 
 function travelEnd() {
   travel.classList.add('hidden');
+}
+
+/* ---------- alarm bell (synthesised, no file needed) ---------- */
+let audioCtx = null;
+function playBell(volume) {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const now = audioCtx.currentTime;
+    const master = audioCtx.createGain();
+    master.gain.value = Math.max(0, Math.min(1, volume ?? 0.6)) * 0.35;
+    master.connect(audioCtx.destination);
+    // classic electric alarm bell: fast hammer strikes on a metal gong
+    for (let k = 0; k < 14; k++) {
+      const t = now + k * 0.085;
+      [1, 2.76, 5.4].forEach((mult, j) => {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'sine';
+        o.frequency.value = 880 * mult;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime([1, .5, .25][j], t + 0.004);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+        o.connect(g); g.connect(master);
+        o.start(t); o.stop(t + 0.4);
+      });
+    }
+  } catch (e) {}
 }
 
 /* ---------- audio ---------- */
@@ -173,11 +236,11 @@ window.addEventListener('message', (e) => {
   if (d.action === 'travelEnd')   travelEnd();
   if (d.action === 'playSound')   playSoundFile(d);
   if (d.action === 'stopSound')   stopSoundFile(d.id);
+  if (d.action === 'bell')        playBell(d.volume);
   if (d.action === 'adminOpen')   adminOpenView(d);
   if (d.action === 'adminData')   adminSetData(d.elevators);
 });
 
-document.getElementById('closeBtn').addEventListener('click', () => post('close'));
 
 window.addEventListener('keydown', (e) => {
   const typing = ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName);
@@ -200,7 +263,7 @@ const adminSub   = document.getElementById('adminSub');
 const adminBack  = document.getElementById('adminBack');
 const adminCloseBtn = document.getElementById('adminClose');
 
-let A = { open: false, elevators: [], view: 'list', current: null, interactionDefault: 'target', editingFloor: null };
+let A = { open: false, elevators: [], view: 'list', current: null, interactionDefault: 'target', numberDefault: 1, editingFloor: null };
 
 function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -212,6 +275,17 @@ async function act(payload) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   }).then(r => r.json()).catch(() => ({}));
+}
+
+/* same rule as the client Lua: custom button text wins, every other floor
+   counts up from the elevator's start number (0 or 1), skipping custom ones */
+function buttonTexts(e, defStart) {
+  const start = (e.numberFrom ?? defStart ?? 1);
+  let n = start;
+  return (e.floors || []).map(f => {
+    if (f.button && String(f.button).trim() !== '') return String(f.button).trim();
+    return String(n++);
+  });
 }
 
 function jobsStr(jobs) { return (jobs && jobs.length) ? jobs.join(', ') : ''; }
@@ -240,6 +314,7 @@ function adminOpenView(d) {
   A.open = true;
   A.elevators = d.elevators || [];
   A.interactionDefault = d.interactionDefault || 'target';
+  A.numberDefault = d.numberDefault ?? 1;
   A.view = 'list';
   A.current = null;
 
@@ -391,6 +466,28 @@ function renderDetail() {
   });
   adminBody.appendChild(segRow);
 
+  /* floor numbering: 1,2,3... or 0,1,2... (0 = ground floor) */
+  sec = document.createElement('div');
+  sec.className = 'a-section';
+  sec.textContent = 'FLOOR NUMBERING';
+  adminBody.appendChild(sec);
+
+  const numRow = document.createElement('div');
+  numRow.className = 'seg-row';
+  const curNum = (e.numberFrom === 0 || e.numberFrom === 1) ? String(e.numberFrom) : 'default';
+  [
+    { v: 'default', l: `DEFAULT (STARTS AT ${A.numberDefault})` },
+    { v: '1', l: 'START AT 1' },
+    { v: '0', l: 'START AT 0 (GROUND)' },
+  ].forEach(m => {
+    const b = document.createElement('button');
+    b.className = 'seg' + (curNum === m.v ? ' active' : '');
+    b.textContent = m.l;
+    b.addEventListener('click', () => act({ action: 'numbering', dynIndex: di, value: m.v }));
+    numRow.appendChild(b);
+  });
+  adminBody.appendChild(numRow);
+
   /* panel color — per elevator */
   sec = document.createElement('div');
   sec.className = 'a-section';
@@ -452,6 +549,7 @@ function renderDetail() {
     addRow.querySelector('#newFloorLbl').value = '';
   });
 
+  const btnTxt = buttonTexts(e, A.numberDefault);
   e.floors.forEach((f, idx) => {
     const fi = idx + 1;
     const card = document.createElement('div');
@@ -460,7 +558,7 @@ function renderDetail() {
     const jobsTxt = (f.jobs && f.jobs.length) ? `<span class="fjobs">\u{1F512} ${esc(jobsStr(f.jobs))}</span> \u2022 ` : '';
     card.innerHTML = `
       <div class="frow">
-        <div class="led">${fi}</div>
+        <div class="led">${esc(btnTxt[idx])}</div>
         <div class="fl">
           <div class="fname">${esc(f.label)}</div>
           <div class="fcoords">${jobsTxt}${c.x.toFixed(1)}, ${c.y.toFixed(1)}, ${c.z.toFixed(1)}  h${(c.w ?? 0).toFixed(0)}</div>
@@ -490,7 +588,8 @@ function renderDetail() {
       if (!box.classList.contains('hidden')) { box.classList.add('hidden'); box.innerHTML = ''; return; }
       box.classList.remove('hidden');
       box.innerHTML = `
-        <input class="a-input" data-f="label" value="${esc(f.label)}" placeholder="Label" maxlength="30" style="flex:1 1 100%;">
+        <input class="a-input" data-f="label" value="${esc(f.label)}" placeholder="Label" maxlength="30" style="flex:1 1 70%;">
+        <input class="a-input sm" data-f="button" value="${esc(f.button || '')}" placeholder="Button" maxlength="3" title="Button text (blank = number). e.g. P, G, R, B1">
         <input class="a-input sm" data-f="x" value="${c.x.toFixed(2)}">
         <input class="a-input sm" data-f="y" value="${c.y.toFixed(2)}">
         <input class="a-input sm" data-f="z" value="${c.z.toFixed(2)}">
@@ -502,6 +601,7 @@ function renderDetail() {
         await act({ action: 'floorRename', dynIndex: di, floorIndex: fi, label: v('label').trim() || f.label });
         await act({ action: 'floorCoords', dynIndex: di, floorIndex: fi, x: v('x'), y: v('y'), z: v('z'), w: v('w') });
         await act({ action: 'floorJobs', dynIndex: di, floorIndex: fi, jobs: v('jobs') });
+        await act({ action: 'floorButton', dynIndex: di, floorIndex: fi, button: v('button').trim() });
       });
     });
 

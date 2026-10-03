@@ -60,8 +60,11 @@ Config.Panel = {
     theme       = 'teal',      -- teal | amber | red | pink | purple | cyan | green | white | custom
     customColor = '#9b5dff',   -- used only when theme = 'custom' (any hex)
     position    = 'right',     -- right | left | center
-    showHereTag = true,        -- "• HERE" label on current floor
-    topFloorFirst = true,      -- list floors top-down like a real button board
+    -- Floor numbers on the buttons. 1 = floors are 1,2,3...  0 = 0,1,2... (0 = ground).
+    -- This is the default; each elevator can override it in the F7 manager
+    -- ("Floor Numbering"), so elevators that are perfect with 1 stay as they are.
+    -- A floor can also have its own button text (P, G, R, B1...) set in its EDIT box.
+    firstFloorNumber = 1,
     logo        = 'logo.png',  -- 100x100 image shown at the top of the panel.
                                -- Replace html/logo.png with your own (keep the
                                -- name, or change it here). false = no logo.
@@ -117,6 +120,10 @@ Config.Sounds = {
     -- destination hears it (volume falls off with distance), so people
     -- on the floor hear the elevator arrive before the doors open.
     arrival     = { file = 'ding.wav', volume = 0.8, broadcast = true, radius = 20.0 },
+
+    -- the bell button on the panel: an alarm bell everyone within radius hears
+    -- (synthesised in the UI, no file needed). false = bell button does nothing.
+    alarm       = { volume = 0.7, radius = 15.0 },
 }
 
 -- ============================================================
@@ -131,8 +138,10 @@ Config.Elevators = {
     -- Example (uncomment / edit if you prefer config-managed):
     -- {
     --     name = 'Pier Motel',
+    --     numberFrom = 0,          -- optional: 0 = ground floor is "0"
     --     floors = {
-    --         { label = 'Ground Floor', coords = vec4(-1345.33, -784.6, 20.24, 127.64) },
+    --         { label = 'Ground Floor', coords = vec4(-1345.33, -784.6, 20.24, 127.64) },   -- button "0"
+    --         { label = 'Parking', button = 'P', coords = vec4(...) },                      -- custom button
     --         { label = '2nd Floor',    coords = vec4(-1333.93, -772.85, 29.55, 212.32) },
     --     },
     -- },

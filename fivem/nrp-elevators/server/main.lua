@@ -31,11 +31,15 @@ local function buildList()
         for _, f in ipairs(e.floors) do
             floors[#floors + 1] = {
                 label  = f.label,
+                button = f.button,
                 jobs   = f.jobs,
                 coords = { x = f.coords.x, y = f.coords.y, z = f.coords.z, w = f.coords.w },
             }
         end
-        list[#list + 1] = { name = e.name, jobs = e.jobs, floors = floors, source = 'config' }
+        list[#list + 1] = {
+            name = e.name, jobs = e.jobs, floors = floors, source = 'config',
+            numberFrom = e.numberFrom, color = e.color, interaction = e.interaction,
+        }
     end
     for _, e in ipairs(dynamicElevators) do
         e.source = 'json'
@@ -179,6 +183,17 @@ lib.callback.register('nrp-elevators:setInteraction', function(source, dynIndex,
     return true
 end)
 
+lib.callback.register('nrp-elevators:setNumbering', function(source, dynIndex, value)
+    if not isAdmin(source) then return false, 'No permission.' end
+    local e = dynamicElevators[dynIndex]
+    if not e then return false, 'Not found.' end
+    local v = tonumber(value)
+    e.numberFrom = (v == 0 or v == 1) and v or nil   -- nil = use Config.Panel.firstFloorNumber
+    saveElevators()
+    syncAll()
+    return true
+end)
+
 lib.callback.register('nrp-elevators:setColor', function(source, dynIndex, color)
     if not isAdmin(source) then return false, 'No permission.' end
     local e = dynamicElevators[dynIndex]
@@ -228,6 +243,10 @@ lib.callback.register('nrp-elevators:updateFloor', function(source, dynIndex, fl
     end
     if patch.jobs ~= nil then
         f.jobs = (#patch.jobs > 0) and patch.jobs or nil
+    end
+    if patch.button ~= nil then
+        local b = tostring(patch.button):gsub('^%s+', ''):gsub('%s+$', ''):upper():sub(1, 3)
+        f.button = (b ~= '') and b or nil
     end
     saveElevators()
     syncAll()
@@ -283,6 +302,42 @@ RegisterNetEvent('nrp-elevators:arrivalDing', function(coords)
         end
     end
 end)
+
+-- ============================================================
+--  ALARM BELL  (panel bell button, heard by everyone nearby)
+-- ============================================================
+local lastAlarm = {}
+RegisterNetEvent('nrp-elevators:alarm', function(coords)
+    local src = source
+    if type(coords) ~= 'table' then return end
+    if lastAlarm[src] and os.time() - lastAlarm[src] < 4 then return end
+    lastAlarm[src] = os.time()
+
+    local srcPed = GetPlayerPed(src)
+    if not srcPed or srcPed == 0 then return end
+    local c = GetEntityCoords(srcPed)   -- use where they really are
+
+    -- must actually be standing at an elevator
+    local nearElevator = false
+    for _, e in ipairs(buildList()) do
+        for _, f in ipairs(e.floors or {}) do
+            if #(c - vector3(f.coords.x, f.coords.y, f.coords.z)) < 6.0 then nearElevator = true break end
+        end
+        if nearElevator then break end
+    end
+    if not nearElevator then return end
+
+    local radius = (Config.Sounds.alarm and Config.Sounds.alarm.radius) or 15.0
+    for _, pid in ipairs(GetPlayers()) do
+        local ped = GetPlayerPed(pid)
+        if ped and ped ~= 0 then
+            local dist = #(GetEntityCoords(ped) - c)
+            if dist <= radius then TriggerClientEvent('nrp-elevators:playBell', pid, dist, radius) end
+        end
+    end
+end)
+
+AddEventHandler('playerDropped', function() lastAlarm[source] = nil end)
 
 -- ============================================================
 --  Single fallback command (admins can also just use the keybind)
