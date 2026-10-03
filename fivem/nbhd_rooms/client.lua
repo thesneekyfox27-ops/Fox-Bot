@@ -71,10 +71,24 @@ end
 --  the floors are loaded (that is why they used to go missing).
 -- ============================================================
 
-local function safeSpot(b, n)
+-- where you stand to use the safe (same height as the config coords)
+local function safeStand(b, n)
+    local s = b.rooms[unitOf(b, n)].safe
+    return s and vector3(s.x, s.y, standZ(b, n)) or nil
+end
+
+-- where the safe prop goes: its bottom sitting on the floor (the floor is about
+-- 1m under the standing coords), whatever the model's pivot is
+local function safeSpot(b, n, model)
     local s = b.rooms[unitOf(b, n)].safe
     if not s then return nil end
-    return vector3(s.x, s.y, standZ(b, n) + (b.safeZOffset or -1.0)), (s.h + 180.0) % 360.0
+    local bottom = 0.0
+    if model then
+        local min = GetModelDimensions(model)
+        bottom = min.z
+    end
+    local floorZ = standZ(b, n) - 0.98
+    return vector3(s.x, s.y, floorZ - bottom + (b.safeLift or 0.0)), (s.h + 180.0) % 360.0
 end
 
 local function clearLeftovers(model, pos)
@@ -98,7 +112,7 @@ local function spawnSafes(bKey, b)
     for n = 1, b.floors * b.roomsPerFloor do
         local obj = safes[bKey][n]
         if not (obj and DoesEntityExist(obj)) then
-            local pos, heading = safeSpot(b, n)
+            local pos, heading = safeSpot(b, n, model)
             if pos then
                 clearLeftovers(model, pos)
                 obj = CreateObjectNoOffset(model, pos.x, pos.y, pos.z, false, false, false)
@@ -289,21 +303,30 @@ end)
 --  WARDROBE (17mov_CharacterSystem, illenium-appearance or qb-clothing)
 -- ============================================================
 
+-- Same events nrp-clothingstore uses with 17mov_CharacterSystem:
+--   editor  = full clothing editor (Cancel + Save)
+--   outfits = your saved outfits
 local function openWardrobe()
-    local ev = Config.WardrobeEvent or 'auto'
-    if ev == 'auto' then
-        if GetResourceState('17mov_CharacterSystem') == 'started' then
-            ev = '17mov'
-        elseif GetResourceState('illenium-appearance') == 'started' then
-            ev = 'illenium-appearance:client:openOutfitMenu'
-        else
-            ev = 'qb-clothing:client:openOutfitMenu'
-        end
-    end
-    if ev == '17mov' then
-        ev = Config.Wardrobe17movEvent or 'qb-clothing:client:openOutfitMenu'
-    end
-    TriggerEvent(ev)
+    local w = Config.Wardrobe or {}
+    local editor  = w.editorEvent  or 'qb-clothing:client:openMenuCommand'
+    local outfits = w.outfitsEvent or 'qb-clothing:client:openOutfitMenu'
+    local mode = w.mode or 'menu'
+
+    if mode == 'editor' then return TriggerEvent(editor) end
+    if mode == 'outfits' then return TriggerEvent(outfits) end
+
+    if GetResourceState('ox_lib') ~= 'started' or not lib then return TriggerEvent(editor) end
+    lib.registerContext({
+        id = 'nbhd_rooms_wardrobe',
+        title = 'Wardrobe',
+        options = {
+            { title = 'Change clothes', description = 'Open the clothing editor', icon = 'shirt',
+              onSelect = function() TriggerEvent(editor) end },
+            { title = 'My saved outfits', description = 'Put on an outfit you saved', icon = 'bookmark',
+              onSelect = function() TriggerEvent(outfits) end },
+        },
+    })
+    lib.showContext('nbhd_rooms_wardrobe')
 end
 
 -- ============================================================
@@ -359,7 +382,7 @@ for bKey, b in pairs(Config.Buildings) do
                 end
 
                 -- SAFE
-                local pos = b.locker and safeSpot(b, n)
+                local pos = b.locker and safeStand(b, n)
                 if pos then
                     local dist = #(pC - pos)
                     if dist < 10.0 then sleep = 0 end
@@ -379,7 +402,7 @@ for bKey, b in pairs(Config.Buildings) do
                 if w then
                     local dist = #(pC - vector3(w.x, w.y, standZ(b, n)))
                     if dist < 10.0 then sleep = 0 end
-                    if dist < 1.6 then
+                    if dist < 1.6 and not IsNuiFocused() then
                         showPanel('wardrobe_' .. bKey, { action = 'show', kind = 'wardrobe', label = b.label, room = n, floor = floor })
                         if IsControlJustReleased(0, interactKey) then openWardrobe() end
                     else

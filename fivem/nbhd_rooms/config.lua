@@ -17,16 +17,15 @@ Config.DespawnDistance = 130.0
 -- ('legacy' = the old client event 'inventory:server:OpenInventory').
 Config.Inventory = 'auto'
 
--- Wardrobe: what opens the outfit menu at the room wardrobe.
---   'auto'  = 17mov_CharacterSystem, then illenium-appearance, then qb-clothing
---   '17mov' = 17mov_CharacterSystem outfits menu
---   or any client event name, e.g. 'qb-clothing:client:openOutfitMenu'
-Config.WardrobeEvent = 'auto'
-
--- Event used to open the 17mov outfits menu. On QBCore 17mov answers the
--- qb-clothing outfit event; if nothing opens, switch to
--- '17mov_CharacterSystem:OpenOutfitsMenu'.
-Config.Wardrobe17movEvent = 'qb-clothing:client:openOutfitMenu'
+-- Wardrobe in each room (17mov_CharacterSystem, same events as nrp-clothingstore).
+--   mode = 'menu'    -> pick "Change clothes" or "My saved outfits" (ox_lib menu)
+--   mode = 'editor'  -> straight into the clothing editor
+--   mode = 'outfits' -> straight into saved outfits
+Config.Wardrobe = {
+    mode         = 'menu',
+    editorEvent  = 'qb-clothing:client:openMenuCommand',
+    outfitsEvent = 'qb-clothing:client:openOutfitMenu',
+}
 
 -- "Already owns a home" check for skipIfOwnsAnyProperty. Any of these tables
 -- that exist on your database are checked (missing ones are ignored).
@@ -66,7 +65,8 @@ Config.HomeTables = {
       receptionist   - { model, coords(vec4), scenario } or false
       floorOffset    - added to the floor number the receptionist says (0 = rooms
                        1-8 are "Floor 1"; set 1 if the lobby counts as floor 1)
-      safeZOffset    - safe height relative to the player-standing Z (-1.0 = floor)
+      safeLift       - extra height for the safes (0.0 = sitting on the floor;
+                       e.g. 0.05 up, -0.05 down)
       rooms          - one entry per unit, measured on the FIRST room floor:
           door     = { x, y, h }   door prop position + heading
           safe     = { x, y, h }   exact safe position + door-facing heading
@@ -97,7 +97,7 @@ Config.Buildings = {
 
         locker      = { slots = 10, weight = 50000 },
         safeModel   = `prop_ld_int_safe_01`,
-        safeZOffset = -1.0,
+        safeLift    = 0.0,   -- safes sit on the floor; nudge up/down here
         floorOffset = 0,   -- rooms 1-8 Floor 1, 9-16 Floor 2, ... 41-48 Floor 6
 
         receptionist = {

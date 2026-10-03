@@ -1,4 +1,4 @@
-# NBHD Rooms v3.1.1
+# NBHD Rooms v3.2.0
 
 Motel room system for QBCore, configured through `Config.Buildings` in `config.lua`.
 
@@ -6,7 +6,7 @@ Motel room system for QBCore, configured through `Config.Buildings` in `config.l
 - **Safes are back in every room.** All 48 rooms get a safe at the exact spot set in the config (6 floors x 8 rooms).
   - Safes only spawn while you are near the building (`Config.SpawnDistance`), once the floors have loaded. Before, they spawned at login and fell under the map.
   - Any safe that goes missing is respawned every 2 seconds while you are nearby.
-  - Use `safeZOffset` to raise or lower them.
+  - Safes sit on the floor based on the model's real size. Use `safeLift` to nudge them up or down.
 - **Your safe storage is yours.** The stash id is `<building>_locker_<citizenid>`, the same id as before, so nothing already stored is lost. It follows you even if you get a different room.
 - **Same room back.** With `Config.KeepLastRoom = true` you get your last room back on login, as long as nobody else has taken it.
 - **Front desk.** Press E at the receptionist to get a key card showing your room, floor and name. The floor is worked out from 8 rooms per floor:
@@ -23,9 +23,8 @@ Motel room system for QBCore, configured through `Config.Buildings` in `config.l
   If your building counts the lobby as Floor 1, set `floorOffset = 1` so rooms 1-8 show as "Floor 2".
 - **Server checks.** You can only lock or unlock your own door, standing at it (3 m). You can only open your own room's safe, standing at it. The front desk only answers when you are at the desk.
 - **Inventory is detected automatically** (`Config.Inventory = 'auto'`): tgiann-inventory, then ox_inventory, then qb-inventory, then the old client event.
-- **Wardrobe** opens the **17mov_CharacterSystem** outfits menu when 17mov is running, otherwise illenium-appearance, otherwise qb-clothing.
-  On QBCore, 17mov answers the `qb-clothing:client:openOutfitMenu` event, which is the default. If pressing E at the wardrobe opens nothing, set
-  `Config.Wardrobe17movEvent = '17mov_CharacterSystem:OpenOutfitsMenu'` in config.lua.
+- **Wardrobe** (17mov_CharacterSystem) uses the same events as nrp-clothingstore. Press E and choose **Change clothes** (full editor) or **My saved outfits**.
+  Change `Config.Wardrobe.mode` to `'editor'` or `'outfits'` to skip the choice.
 - **Homeowners** listed in `Config.HomeTables` (qb-houses / ps-housing) are not given a room automatically. Tables that don't exist are ignored.
 - **New UI:** door, safe, wardrobe and front desk panels. The front desk hands you a beach "welcome" key card with a paper sleeve showing your room, floor, name and "Take the elevator to Floor N".
 

@@ -4,7 +4,7 @@ lua54 'yes'
 
 author 'The Neighborhood RP'
 description 'NBHD Rooms - Configurable Multi-Building Room System'
-version '3.1.1'
+version '3.2.0'
 
 ui_page 'ui/index.html'
 
@@ -13,6 +13,7 @@ files {
 }
 
 shared_scripts {
+    '@ox_lib/init.lua',
     'config.lua',
 }
 
@@ -28,4 +29,5 @@ server_scripts {
 dependencies {
     'qb-core',
     'oxmysql',
+    'ox_lib',
 }
