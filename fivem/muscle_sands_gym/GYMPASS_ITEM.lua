@@ -9,8 +9,8 @@
 --   ox_inventory:      ox_inventory/web/images/gym_pass.png
 --   tgiann-inventory:  tgiann-inventory/html/images/gym_pass.png  (or web/images on some builds)
 --
--- The pass auto-expires at the end of the in-game day it was bought on; the
--- script removes the item for you, so it does NOT need to be "useable".
+-- The membership expires in real time (Day / Week / Month); the script
+-- removes the card for you when it runs out, so it does NOT need to be "useable".
 -- ============================================================
 
 ['gym_pass'] = {
@@ -22,5 +22,5 @@
     ['unique']      = true,
     ['useable']     = false,
     ['shouldClose'] = false,
-    ['description'] = 'Muscle Sands day pass - expires 24 in-game hours after purchase',
+    ['description'] = 'Muscle Sands membership card - carry it to train',
 },

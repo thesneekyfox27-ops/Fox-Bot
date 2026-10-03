@@ -1,140 +1,110 @@
 Config = {}
--- 'auto'      -> use a QB-style core if one is running, otherwise standalone
--- 'qbcore'    -> force core mode (gym_pass item + metadata, synced server-side)
--- 'standalone'-> force standalone (saves locally per-client via KVP, no item)
-Config.Framework = 'auto'
 
--- Resource names. 'auto' core-detect covers qb-core, qbx_core and tgiann-core.
--- Set these explicitly if your resources are named differently.
-Config.CoreResource      = 'auto'              -- or 'tgiann-core' / 'qb-core' / 'qbx_core'
-Config.InventoryResource = 'tgiann-inventory'  -- used for HasItem / RemoveItem exports
-Config.TargetResource    = 'qb-target'         -- e.g. 'ox_target' if that's what you run
+-- ============================================================
+--  MUSCLE SANDS GYM  (Vespucci Beach)  -  QBCore
+--  Stats, energy, passes and gains all live on the SERVER
+--  (player metadata), so nobody can give themselves 100 strength.
+-- ============================================================
 
--- qb-target for the vendor NPC: 'auto' uses it if the target resource is running.
--- When off (or standalone), you buy from a press-E marker on the NPC instead.
-Config.UseTarget = 'auto'
+Config.Debug = false
 
-Config.MaxStat          = 100     -- max value for strength / stamina (GTA caps at 100)
-Config.GainPerSession   = 1       -- points gained per completed workout (1 = slow grind to max)
-Config.WorkoutDuration  = 15000   -- ms a workout takes (longer = more effort per point)
-Config.WorkoutCooldown  = 5       -- seconds you must rest between workouts (0 = none)
-Config.DrawDistance     = 20.0    -- distance (m) at which markers appear
-Config.InteractDistance = 1.6     -- distance (m) at which you can press E
-Config.ShowMarkers      = true
-Config.MarkerColor      = { r = 0, g = 180, b = 255, a = 120 }
--- Keys (FiveM control IDs)
-Config.InteractKey = 38  -- E
-Config.CancelKey   = 73  -- X
+-- 'auto' picks ox_target, then qb-target. 'off' = walk up and press E.
+Config.Target = 'auto'
 
--- ============================ NOTIFICATIONS ============================
--- Lightweight on-screen text notifications (no dependency).
-Config.Notify = {
-    x        = 0.90,    -- screen X (0 left .. 1 right)
-    y        = 0.85,   -- screen Y (0 top .. 1 bottom)
-    scale    = 0.42,
-    duration = 4000,   -- ms each message stays up
+-- Inventory used for the gym_pass item ('tgiann-inventory' works through its exports,
+-- anything else uses the QBCore player functions).
+Config.InventoryResource = 'tgiann-inventory'
+
+Config.InteractKey      = 38      -- E
+Config.DrawDistance     = 20.0    -- markers show within this range (with a pass)
+Config.InteractDistance = 1.6
+Config.Marker = { type = 1, size = vector3(0.7, 0.7, 0.35), color = { r = 242, g = 178, b = 61, a = 120 } }
+
+-- ============================================================
+--  STATS & GAINS
+-- ============================================================
+Config.MaxStat = 100
+
+Config.Workout = {
+    reps        = 8,      -- reps per set (each rep is one press of the timing bar)
+    repTime     = 1500,   -- ms the marker takes to cross the bar
+    zoneSize    = 0.22,   -- width of the green "good" zone (0-1 of the bar)
+    perfectSize = 0.07,   -- width of the gold "perfect" centre
+    pushKey     = 22,     -- SPACE: push the rep
+    cancelKey   = 73,     -- X: stop the set
+    cooldown    = 5,      -- seconds of rest between sets
 }
 
--- ============================ EFFECTS ============================
--- Stamina drives how long you can sprint AND how fast you run.
--- Low stamina = you gas out quickly; train it up to last longer and move faster.
+Config.Gain = {
+    perfectSet = 1.0,     -- points for a flawless set at 0 stat
+    minScore   = 0.25,    -- sets worse than this give nothing
+    -- gains shrink as you get stronger: at the max stat you gain (1 - falloff) of normal
+    falloff    = 0.6,
+}
+
+-- ============================================================
+--  EFFECTS (what the stats actually do)
+-- ============================================================
 Config.Effects = {
-    enabled = true,
-    -- TIREDNESS: fraction of your stored stamina the game actually uses for sprint
-    -- endurance. 1.0 = vanilla. Lower = tire faster across the board. 0.6 means
-    -- even maxed stamina tires sooner than a vanilla maxed character; an untrained
-    -- player gasses out very quickly.
-    staminaGameRatio = 0.6,
-    -- RUN SPEED boost from stamina. 1.0 is normal; ~1.49 is the game's effective max.
-    speedBase = 1.00,   -- at 0 stamina   -> normal speed
-    speedMax  = 1.49,   -- at 100 stamina -> noticeable speed boost
-    -- SWIM SPEED boost from stamina (same scale/caps).
-    swimBase  = 1.00,
-    swimMax   = 1.49,
+    enabled          = true,
+    staminaGameRatio = 0.6,    -- share of stamina the game uses for sprint endurance (lower = tire faster)
+    speedBase = 1.00, speedMax = 1.25,   -- run speed at 0 / 100 stamina (game cap is 1.49)
+    swimBase  = 1.00, swimMax  = 1.25,
+    meleeBase = 1.00, meleeMax = 1.30,   -- melee damage at 0 / 100 strength
 }
 
--- ============================ DECAY ============================
--- Skip the gym for a while and your stats slowly drop.
+-- Skip the gym and you slowly lose it (real time).
 Config.Decay = {
     enabled    = true,
-    graceHours = 48,   -- no decay until this many (real) hours since your last workout
-    lossPerDay = 2,    -- points lost per full day idle after the grace period (both stats)
+    graceHours = 48,   -- no loss for this long after your last workout
+    lossPerDay = 2,    -- points lost per idle day after that (both stats)
 }
 
--- ============================ ENERGY / EXHAUSTION ============================
--- Stops players grinding the gym all day. Every workout burns energy; run out
--- and you're "too exhausted to work out" until you've rested. Energy regens over
--- REAL time (so relogging won't refill it). While exhausted, your sprint stamina
--- is cut, so you also tire much faster until you recover.
+-- Every set burns energy; it comes back over real time.
 Config.Energy = {
     enabled        = true,
     max            = 100,
-    costPerWorkout = 25,    -- energy per workout (max / cost = sessions before exhausted)
-    regenPerMin    = 8,     -- energy recovered per REAL minute of rest
-    exhaustedStaminaMult = 0.3,  -- sprint stamina multiplier while exhausted (lower = tire faster)
+    costPerWorkout = 20,
+    regenPerMin    = 6,
+    exhaustedStaminaMult = 0.3,   -- sprint stamina while exhausted
 }
 
--- ============================ STATS BOARD ============================
--- A board near the gym showing your current Strength/Stamina and the boosts they
--- give. Decay is silent - players check their numbers here instead of a popup.
--- Move it anywhere by changing coords (use /gymcoords in-game to grab a spot).
-Config.StatsBoard = {
-    enabled      = true,
-    coords       = vector3(-1201.54, -1569.25, 4.61),
-    heading      = 120.0,
-    drawDistance = 10.0,
-    prop         = true,   -- false = floating text only. Set a model name to spawn a
-                            -- physical board, e.g. 'prop_noticeboard_01' or 'prop_inscroll_01a'.
-    groundSnap   = true,   -- false = place the prop at the exact Z above (recommended on the
-                            -- boardwalk). true = drop it to the ground (sinks into deck sand).
+-- ============================================================
+--  MEMBERSHIPS
+-- ============================================================
+-- Real-time durations. Buying while active ADDS the time on top.
+Config.Pass = {
+    item         = 'gym_pass',
+    requireItem  = true,        -- must actually carry the card to train
+    account      = 'cash',      -- charged from here first...
+    bankFallback = true,        -- ...then the bank if cash is short
+    tiers = {
+        { id = 'day',   label = 'Day Pass',       price = 50,   minutes = 120,          perks = 'Full gym access for 2 hours' },
+        { id = 'week',  label = 'Weekly Member',  price = 300,  minutes = 60 * 24 * 7,  perks = '7 days of access - best for regulars' },
+        { id = 'month', label = 'Monthly VIP',    price = 1000, minutes = 60 * 24 * 30, perks = '30 days of access - VIP card' },
+    },
 }
 
--- ============================ APPEARANCE ============================
--- GTA has no native muscle slider for the freemode player ped, so a real body
--- morph requires your clothing/appearance resource. When enabled, the hook in
--- client.lua (applyAppearance) runs as Strength changes - drop your resource's
--- export in there. Left disabled (no-op) by default so nothing breaks.
-Config.Appearance = {
-    enabled = false,
+-- ============================================================
+--  TRAINER (sells passes, shows your stats + leaderboard)
+-- ============================================================
+Config.Trainer = {
+    model    = 'a_m_m_beach_01',
+    coords   = vector4(-1208.44, -1569.55, 4.61, 107.05),   -- standing coords (/gymcoords)
+    scenario = 'WORLD_HUMAN_CLIPBOARD',
+    spawnDistance   = 60.0,
+    despawnDistance = 90.0,
+    blip = { enabled = true, sprite = 311, color = 47, scale = 0.7, name = 'Muscle Sands Gym' },
 }
 
--- ============================ GYM PASS ============================
--- Buy a pass from the NPC. It lasts for the rest of the in-game day it was
--- bought on, then auto-removes when that day ends. Machine markers only appear
--- while a valid pass is held.
-Config.GymPass = {
-    price       = 50,        -- cost (QBCore only; standalone has no economy so it's free)
-    account     = 'cash',      -- 'cash' or 'bank' (QBCore)
-    -- QBCore membership item (matches the dynyx gym_pass item + image).
-    item        = 'gym_pass',
-    durationIgHours = 24,      -- pass lasts this many IN-GAME hours from purchase, then auto-removes
-    requireItem = true,        -- QBCore: must actually hold the item to train (drop it = no access)
-    hasItemExport = true,     -- set true to use exports['tgiann-inventory']:HasItem instead of qb-core's
-    -- Vendor NPC you buy the pass from (Vespucci boardwalk).
-    spawnPed    = true,
-    pedModel    = 'a_m_m_beach_01',
-    pedCoords   = vector4(-1208.44, -1569.55, 4.61, 107.05),  -- set Z to the DECK surface
-    groundSnap  = false,       -- false = use the exact Z above (the gym is on a raised
-                               -- boardwalk; snapping finds the sand UNDER it and sinks the
-                               -- ped). Stand where you want him, /gymcoords, paste the Z.
-    -- The "muscle" blip (dumbbell icon) at the gym.
-    showBlip   = true,
-    blipSprite = 311,          -- dumbbell icon
-    blipColor  = 7,
-    blipScale  = 0.65,
-    blipName   = 'Muscle Sands Gym',
-}
+Config.Leaderboard = { enabled = true, size = 5 }
 
--- Each station: label, stat it trains ('strength' or 'stamina'), and the animation
--- (EITHER scenario = '...'  OR  animDict + animName).
---
--- MULTIPLE SPOTS FOR THE SAME EXERCISE:
---   Add coords2, coords3, coords4, ... (any number). Each becomes its own usable
---   point sharing the same label/stat/animation.
---   Optional per-spot facing: headings = { [1] = 35.0, [2] = 215.0, ... }
---   (otherwise every spot uses the station's single `heading`).
---
--- TIP: run /gymcoords in-game to print your exact position + heading, then paste.
+-- ============================================================
+--  STATIONS
+-- ============================================================
+-- coords, coords2, coords3 ... = extra spots for the same exercise.
+-- headings = { [1] = 35.0, [2] = 215.0 } for per-spot facing (else `heading`).
+-- Use a scenario OR animDict + animName.
 Config.Stations = {
     {
         label    = 'Free Weights',
@@ -177,15 +147,31 @@ Config.Stations = {
         stat     = 'stamina',
         scenario = 'WORLD_HUMAN_YOGA',
     },
-
     {
         label    = 'Jumping Jacks',
         coords   = vector3(-1207.58, -1566.09, 4.61),
         heading  = 215.0,
         stat     = 'stamina',
-        -- NOTE: GTA has no real jumping-jacks anim. animDict is the '@' path, animName
-        -- is the short clip name. Swap these for any valid pair you like.
         animDict = 'timetable@reunited@ig_2',
         animName = 'jimmy_getknocked',
     },
 }
+
+-- Flattened list of every usable spot (shared by client + server, same order on both).
+function GymSpots()
+    local out = {}
+    for _, st in ipairs(Config.Stations) do
+        local list = {}
+        if st.coords then list[#list + 1] = st.coords end
+        local i = 2
+        while st['coords' .. i] do list[#list + 1] = st['coords' .. i]; i = i + 1 end
+        for idx, c in ipairs(list) do
+            out[#out + 1] = {
+                label = st.label, coords = c, stat = st.stat,
+                heading = (st.headings and st.headings[idx]) or st.heading,
+                scenario = st.scenario, animDict = st.animDict, animName = st.animName,
+            }
+        end
+    end
+    return out
+end
