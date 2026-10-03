@@ -306,22 +306,109 @@ end)
 -- Same events nrp-clothingstore uses with 17mov_CharacterSystem:
 --   editor  = full clothing editor (Cancel + Save)
 --   outfits = your saved outfits
-local function openWardrobe()
+-- ------------------------------------------------------------
+--  Dressing room: go somewhere roomy + lit, edit, come back
+-- ------------------------------------------------------------
+local isDressing = false
+local dressingBack = nil
+local dressingReady = false
+
+RegisterNetEvent('nbhd_rooms:client:dressingReady', function() dressingReady = true end)
+
+local function editorOpen()
+    local ok, open = pcall(function() return exports['17mov_CharacterSystem']:IsCreatingCharacter() end)
+    if ok and open ~= nil then return open == true or IsNuiFocused() end
+    return IsNuiFocused()
+end
+
+local function teleport(ped, c)
+    RequestCollisionAtCoord(c.x, c.y, c.z)
+    SetEntityCoords(ped, c.x, c.y, c.z, false, false, false, false)
+    SetEntityHeading(ped, c.w or 0.0)
+    local t = GetGameTimer() + 4000
+    while not HasCollisionLoadedAroundEntity(ped) and GetGameTimer() < t do Wait(25) end
+end
+
+local function dressAt(bKey, editorEvent)
+    local d = (Config.Wardrobe or {}).dressingRoom or {}
+    if isDressing then return end
+    if d.enabled == false or not d.coords then return TriggerEvent(editorEvent) end
+
+    isDressing = true
+    local ped = PlayerPedId()
+    local p = GetEntityCoords(ped)
+    local back = vector4(p.x, p.y, p.z, GetEntityHeading(ped))
+    dressingBack = back
+
+    dressingReady = false
+    TriggerServerEvent('nbhd_rooms:server:dressing', true, bKey, back)
+    local t = GetGameTimer() + 3000
+    while not dressingReady and GetGameTimer() < t do Wait(25) end
+    if not dressingReady then isDressing = false return end
+
+    DoScreenFadeOut(400) while not IsScreenFadedOut() do Wait(10) end
+    FreezeEntityPosition(ped, true)
+    teleport(ped, d.coords)
+    if d.daylight ~= false then
+        TriggerEvent('qb-weathersync:client:DisableSync')
+        NetworkOverrideClockTime(12, 0, 0)
+        SetWeatherTypeNowPersist('CLEAR')
+    end
+    FreezeEntityPosition(ped, false)
+    Wait(200)
+    DoScreenFadeIn(400)
+
+    TriggerEvent(editorEvent)
+
+    -- wait for the editor to open, then for it to close (Save or Cancel)
+    local opened = false
+    t = GetGameTimer() + 6000
+    while GetGameTimer() < t do
+        if editorOpen() then opened = true break end
+        Wait(100)
+    end
+    if opened then
+        local limit = GetGameTimer() + 20 * 60 * 1000   -- safety: 20 minutes max
+        while editorOpen() and GetGameTimer() < limit do
+            if d.daylight ~= false then NetworkOverrideClockTime(12, 0, 0) end
+            Wait(250)
+        end
+    end
+    Wait(300)
+
+    DoScreenFadeOut(400) while not IsScreenFadedOut() do Wait(10) end
+    ped = PlayerPedId()
+    teleport(ped, back)
+    if d.daylight ~= false then
+        NetworkClearClockTimeOverride()
+        ClearWeatherTypePersist()
+        TriggerEvent('qb-weathersync:client:EnableSync')
+    end
+    TriggerServerEvent('nbhd_rooms:server:dressing', false)
+    Wait(200)
+    DoScreenFadeIn(400)
+    isDressing = false
+    dressingBack = nil
+end
+
+local function openWardrobe(bKey)
     local w = Config.Wardrobe or {}
     local editor  = w.editorEvent  or 'qb-clothing:client:openMenuCommand'
     local outfits = w.outfitsEvent or 'qb-clothing:client:openOutfitMenu'
     local mode = w.mode or 'menu'
 
-    if mode == 'editor' then return TriggerEvent(editor) end
+    local function changeClothes() CreateThread(function() dressAt(bKey, editor) end) end
+
+    if mode == 'editor' then return changeClothes() end
     if mode == 'outfits' then return TriggerEvent(outfits) end
 
-    if GetResourceState('ox_lib') ~= 'started' or not lib then return TriggerEvent(editor) end
+    if GetResourceState('ox_lib') ~= 'started' or not lib then return changeClothes() end
     lib.registerContext({
         id = 'nbhd_rooms_wardrobe',
         title = 'Wardrobe',
         options = {
             { title = 'Change clothes', description = 'Open the clothing editor', icon = 'shirt',
-              onSelect = function() TriggerEvent(editor) end },
+              onSelect = changeClothes },
             { title = 'My saved outfits', description = 'Put on an outfit you saved', icon = 'bookmark',
               onSelect = function() TriggerEvent(outfits) end },
         },
@@ -402,9 +489,9 @@ for bKey, b in pairs(Config.Buildings) do
                 if w then
                     local dist = #(pC - vector3(w.x, w.y, standZ(b, n)))
                     if dist < 10.0 then sleep = 0 end
-                    if dist < 1.6 and not IsNuiFocused() then
+                    if dist < 1.6 and not IsNuiFocused() and not isDressing then
                         showPanel('wardrobe_' .. bKey, { action = 'show', kind = 'wardrobe', label = b.label, room = n, floor = floor })
-                        if IsControlJustReleased(0, interactKey) then openWardrobe() end
+                        if IsControlJustReleased(0, interactKey) then openWardrobe(bKey) end
                     else
                         hidePanel('wardrobe_' .. bKey)
                     end
@@ -453,6 +540,12 @@ end)
 
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
+    if isDressing and dressingBack then
+        SetEntityCoords(PlayerPedId(), dressingBack.x, dressingBack.y, dressingBack.z, false, false, false, false)
+        NetworkClearClockTimeOverride()
+        TriggerEvent('qb-weathersync:client:EnableSync')
+        DoScreenFadeIn(0)
+    end
     for bKey in pairs(Config.Buildings) do
         despawnSafes(bKey)
         despawnReceptionist(bKey)

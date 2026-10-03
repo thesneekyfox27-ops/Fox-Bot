@@ -269,7 +269,64 @@ local function onLeave(src)
     sessionCitizen[src] = nil
 end
 
-AddEventHandler('playerDropped', function() onLeave(source) end)
+-- ============================================================
+--  DRESSING ROOM: private bucket while you use the clothing editor
+-- ============================================================
+
+local dressing = {}   -- [src] = { bucket = previous bucket, back = vector4, citizenid }
+
+local function wardrobePos(b, n)
+    local w = b.rooms[unitOf(b, n)].wardrobe
+    if not w then return nil end
+    return vector3(w.x, w.y, b.baseZ + (floorIndex(b, n) - 1) * b.floorHeight)
+end
+
+RegisterNetEvent('nbhd_rooms:server:dressing', function(on, bKey, back)
+    local src = source
+    if on then
+        if dressing[src] then return end
+        local b = Config.Buildings[bKey]
+        local citizenid = citizenOf(src)
+        if not b or not citizenid then return end
+        local n = numberFromName(holdsRoomIn(citizenid, b))
+        if not n or not near(src, wardrobePos(b, n), 3.0) then return end
+
+        local d = Config.Wardrobe and Config.Wardrobe.dressingRoom or {}
+        dressing[src] = { bucket = GetPlayerRoutingBucket(src), back = back, citizenid = citizenid }
+        if d.private ~= false then
+            local bucket = 7000 + src
+            SetRoutingBucketPopulationEnabled(bucket, false)
+            SetPlayerRoutingBucket(src, bucket)
+        end
+        TriggerClientEvent('nbhd_rooms:client:dressingReady', src)
+    else
+        local st = dressing[src]
+        if not st then return end
+        SetPlayerRoutingBucket(src, st.bucket or 0)
+        dressing[src] = nil
+    end
+end)
+
+-- crashed / quit while dressing: put their saved position back in their room
+local function dressingDropped(src)
+    local st = dressing[src]
+    dressing[src] = nil
+    if not (st and st.back and st.citizenid) then return end
+    local pos = json.encode({ x = st.back.x, y = st.back.y, z = st.back.z, w = st.back.w })
+    SetTimeout(3000, function()   -- after QBCore has saved its own position
+        MySQL.update('UPDATE players SET position = ? WHERE citizenid = ?', { pos, st.citizenid })
+    end)
+end
+
+AddEventHandler('onResourceStop', function(res)
+    if res ~= GetCurrentResourceName() then return end
+    for src, st in pairs(dressing) do SetPlayerRoutingBucket(src, st.bucket or 0) end
+end)
+
+AddEventHandler('playerDropped', function()
+    dressingDropped(source)
+    onLeave(source)
+end)
 RegisterNetEvent('QBCore:Server:OnPlayerUnload', function(src) onLeave(src or source) end)
 
 -- ============================================================

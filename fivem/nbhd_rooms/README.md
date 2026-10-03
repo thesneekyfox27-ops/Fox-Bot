@@ -1,4 +1,4 @@
-# NBHD Rooms v3.2.0
+# NBHD Rooms v3.3.0
 
 Motel room system for QBCore, configured through `Config.Buildings` in `config.lua`.
 
@@ -25,6 +25,9 @@ Motel room system for QBCore, configured through `Config.Buildings` in `config.l
 - **Inventory is detected automatically** (`Config.Inventory = 'auto'`): tgiann-inventory, then ox_inventory, then qb-inventory, then the old client event.
 - **Wardrobe** (17mov_CharacterSystem) uses the same events as nrp-clothingstore. Press E and choose **Change clothes** (full editor) or **My saved outfits**.
   Change `Config.Wardrobe.mode` to `'editor'` or `'outfits'` to skip the choice.
+- **Dressing room.** "Change clothes" fades you to a roomy, well-lit spot so the editor camera can see you. The default is 17mov's own creator point.
+  You go into your own private world (nobody sees you, no NPCs) at midday, and when you Save or Cancel you're put back exactly where you stood in your room.
+  If you crash while dressing, your saved position is set back to your room. Configure it under `Config.Wardrobe.dressingRoom`.
 - **Homeowners** listed in `Config.HomeTables` (qb-houses / ps-housing) are not given a room automatically. Tables that don't exist are ignored.
 - **New UI:** door, safe, wardrobe and front desk panels. The front desk hands you a beach "welcome" key card with a paper sleeve showing your room, floor, name and "Take the elevator to Floor N".
 

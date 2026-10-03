@@ -25,6 +25,16 @@ Config.Wardrobe = {
     mode         = 'menu',
     editorEvent  = 'qb-clothing:client:openMenuCommand',
     outfitsEvent = 'qb-clothing:client:openOutfitMenu',
+
+    -- "Change clothes" takes you here so the camera has room and light to see
+    -- you, then puts you back in your room when you Save or Cancel.
+    -- Default spot = 17mov's own character creator point (Skin.CreatingPoint).
+    dressingRoom = {
+        enabled  = true,
+        coords   = vector4(-819.68, -723.71, 105.87, 2.87),
+        private  = true,    -- own "ghost" world: nobody sees you, no NPCs
+        daylight = true,    -- midday + clear sky while you edit
+    },
 }
 
 -- "Already owns a home" check for skipIfOwnsAnyProperty. Any of these tables
