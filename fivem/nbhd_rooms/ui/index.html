@@ -3,337 +3,344 @@
 <head>
 <meta charset="utf-8">
 <style>
+:root {
+    --ink: #f4efe2;
+    --muted: #a8a293;
+    --brass: #d6b25e;
+    --brass-dark: #8a6a24;
+    --panel: rgba(17, 20, 28, 0.96);
+    --line: rgba(255, 255, 255, 0.08);
+    --red: #ff6b6b;
+    --green: #4be08a;
+}
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { overflow: hidden; font-family: "Segoe UI", Roboto, sans-serif; background: transparent !important; }
 
+/* ---------------------------------------------------------- panel */
 #panel {
     position: fixed;
     top: 68%;
     right: 24px;
-    transform: translateY(-50%) translateX(15px);
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 14px 22px;
-    background: linear-gradient(145deg, rgba(16,16,20,0.97), rgba(26,26,32,0.97));
-    border: 1px solid rgba(255,255,255,0.08);
+    width: 300px;
+    transform: translateY(-50%) translateX(18px);
+    background: var(--panel);
+    border: 1px solid var(--line);
     border-radius: 16px;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06);
+    box-shadow: 0 14px 40px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05);
+    overflow: hidden;
     opacity: 0;
     pointer-events: none;
     transition: opacity .25s ease, transform .25s ease;
 }
 #panel.visible { opacity: 1; transform: translateY(-50%) translateX(0); }
 
-/* doorknob */
-.knob {
+.p-top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 14px;
+    background: linear-gradient(90deg, rgba(214,178,94,0.16), rgba(214,178,94,0.03));
+    border-bottom: 1px solid rgba(214,178,94,0.22);
+    color: var(--brass);
+    font-size: 10.5px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase;
+}
+.p-top .floor { color: var(--muted); letter-spacing: 1px; }
+
+.p-body { display: flex; align-items: center; gap: 14px; padding: 14px; }
+
+.tile {
     position: relative;
-    width: 58px; height: 58px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #d8c690, #8d7434 55%, #5d4b1d);
-    box-shadow: inset 0 -4px 8px rgba(0,0,0,0.45), inset 0 3px 6px rgba(255,255,255,0.35), 0 4px 10px rgba(0,0,0,0.5);
-    flex-shrink: 0;
+    width: 56px; height: 56px; flex-shrink: 0;
+    border-radius: 14px;
+    background: linear-gradient(145deg, #262b38, #171a22);
+    border: 1px solid rgba(255,255,255,0.09);
+    box-shadow: inset 0 2px 6px rgba(255,255,255,0.05), 0 4px 10px rgba(0,0,0,0.45);
+    display: flex; align-items: center; justify-content: center;
 }
-.keyhole {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -58%);
-    width: 9px; height: 9px;
-    background: #14110a;
-    border-radius: 50%;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.9);
+.tile svg { width: 32px; height: 32px; }
+
+/* door knob with key turn */
+.knob {
+    position: relative; width: 38px; height: 38px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #f0dc9c, #a98632 55%, #5d4b1d);
+    box-shadow: inset 0 -3px 6px rgba(0,0,0,0.45), inset 0 2px 5px rgba(255,255,255,0.35);
 }
-.keyhole::after {
-    content: '';
-    position: absolute;
-    top: 7px; left: 50%;
-    transform: translateX(-50%);
-    width: 4px; height: 11px;
-    background: #14110a;
-    border-radius: 0 0 2px 2px;
+.knob::before {
+    content: ''; position: absolute; top: 50%; left: 50%;
+    width: 7px; height: 7px; transform: translate(-50%, -70%);
+    background: #14110a; border-radius: 50%;
 }
-/* key that turns */
-.key {
-    position: absolute;
-    top: 50%; left: 50%;
-    width: 4px; height: 20px;
-    background: linear-gradient(#f4e9bd, #c2ab5e);
-    border-radius: 2px;
-    transform-origin: top center;
-    transform: translate(-50%, -2px) rotate(0deg);
-    opacity: 0;
+.knob::after {
+    content: ''; position: absolute; top: 50%; left: 50%;
+    width: 3px; height: 8px; transform: translate(-50%, 0);
+    background: #14110a; border-radius: 0 0 2px 2px;
 }
-.knob.turning .key {
-    animation: turnkey .55s ease forwards;
+.knob .key {
+    position: absolute; top: 50%; left: 50%; width: 4px; height: 16px; z-index: 2;
+    background: linear-gradient(#f4e9bd, #c2ab5e); border-radius: 2px;
+    transform-origin: top center; transform: translate(-50%, -2px) rotate(0deg); opacity: 0;
 }
+.knob.turning .key { animation: turnkey .55s ease forwards; }
 @keyframes turnkey {
     0%   { opacity: 0; transform: translate(-50%, -2px) rotate(0deg); }
     25%  { opacity: 1; }
     100% { opacity: 1; transform: translate(-50%, -2px) rotate(95deg); }
 }
 
-.bell {
-    display: none;
-    width: 58px; height: 58px;
-    border-radius: 50%;
-    background: linear-gradient(145deg, #2e2e36, #1c1c22);
-    border: 1px solid rgba(255,255,255,0.10);
-    box-shadow: inset 0 2px 6px rgba(255,255,255,0.06), 0 4px 10px rgba(0,0,0,0.5);
-    font-size: 26px;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
+.info { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.title { color: var(--ink); font-size: 17px; font-weight: 700; letter-spacing: .3px; }
+.row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-.info { display: flex; flex-direction: column; gap: 6px; }
-.room {
-    color: #f5f2e8;
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: .4px;
-}
-.row { display: flex; align-items: center; gap: 10px; }
-
-.state {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 1.2px;
-    padding: 3px 10px;
-    border-radius: 999px;
+.pill {
+    font-size: 10.5px; font-weight: 800; letter-spacing: 1.3px;
+    padding: 3px 9px; border-radius: 999px;
     transition: background .3s, color .3s, box-shadow .3s;
 }
-.state.locked {
-    background: rgba(224,60,60,0.16);
-    color: #ff6b6b;
-    box-shadow: 0 0 12px rgba(224,60,60,0.25);
-}
-.state.unlocked {
-    background: rgba(60,220,120,0.14);
-    color: #4be08a;
-    box-shadow: 0 0 12px rgba(60,220,120,0.25);
+.pill.locked   { background: rgba(224,60,60,0.16); color: var(--red);   box-shadow: 0 0 12px rgba(224,60,60,0.22); }
+.pill.unlocked { background: rgba(60,220,120,0.14); color: var(--green); box-shadow: 0 0 12px rgba(60,220,120,0.22); }
+.pill.gold     { background: rgba(214,178,94,0.14); color: var(--brass); }
+
+.hint { display: flex; align-items: center; gap: 7px; color: #cfc9b8; font-size: 12.5px; }
+.keycap {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 22px; height: 22px; padding: 0 5px;
+    background: linear-gradient(#3a3f4c, #232631);
+    border: 1px solid rgba(255,255,255,0.16); border-bottom-width: 3px; border-radius: 5px;
+    color: #f0ead6; font-size: 12px; font-weight: 800;
 }
 
-.hint { display: flex; align-items: center; gap: 6px; color: #b9b4a6; font-size: 12px; }
 .status {
-    margin-top: 2px;
-    font-size: 11.5px;
-    font-weight: 600;
-    letter-spacing: .3px;
-    height: 14px;
-    opacity: 0;
-    transition: opacity .25s ease;
+    height: 0; overflow: hidden;
+    padding: 0 14px;
+    font-size: 11.5px; font-weight: 700; letter-spacing: .3px;
+    transition: height .2s ease, padding .2s ease;
 }
-.status.show { opacity: 1; }
-.status.locked { color: #ff6b6b; }
-.status.unlocked { color: #4be08a; }
+.status.show { height: 30px; padding: 7px 14px; border-top: 1px solid var(--line); }
+.status.locked { color: var(--red); }
+.status.unlocked { color: var(--green); }
 
-#outfits {
+/* -------------------------------------------------------- key card */
+#card {
     position: fixed;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%) scale(0.97);
-    width: 360px;
-    max-height: 64vh;
-    display: none;
-    flex-direction: column;
-    background: linear-gradient(160deg, rgba(16,16,20,0.98), rgba(26,26,32,0.98));
-    border: 1px solid rgba(255,255,255,0.09);
-    border-radius: 18px;
-    box-shadow: 0 18px 60px rgba(0,0,0,0.65);
+    top: 50%; right: 24px;
+    transform: translateY(-50%) translateX(40px) rotate(4deg);
+    width: 340px;
     opacity: 0;
-    transition: opacity .2s ease, transform .2s ease;
+    pointer-events: none;
+    transition: opacity .35s ease, transform .45s cubic-bezier(.2,.9,.3,1.2);
+}
+#card.visible { opacity: 1; transform: translateY(-50%) translateX(0) rotate(-2deg); }
+
+.sleeve-note {
+    color: var(--ink);
+    font-size: 13px; font-weight: 600;
+    text-align: right;
+    margin-bottom: 10px;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+}
+.sleeve-note b { color: var(--brass); }
+
+.kc {
+    position: relative;
+    height: 212px;
+    border-radius: 16px;
+    padding: 18px 20px;
+    color: #fbf6e8;
+    background:
+        radial-gradient(120% 90% at 100% 0%, rgba(214,178,94,0.30), transparent 55%),
+        repeating-linear-gradient(135deg, rgba(255,255,255,0.025) 0 2px, transparent 2px 7px),
+        linear-gradient(150deg, #1b2a45 0%, #0f1a2e 55%, #0a1220 100%);
+    border: 1px solid rgba(214,178,94,0.45);
+    box-shadow: 0 22px 50px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12);
     overflow: hidden;
 }
-#outfits.visible { display: flex; opacity: 1; transform: translate(-50%, -50%) scale(1); }
-
-.ohead {
-    display: flex; align-items: center; gap: 12px;
-    padding: 16px 18px 12px;
-    border-bottom: 1px solid rgba(255,255,255,0.07);
+.kc::after {   /* glossy sweep */
+    content: ''; position: absolute; top: -60%; left: -40%;
+    width: 60%; height: 220%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.10), transparent);
+    transform: rotate(20deg);
+    animation: sweep 2.6s ease .4s 1 both;
 }
-.ohead .oicon {
-    width: 40px; height: 40px; border-radius: 50%;
-    background: linear-gradient(145deg, #2e2e36, #1c1c22);
-    border: 1px solid rgba(255,255,255,0.10);
+@keyframes sweep { from { left: -60%; } to { left: 130%; } }
+
+.kc-head { display: flex; align-items: center; justify-content: space-between; }
+.kc-brand { display: flex; align-items: center; gap: 9px; }
+.kc-crest {
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 1.5px solid var(--brass);
     display: flex; align-items: center; justify-content: center;
-    font-size: 19px;
+    color: var(--brass); font-family: Georgia, serif; font-size: 14px; font-weight: 700;
 }
-.ohead .otitle { color: #f5f2e8; font-size: 15px; font-weight: 600; letter-spacing: .3px; }
-.ohead .osub { color: #8d897d; font-size: 11px; margin-top: 2px; }
-.ohead .oclose {
-    margin-left: auto;
-    width: 28px; height: 28px; border-radius: 8px;
-    background: rgba(255,255,255,0.06);
-    color: #b9b4a6; font-size: 14px;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; border: none;
+.kc-name { font-family: Georgia, "Times New Roman", serif; font-size: 17px; letter-spacing: .6px; }
+.kc-sub { font-size: 9px; letter-spacing: 2.4px; color: var(--brass); text-transform: uppercase; margin-top: 1px; }
+.kc-chip {
+    width: 38px; height: 28px; border-radius: 6px;
+    background: linear-gradient(135deg, #f3dc95, #b8923d 60%, #8e6c25);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.25);
+    position: relative;
 }
-.ohead .oclose:hover { background: rgba(255,255,255,0.12); color: #fff; }
+.kc-chip::before, .kc-chip::after {
+    content: ''; position: absolute; background: rgba(0,0,0,0.25);
+}
+.kc-chip::before { left: 12px; right: 12px; top: 0; bottom: 0; border-left: 1px solid rgba(0,0,0,0.3); border-right: 1px solid rgba(0,0,0,0.3); background: none; }
+.kc-chip::after  { top: 13px; left: 0; right: 0; height: 1px; }
 
-.olist { overflow-y: auto; padding: 10px; }
-.olist::-webkit-scrollbar { width: 6px; }
-.olist::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+.kc-mid { display: flex; align-items: flex-end; gap: 22px; margin-top: 16px; }
+.kc-label { font-size: 9px; letter-spacing: 2px; color: #9fb0cc; text-transform: uppercase; }
+.kc-room { font-family: Georgia, serif; font-size: 56px; font-weight: 700; line-height: 1; color: #fff; }
+.kc-floor { font-family: Georgia, serif; font-size: 28px; font-weight: 700; line-height: 1; color: var(--brass); }
 
-.oitem {
-    display: flex; align-items: center; gap: 12px;
-    padding: 11px 12px;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: background .15s ease;
+.kc-foot {
+    position: absolute; left: 20px; right: 20px; bottom: 16px;
+    display: flex; align-items: flex-end; justify-content: space-between;
 }
-.oitem:hover { background: rgba(255,255,255,0.07); }
-.oitem .oava {
-    width: 34px; height: 34px; border-radius: 10px;
-    background: linear-gradient(145deg, #34343d, #232329);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px;
-    flex-shrink: 0;
+.kc-guest { font-size: 13px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; }
+.kc-badge {
+    font-size: 9.5px; font-weight: 800; letter-spacing: 1.4px;
+    padding: 4px 9px; border-radius: 999px;
+    background: rgba(214,178,94,0.18); color: var(--brass);
+    border: 1px solid rgba(214,178,94,0.4);
 }
-.oitem .oname { color: #ece8db; font-size: 13.5px; font-weight: 500; }
-.oitem .owear {
-    margin-left: auto; color: #6f6b5f; font-size: 11px;
-    opacity: 0; transition: opacity .15s ease;
-}
-.oitem:hover .owear { opacity: 1; color: #4be08a; }
-
-.oempty { color: #8d897d; font-size: 12.5px; text-align: center; padding: 26px 14px; }
-
-.keycap {
-    display: inline-flex;
-    align-items: center; justify-content: center;
-    width: 22px; height: 22px;
-    background: linear-gradient(#3a3a42, #232329);
-    border: 1px solid rgba(255,255,255,0.15);
-    border-bottom-width: 3px;
-    border-radius: 5px;
-    color: #f0ead6;
-    font-size: 12px;
-    font-weight: 700;
+.kc-stripe {
+    position: absolute; right: 0; top: 0; bottom: 0; width: 14px;
+    background: linear-gradient(90deg, #050608, #1a1d24);
+    opacity: .85;
 }
 </style>
 </head>
 <body>
+
 <div id="panel">
-    <div class="knob" id="knob">
-        <div class="keyhole"></div>
-        <div class="key"></div>
-    </div>
-    <div class="bell" id="bell">🛎️</div>
-    <div class="info">
-        <div class="room" id="room">Room</div>
-        <div class="row">
-            <span class="state locked" id="state">LOCKED</span>
-            <span class="hint"><span class="keycap">K</span> Lock / Unlock</span>
+    <div class="p-top"><span id="pBuilding">Pier Motel</span><span class="floor" id="pFloor"></span></div>
+    <div class="p-body">
+        <div class="tile" id="tile"></div>
+        <div class="info">
+            <div class="title" id="pTitle">Room 1</div>
+            <div class="row">
+                <span class="pill locked" id="pill">LOCKED</span>
+                <span class="hint" id="hint"><span class="keycap">K</span> Lock / Unlock</span>
+            </div>
         </div>
-        <div class="status" id="status"></div>
     </div>
+    <div class="status" id="status"></div>
 </div>
 
-<div id="outfits">
-    <div class="ohead">
-        <div class="oicon">\uD83D\uDC55</div>
-        <div>
-            <div class="otitle" id="otitle">Wardrobe</div>
-            <div class="osub">Select an outfit to wear</div>
+<div id="card">
+    <div class="sleeve-note" id="note"></div>
+    <div class="kc">
+        <div class="kc-stripe"></div>
+        <div class="kc-head">
+            <div class="kc-brand">
+                <div class="kc-crest" id="kcCrest">P</div>
+                <div>
+                    <div class="kc-name" id="kcName">Pier Motel</div>
+                    <div class="kc-sub">Guest Key Card</div>
+                </div>
+            </div>
+            <div class="kc-chip"></div>
         </div>
-        <button class="oclose" id="oclose">\u2715</button>
+        <div class="kc-mid">
+            <div><div class="kc-label">Room</div><div class="kc-room" id="kcRoom">12</div></div>
+            <div><div class="kc-label">Floor</div><div class="kc-floor" id="kcFloor">2</div></div>
+        </div>
+        <div class="kc-foot">
+            <div>
+                <div class="kc-label">Guest</div>
+                <div class="kc-guest" id="kcGuest">John Doe</div>
+            </div>
+            <div class="kc-badge" id="kcBadge">CHECKED IN</div>
+        </div>
     </div>
-    <div class="olist" id="olist"></div>
 </div>
 
 <script>
-const panel = document.getElementById('panel');
-const knob  = document.getElementById('knob');
-const room  = document.getElementById('room');
-const state = document.getElementById('state');
-const status = document.getElementById('status');
-const bell = document.getElementById('bell');
-let statusTimer = null;
+const $ = (id) => document.getElementById(id);
+const panel = $('panel'), tile = $('tile'), pill = $('pill'), hint = $('hint'), status = $('status');
+let statusTimer = null, cardTimer = null;
 
-function setState(locked) {
-    state.textContent = locked ? 'LOCKED' : 'UNLOCKED';
-    state.className = 'state ' + (locked ? 'locked' : 'unlocked');
+const ICONS = {
+    locker: '<svg viewBox="0 0 32 32" fill="none" stroke="#d6b25e" stroke-width="1.8"><rect x="4" y="5" width="24" height="21" rx="2.5"/><circle cx="16" cy="15.5" r="5"/><path d="M16 10.5v2M16 18.5v2M11 15.5h2M19 15.5h2"/><path d="M8 26v2M24 26v2"/></svg>',
+    wardrobe: '<svg viewBox="0 0 32 32" fill="none" stroke="#d6b25e" stroke-width="1.8" stroke-linejoin="round"><path d="M16 9a2.5 2.5 0 1 1 2.5-2.5"/><path d="M16 9v2L4 20a1.5 1.5 0 0 0 1 2.7h22A1.5 1.5 0 0 0 28 20L16 11"/></svg>',
+    reception: '<svg viewBox="0 0 32 32" fill="none" stroke="#d6b25e" stroke-width="1.8" stroke-linecap="round"><path d="M6 22a10 10 0 0 1 20 0"/><path d="M4 25h24"/><path d="M16 12V9M13.5 9h5"/></svg>'
+};
+
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function setLocked(locked) {
+    pill.textContent = locked ? 'LOCKED' : 'UNLOCKED';
+    pill.className = 'pill ' + (locked ? 'locked' : 'unlocked');
 }
 
-const outfitsEl = document.getElementById('outfits');
-const olist = document.getElementById('olist');
-const otitle = document.getElementById('otitle');
-const post = (name, data) => fetch(`https://${GetParentResourceName()}/${name}`, {
-    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data || {})
-});
+function show(d) {
+    $('pBuilding').textContent = d.label || '';
+    $('pFloor').textContent = d.floor ? 'Floor ' + d.floor : '';
+    pill.style.display = '';
 
-document.getElementById('oclose').addEventListener('click', () => post('closeOutfits'));
-window.addEventListener('keydown', (e) => { if (e.key === 'Escape') post('closeOutfits'); });
-
-const OUTFIT_ICONS = ['\uD83D\uDC55','\uD83D\uDC54','\uD83D\uDC57','\uD83E\uDDE5','\uD83D\uDC5F','\uD83E\uDDE2'];
-
-function renderOutfits(list, roomN) {
-    otitle.textContent = 'Room ' + (roomN || '') + ' \u2014 Wardrobe';
-    olist.innerHTML = '';
-    if (!list || list.length === 0) {
-        olist.innerHTML = '<div class="oempty">No saved outfits yet.<br>Save outfits at a clothing store first.</div>';
-        return;
+    if (d.kind === 'door') {
+        tile.innerHTML = '<div class="knob" id="knob"><div class="key"></div></div>';
+        $('pTitle').textContent = 'Room ' + d.room;
+        setLocked(d.locked);
+        hint.innerHTML = '<span class="keycap">K</span> Lock / Unlock';
+    } else if (d.kind === 'locker') {
+        tile.innerHTML = ICONS.locker;
+        $('pTitle').textContent = 'Room ' + d.room + ' Safe';
+        pill.className = 'pill gold'; pill.textContent = 'YOURS';
+        hint.innerHTML = '<span class="keycap">E</span> Open Safe';
+    } else if (d.kind === 'wardrobe') {
+        tile.innerHTML = ICONS.wardrobe;
+        $('pTitle').textContent = 'Wardrobe';
+        pill.style.display = 'none';
+        hint.innerHTML = '<span class="keycap">E</span> Change Outfit';
+    } else if (d.kind === 'reception') {
+        tile.innerHTML = ICONS.reception;
+        $('pTitle').textContent = 'Front Desk';
+        $('pFloor').textContent = d.room ? 'Your room: ' + d.room : '';
+        pill.style.display = 'none';
+        hint.innerHTML = '<span class="keycap">E</span> ' + (d.room ? 'Get my key card' : 'Check in');
     }
-    list.forEach((o, i) => {
-        const el = document.createElement('div');
-        el.className = 'oitem';
-        el.innerHTML = '<div class="oava">' + OUTFIT_ICONS[i % OUTFIT_ICONS.length] + '</div>'
-            + '<div class="oname"></div><div class="owear">Wear \u2192</div>';
-        el.querySelector('.oname').textContent = o.name;
-        el.addEventListener('click', () => post('wearOutfit', { id: o.id, skin: o.skin, model: o.model }));
-        olist.appendChild(el);
-    });
+    panel.classList.add('visible');
+}
+
+function showCard(c) {
+    $('kcName').textContent = c.building || 'Motel';
+    $('kcCrest').textContent = (c.building || 'M').trim().charAt(0).toUpperCase();
+    $('kcRoom').textContent = c.room;
+    $('kcFloor').textContent = c.floor;
+    $('kcGuest').textContent = c.guest || 'Guest';
+
+    let badge = 'YOUR ROOM', note;
+    if (c.fresh && c.same) { badge = 'WELCOME BACK'; note = 'Welcome back! Same room as last time, <b>Room ' + esc(c.room) + '</b> on <b>Floor ' + esc(c.floor) + '</b>.'; }
+    else if (c.fresh)      { badge = 'CHECKED IN';   note = 'You\'re in <b>Room ' + esc(c.room) + '</b>, take the stairs to <b>Floor ' + esc(c.floor) + '</b>.'; }
+    else                   { note = 'You\'re in <b>Room ' + esc(c.room) + '</b> on <b>Floor ' + esc(c.floor) + '</b>.'; }
+    $('kcBadge').textContent = badge;
+    $('note').innerHTML = note;
+
+    const card = $('card');
+    card.classList.remove('visible');
+    void card.offsetWidth;
+    card.classList.add('visible');
+    clearTimeout(cardTimer);
+    cardTimer = setTimeout(() => card.classList.remove('visible'), 8000);
 }
 
 window.addEventListener('message', (e) => {
-    const d = e.data;
+    const d = e.data || {};
     if (d.action === 'show') {
-        if (d.kind === 'wardrobe') {
-            room.textContent = 'Room ' + d.room + ' \u2014 Wardrobe';
-            state.style.display = 'none';
-            knob.style.display = 'none';
-            bell.style.display = 'flex';
-            bell.textContent = '\uD83D\uDC55'; // shirt
-            document.querySelector('.hint').innerHTML = '<span class="keycap">E</span> Change Outfit';
-        } else if (d.kind === 'reception') {
-            room.textContent = (d.label || '') + ' \u2014 Front Desk';
-            state.style.display = 'none';
-            knob.style.display = 'none';
-            bell.style.display = 'flex';
-            bell.textContent = '\uD83D\uDECE\uFE0F'; // desk bell
-            document.querySelector('.hint').innerHTML = '<span class="keycap">E</span> \u201CWhat room am I in?\u201D';
-        } else if (d.kind === 'locker') {
-            room.textContent = 'Room ' + d.room + ' — Personal Locker';
-            state.style.display = 'none';
-            knob.style.display = '';
-            bell.style.display = 'none';
-            document.querySelector('.hint').innerHTML = '<span class="keycap">E</span> Open Locker';
-        } else {
-            room.textContent = (d.label || '') + ' — Room ' + d.room;
-            state.style.display = '';
-            knob.style.display = '';
-            bell.style.display = 'none';
-            document.querySelector('.hint').innerHTML = '<span class="keycap">K</span> Lock / Unlock';
-            setState(d.locked);
-        }
-        panel.classList.add('visible');
+        show(d);
     } else if (d.action === 'hide') {
         panel.classList.remove('visible');
-    } else if (d.action === 'outfits') {
-        renderOutfits(d.list, d.room);
-        outfitsEl.classList.add('visible');
-        panel.classList.remove('visible');
-    } else if (d.action === 'closeOutfits') {
-        outfitsEl.classList.remove('visible');
     } else if (d.action === 'state') {
-        setState(d.locked);
+        setLocked(d.locked);
         status.textContent = d.locked ? 'Door locked' : 'Door unlocked';
         status.className = 'status show ' + (d.locked ? 'locked' : 'unlocked');
         clearTimeout(statusTimer);
         statusTimer = setTimeout(() => status.classList.remove('show'), 2200);
     } else if (d.action === 'turnkey') {
+        const knob = $('knob');
+        if (!knob) return;
         knob.classList.remove('turning');
-        void knob.offsetWidth; // restart animation
+        void knob.offsetWidth;
         knob.classList.add('turning');
+    } else if (d.action === 'keycard') {
+        showCard(d.card || {});
     }
 });
 </script>

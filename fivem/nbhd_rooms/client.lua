@@ -8,50 +8,39 @@ local QBCore = exports['qb-core']:GetCoreObject()
 local myRooms     = {} -- [bKey] = roomNumber
 local doorLocked  = {} -- [bKey][n] = bool
 local doors       = {} -- [bKey][n] = { coords, hash }
-local safes       = {} -- [bKey][n] = object handle
-local receptions  = {} -- [bKey] = ped handle
+local safes       = {} -- [bKey][n] = object handle (only while you are near the building)
+local receptions  = {} -- [bKey] = ped handle   (only while you are near the building)
+local centers     = {} -- [bKey] = vector3, middle of the building
 local activePanel = nil -- which panel is currently shown (string id)
 
-local function totalRooms(b) return b.floors * b.roomsPerFloor end
 local function unitOf(b, n) return ((n - 1) % b.roomsPerFloor) + 1 end
 local function floorOf(b, n) return math.ceil(n / b.roomsPerFloor) end
+local function floorLabel(b, n) return floorOf(b, n) + (b.floorOffset or 0) end
 
--- ============================================================
---  SETUP: doors, safes, receptionists per building
--- ============================================================
+-- player-standing z on the floor room n is on
+local function standZ(b, n) return b.baseZ + (floorOf(b, n) - 1) * b.floorHeight end
 
-local function spawnReceptionist(bKey, b)
-    if not b.receptionist then return end
-    local model = GetHashKey(b.receptionist.model)
+local function loadModel(model)
+    if type(model) == 'string' then model = joaat(model) end
+    if not IsModelInCdimage(model) then return nil end
     RequestModel(model)
-    while not HasModelLoaded(model) do Wait(50) end
-
-    local ped = CreatePed(4, model,
-        b.receptionist.coords.x, b.receptionist.coords.y, b.receptionist.coords.z,
-        b.receptionist.coords.w, false, true)
-
-    SetEntityCoordsNoOffset(ped, b.receptionist.coords.x, b.receptionist.coords.y, b.receptionist.coords.z, false, false, false)
-    SetEntityAsMissionEntity(ped, true, true)
-    SetEntityInvincible(ped, true)
-    FreezeEntityPosition(ped, true)
-    SetBlockingOfNonTemporaryEvents(ped, true)
-    if b.receptionist.scenario then
-        TaskStartScenarioInPlace(ped, b.receptionist.scenario, 0, true)
+    local t = GetGameTimer() + 5000
+    while not HasModelLoaded(model) do
+        if GetGameTimer() > t then return nil end
+        Wait(25)
     end
-    SetModelAsNoLongerNeeded(model)
-    receptions[bKey] = ped
+    return model
 end
 
-CreateThread(function()
-    while not LocalPlayer.state.isLoggedIn do Wait(500) end
-    Wait(1500)
+-- ============================================================
+--  DOORS (registered once for every room on every floor)
+-- ============================================================
 
+local function registerDoors()
     for bKey, b in pairs(Config.Buildings) do
-        doors[bKey] = {}
-        safes[bKey] = {}
-        doorLocked[bKey] = {}
+        doors[bKey], doorLocked[bKey] = {}, {}
+        local sx, sy, cnt = 0.0, 0.0, 0
 
-        -- door registration
         for floor = 1, b.floors do
             for unit = 1, b.roomsPerFloor do
                 local n = (floor - 1) * b.roomsPerFloor + unit
@@ -66,59 +55,139 @@ CreateThread(function()
                     AddDoorToSystem(doorHash, b.doorModel, d.x, d.y, z, false, false, false)
                 end
                 DoorSystemSetDoorState(doorHash, 1, false, true)
+
+                if floor == 1 then sx, sy, cnt = sx + d.x, sy + d.y, cnt + 1 end
             end
         end
 
-        -- safes
-        if b.safeModel then
-            RequestModel(b.safeModel)
-            local tries = 0
-            while not HasModelLoaded(b.safeModel) and tries < 100 do Wait(50) tries = tries + 1 end
+        local midZ = b.baseZ + (b.floors - 1) * b.floorHeight * 0.5
+        centers[bKey] = cnt > 0 and vector3(sx / cnt, sy / cnt, midZ) or vector3(0, 0, 0)
+    end
+end
 
-            if HasModelLoaded(b.safeModel) then
-                for floor = 1, b.floors do
-                    for unit = 1, b.roomsPerFloor do
-                        local s = b.rooms[unit].safe
-                        if s then
-                            local n = (floor - 1) * b.roomsPerFloor + unit
-                            local z = b.baseZ + (floor - 1) * b.floorHeight
+-- ============================================================
+--  SAFES: one in every room, on every floor, at the exact
+--  config spot. Spawned only while you are near the building so
+--  the floors are loaded (that is why they used to go missing).
+-- ============================================================
 
-                            -- clear leftovers from a previous session
-                            local leftover = GetClosestObjectOfType(s.x, s.y, z - 1.0, 1.5, b.safeModel, false, false, false)
-                            while leftover ~= 0 and DoesEntityExist(leftover) do
-                                SetEntityAsMissionEntity(leftover, true, true)
-                                DeleteEntity(leftover)
-                                leftover = GetClosestObjectOfType(s.x, s.y, z - 1.0, 1.5, b.safeModel, false, false, false)
-                            end
+local function safeSpot(b, n)
+    local s = b.rooms[unitOf(b, n)].safe
+    if not s then return nil end
+    return vector3(s.x, s.y, standZ(b, n) + (b.safeZOffset or -1.0)), (s.h + 180.0) % 360.0
+end
 
-                            local obj = CreateObjectNoOffset(b.safeModel, s.x, s.y, z - 1.0, false, false, false)
-                            SetEntityHeading(obj, (s.h + 180.0) % 360.0)
-                            PlaceObjectOnGroundProperly(obj)
-                            FreezeEntityPosition(obj, true)
-                            safes[bKey][n] = obj
-                        end
-                    end
-                end
-                SetModelAsNoLongerNeeded(b.safeModel)
+local function clearLeftovers(model, pos)
+    for _ = 1, 5 do
+        local obj = GetClosestObjectOfType(pos.x, pos.y, pos.z, 1.5, model, false, false, false)
+        if obj == 0 or not DoesEntityExist(obj) then return end
+        SetEntityAsMissionEntity(obj, true, true)
+        DeleteEntity(obj)
+    end
+end
+
+local function spawnSafes(bKey, b)
+    if not b.safeModel then return end
+    local model = loadModel(b.safeModel)
+    if not model then
+        print(('[nbhd_rooms] safe model for %s is not valid, no safes spawned'):format(bKey))
+        return
+    end
+    safes[bKey] = safes[bKey] or {}
+
+    for n = 1, b.floors * b.roomsPerFloor do
+        local obj = safes[bKey][n]
+        if not (obj and DoesEntityExist(obj)) then
+            local pos, heading = safeSpot(b, n)
+            if pos then
+                clearLeftovers(model, pos)
+                obj = CreateObjectNoOffset(model, pos.x, pos.y, pos.z, false, false, false)
+                SetEntityHeading(obj, heading)
+                SetEntityCoordsNoOffset(obj, pos.x, pos.y, pos.z, false, false, false)
+                FreezeEntityPosition(obj, true)
+                SetEntityInvincible(obj, true)
+                safes[bKey][n] = obj
             end
         end
+    end
+    SetModelAsNoLongerNeeded(model)
+end
 
-        spawnReceptionist(bKey, b)
+local function despawnSafes(bKey)
+    for n, obj in pairs(safes[bKey] or {}) do
+        if DoesEntityExist(obj) then DeleteEntity(obj) end
+        safes[bKey][n] = nil
+    end
+end
+
+-- ============================================================
+--  RECEPTIONIST
+-- ============================================================
+
+local function spawnReceptionist(bKey, b)
+    local r = b.receptionist
+    if not r then return end
+    local model = loadModel(r.model)
+    if not model then
+        print(('[nbhd_rooms] receptionist model %s is not valid'):format(tostring(r.model)))
+        return
     end
 
-    TriggerServerEvent('nbhd_rooms:server:requestStates')
-end)
+    local c = r.coords
+    local ped = CreatePed(4, model, c.x, c.y, c.z - 1.0, c.w, false, true)
+    SetEntityCoordsNoOffset(ped, c.x, c.y, c.z - 1.0, false, false, false)
+    SetEntityHeading(ped, c.w)
+    SetEntityAsMissionEntity(ped, true, true)
+    SetEntityInvincible(ped, true)
+    SetPedCanRagdoll(ped, false)
+    SetPedDiesWhenInjured(ped, false)
+    SetBlockingOfNonTemporaryEvents(ped, true)
+    FreezeEntityPosition(ped, true)
+    if r.scenario then TaskStartScenarioInPlace(ped, r.scenario, 0, true) end
+    SetModelAsNoLongerNeeded(model)
+    receptions[bKey] = ped
+end
 
--- receptionist watchdog
+local function despawnReceptionist(bKey)
+    local ped = receptions[bKey]
+    if ped and DoesEntityExist(ped) then DeleteEntity(ped) end
+    receptions[bKey] = nil
+end
+
+-- ============================================================
+--  STARTUP + STREAMING
+-- ============================================================
+
 CreateThread(function()
     while not LocalPlayer.state.isLoggedIn do Wait(500) end
+    Wait(1000)
+    registerDoors()
+    TriggerServerEvent('nbhd_rooms:server:requestStates')
+
+    local spawned = {}
     while true do
-        Wait(10000)
+        local pC = GetEntityCoords(PlayerPedId())
         for bKey, b in pairs(Config.Buildings) do
-            if b.receptionist and (not receptions[bKey] or not DoesEntityExist(receptions[bKey])) then
-                spawnReceptionist(bKey, b)
+            local c = centers[bKey]
+            local dist = c and #(pC.xy - c.xy) or math.huge
+
+            if dist < (Config.SpawnDistance or 90.0) then
+                if not spawned[bKey] then
+                    -- give the interior a moment to stream in
+                    Wait(750)
+                    spawned[bKey] = true
+                end
+                -- (re)spawn anything missing: also acts as the watchdog
+                spawnSafes(bKey, b)
+                local ped = receptions[bKey]
+                if b.receptionist and not (ped and DoesEntityExist(ped)) then spawnReceptionist(bKey, b) end
+            elseif spawned[bKey] and dist > (Config.DespawnDistance or 130.0) then
+                despawnSafes(bKey)
+                despawnReceptionist(bKey)
+                spawned[bKey] = nil
             end
         end
+        Wait(2000)
     end
 end)
 
@@ -166,6 +235,26 @@ RegisterNetEvent('nbhd_rooms:client:setRoom', function(bKey, n)
     myRooms[bKey] = tonumber(n)
 end)
 
+RegisterNetEvent('nbhd_rooms:client:keycard', function(data)
+    SendNUIMessage({ action = 'keycard', card = data })
+end)
+
+-- ============================================================
+--  WARDROBE (illenium-appearance or qb-clothing)
+-- ============================================================
+
+local function openWardrobe()
+    local ev = Config.WardrobeEvent or 'auto'
+    if ev == 'auto' then
+        if GetResourceState('illenium-appearance') == 'started' then
+            ev = 'illenium-appearance:client:openOutfitMenu'
+        else
+            ev = 'qb-clothing:client:openOutfitMenu'
+        end
+    end
+    TriggerEvent(ev)
+end
+
 -- ============================================================
 --  PROXIMITY INTERACTIONS (one thread per building)
 -- ============================================================
@@ -184,6 +273,10 @@ local function hidePanel(id)
     end
 end
 
+local function playSound(name)
+    if name then TriggerEvent('InteractSound_CL:PlayOnOne', name, 0.4) end
+end
+
 for bKey, b in pairs(Config.Buildings) do
     CreateThread(function()
         local lockKey     = b.lockKey or 311
@@ -192,9 +285,10 @@ for bKey, b in pairs(Config.Buildings) do
         while true do
             local sleep = 1000
             local n = myRooms[bKey]
+            local pC = GetEntityCoords(PlayerPedId())
 
             if n then
-                local pC = GetEntityCoords(PlayerPedId())
+                local floor = floorLabel(b, n)
 
                 -- DOOR
                 local d = doors[bKey] and doors[bKey][n]
@@ -202,30 +296,26 @@ for bKey, b in pairs(Config.Buildings) do
                     local dist = #(pC - d.coords)
                     if dist < 15.0 then sleep = 0 end
                     if dist < 1.8 then
-                        showPanel('door_' .. bKey, { action = 'show', kind = 'door', label = b.label, room = n, locked = doorLocked[bKey][n] })
+                        showPanel('door_' .. bKey, { action = 'show', kind = 'door', label = b.label, room = n, floor = floor, locked = doorLocked[bKey][n] })
                         if IsControlJustReleased(0, lockKey) then
                             TriggerServerEvent('nbhd_rooms:server:toggleDoor', bKey, n)
                             SendNUIMessage({ action = 'turnkey' })
-                            if b.lockSound then
-                                TriggerEvent('InteractSound_CL:PlayOnOne', b.lockSound, 0.4)
-                            end
+                            playSound(b.lockSound)
                         end
                     else
                         hidePanel('door_' .. bKey)
                     end
                 end
 
-                -- LOCKER (safe)
-                local s = safes[bKey] and safes[bKey][n]
-                if b.locker and s and DoesEntityExist(s) then
-                    local dist = #(pC - GetEntityCoords(s))
+                -- SAFE
+                local pos = b.locker and safeSpot(b, n)
+                if pos then
+                    local dist = #(pC - pos)
                     if dist < 10.0 then sleep = 0 end
-                    if dist < 1.6 then
-                        showPanel('locker_' .. bKey, { action = 'show', kind = 'locker', label = b.label, room = n })
+                    if dist < 1.8 then
+                        showPanel('locker_' .. bKey, { action = 'show', kind = 'locker', label = b.label, room = n, floor = floor })
                         if IsControlJustReleased(0, interactKey) then
-                            if b.lockerSound then
-                                TriggerEvent('InteractSound_CL:PlayOnOne', b.lockerSound, 0.4)
-                            end
+                            playSound(b.lockerSound)
                             TriggerServerEvent('nbhd_rooms:server:openLocker', bKey)
                         end
                     else
@@ -236,14 +326,11 @@ for bKey, b in pairs(Config.Buildings) do
                 -- WARDROBE
                 local w = b.rooms[unitOf(b, n)].wardrobe
                 if w then
-                    local z = b.baseZ + (floorOf(b, n) - 1) * b.floorHeight
-                    local dist = #(pC - vector3(w.x, w.y, z))
+                    local dist = #(pC - vector3(w.x, w.y, standZ(b, n)))
                     if dist < 10.0 then sleep = 0 end
                     if dist < 1.6 then
-                        showPanel('wardrobe_' .. bKey, { action = 'show', kind = 'wardrobe', label = b.label, room = n })
-                        if IsControlJustReleased(0, interactKey) then
-                            TriggerEvent('qb-clothing:client:openOutfitMenu')
-                        end
+                        showPanel('wardrobe_' .. bKey, { action = 'show', kind = 'wardrobe', label = b.label, room = n, floor = floor })
+                        if IsControlJustReleased(0, interactKey) then openWardrobe() end
                     else
                         hidePanel('wardrobe_' .. bKey)
                     end
@@ -253,11 +340,11 @@ for bKey, b in pairs(Config.Buildings) do
             -- RECEPTION (works whether or not you hold a room)
             local ped = receptions[bKey]
             if ped and DoesEntityExist(ped) then
-                local dist = #(GetEntityCoords(PlayerPedId()) - GetEntityCoords(ped))
+                local dist = #(pC - GetEntityCoords(ped))
                 if dist < 10.0 then sleep = 0 end
                 if dist < 2.2 then
-                    showPanel('reception_' .. bKey, { action = 'show', kind = 'reception', label = b.label })
-                    if IsControlJustReleased(0, b.interactKey or 38) then
+                    showPanel('reception_' .. bKey, { action = 'show', kind = 'reception', label = b.label, room = n, floor = n and floorLabel(b, n) or nil })
+                    if IsControlJustReleased(0, interactKey) then
                         TriggerServerEvent('nbhd_rooms:server:checkRoom', bKey)
                     end
                 else
@@ -271,14 +358,19 @@ for bKey, b in pairs(Config.Buildings) do
 end
 
 -- ============================================================
---  LOCKER OPEN (tgiann / qb-inventory compatible)
+--  SAFE OPEN (fallbacks; tgiann / qb open straight from the server)
 -- ============================================================
+
+RegisterNetEvent('nbhd_rooms:client:openOxStash', function(stashId)
+    exports.ox_inventory:openInventory('stash', stashId)
+end)
 
 RegisterNetEvent('nbhd_rooms:client:doOpenLocker', function(stashId, slots, weight)
     TriggerServerEvent('inventory:server:OpenInventory', 'stash', stashId, {
         maxweight = weight,
         slots     = slots,
     })
+    TriggerEvent('inventory:client:SetCurrentStash', stashId)
 end)
 
 -- ============================================================
@@ -287,13 +379,9 @@ end)
 
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
-    for _, ped in pairs(receptions) do
-        if DoesEntityExist(ped) then DeleteEntity(ped) end
-    end
-    for _, list in pairs(safes) do
-        for _, obj in pairs(list) do
-            if DoesEntityExist(obj) then DeleteEntity(obj) end
-        end
+    for bKey in pairs(Config.Buildings) do
+        despawnSafes(bKey)
+        despawnReceptionist(bKey)
     end
 end)
 
@@ -303,12 +391,24 @@ end)
 
 RegisterCommand('myroom', function()
     for bKey, n in pairs(myRooms) do
+        local b = Config.Buildings[bKey]
         local d = doors[bKey] and doors[bKey][n]
         local dist = d and #(GetEntityCoords(PlayerPedId()) - d.coords) or -1
-        print(('[nbhd_rooms] %s: room %d | door dist %.2f | locked %s'):format(
-            bKey, n, dist, tostring(doorLocked[bKey] and doorLocked[bKey][n])))
+        local s = safes[bKey] and safes[bKey][n]
+        print(('[nbhd_rooms] %s: room %d (floor %d) | door dist %.2f | locked %s | safe spawned %s'):format(
+            bKey, n, floorLabel(b, n), dist, tostring(doorLocked[bKey] and doorLocked[bKey][n]),
+            tostring(s ~= nil and DoesEntityExist(s))))
     end
     if not next(myRooms) then print('[nbhd_rooms] no rooms held') end
+end, false)
+
+RegisterCommand('roomfloors', function()
+    for bKey, b in pairs(Config.Buildings) do
+        for f = 1, b.floors do
+            local first = (f - 1) * b.roomsPerFloor + 1
+            print(('[nbhd_rooms] %s Floor %d: rooms %d-%d'):format(b.label, f + (b.floorOffset or 0), first, first + b.roomsPerFloor - 1))
+        end
+    end
 end, false)
 
 RegisterCommand('finddoor', function()

@@ -1,5 +1,33 @@
 Config = {}
 
+-- ============================================================
+--  GLOBAL OPTIONS
+-- ============================================================
+
+-- Give players the SAME room back when they log in again (if it's free).
+-- Their safe storage is always theirs either way (keyed by citizenid).
+Config.KeepLastRoom = true
+
+-- Safes and the receptionist are only spawned while you are this close to the
+-- building (so the floors are loaded and nothing ends up under the map).
+Config.SpawnDistance   = 90.0
+Config.DespawnDistance = 130.0
+
+-- Which inventory opens the room safe: 'auto', 'tgiann', 'ox', 'qb' or 'legacy'
+-- ('legacy' = the old client event 'inventory:server:OpenInventory').
+Config.Inventory = 'auto'
+
+-- Wardrobe: client event that opens the outfit menu. 'auto' picks
+-- illenium-appearance, then qb-clothing.
+Config.WardrobeEvent = 'auto'
+
+-- "Already owns a home" check for skipIfOwnsAnyProperty. Any of these tables
+-- that exist on your database are checked (missing ones are ignored).
+Config.HomeTables = {
+    { table = 'player_houses', column = 'citizenid' },        -- qb-houses
+    { table = 'properties',    column = 'owner_citizenid' },  -- ps-housing
+}
+
 --[[
     MULTI-BUILDING ROOM SYSTEM
     ==========================
@@ -29,6 +57,9 @@ Config = {}
       safeModel      - prop spawned as the room safe (false = no safe prop,
                        locker disabled too)
       receptionist   - { model, coords(vec4), scenario } or false
+      floorOffset    - added to the floor number the receptionist says (0 = rooms
+                       1-8 are "Floor 1"; set 1 if the lobby counts as floor 1)
+      safeZOffset    - safe height relative to the player-standing Z (-1.0 = floor)
       rooms          - one entry per unit, measured on the FIRST room floor:
           door     = { x, y, h }   door prop position + heading
           safe     = { x, y, h }   exact safe position + door-facing heading
@@ -57,8 +88,10 @@ Config.Buildings = {
         lockSound   = 'motel_doorlock',
         lockerSound = 'LockerOpen',
 
-        locker    = { slots = 10, weight = 50000 },
-        safeModel = `prop_ld_int_safe_01`,
+        locker      = { slots = 10, weight = 50000 },
+        safeModel   = `prop_ld_int_safe_01`,
+        safeZOffset = -1.0,
+        floorOffset = 0,   -- rooms 1-8 Floor 1, 9-16 Floor 2, ... 41-48 Floor 6
 
         receptionist = {
             model    = 'a_f_y_business_02',
