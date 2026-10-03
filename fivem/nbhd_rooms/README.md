@@ -1,4 +1,4 @@
-# NBHD Rooms v3.0.0
+# NBHD Rooms v3.1.0
 
 Motel room system for QBCore, configured through `Config.Buildings` in `config.lua`.
 
@@ -23,9 +23,11 @@ Motel room system for QBCore, configured through `Config.Buildings` in `config.l
   If your building counts the lobby as Floor 1, set `floorOffset = 1` so rooms 1-8 show as "Floor 2".
 - **Server checks.** You can only lock or unlock your own door, standing at it (3 m). You can only open your own room's safe, standing at it. The front desk only answers when you are at the desk.
 - **Inventory is detected automatically** (`Config.Inventory = 'auto'`): tgiann-inventory, then ox_inventory, then qb-inventory, then the old client event.
-- **Wardrobe** opens illenium-appearance if it is running, otherwise qb-clothing.
+- **Wardrobe** opens the **17mov_CharacterSystem** outfits menu when 17mov is running, otherwise illenium-appearance, otherwise qb-clothing.
+  On QBCore, 17mov answers the `qb-clothing:client:openOutfitMenu` event, which is the default. If pressing E at the wardrobe opens nothing, set
+  `Config.Wardrobe17movEvent = '17mov_CharacterSystem:OpenOutfitsMenu'` in config.lua.
 - **Homeowners** listed in `Config.HomeTables` (qb-houses / ps-housing) are not given a room automatically. Tables that don't exist are ignored.
-- **New UI:** door, safe, wardrobe and front desk panels, plus the hotel key card popup.
+- **New UI:** door, safe, wardrobe and front desk panels. The front desk hands you a beach "welcome" key card with a paper sleeve showing your room, floor, name and "Take the elevator to Floor N".
 
 ## Commands
 - `/myroom`: your room, floor, door distance, lock state and whether your safe is spawned (F8)

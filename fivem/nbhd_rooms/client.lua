@@ -240,17 +240,22 @@ RegisterNetEvent('nbhd_rooms:client:keycard', function(data)
 end)
 
 -- ============================================================
---  WARDROBE (illenium-appearance or qb-clothing)
+--  WARDROBE (17mov_CharacterSystem, illenium-appearance or qb-clothing)
 -- ============================================================
 
 local function openWardrobe()
     local ev = Config.WardrobeEvent or 'auto'
     if ev == 'auto' then
-        if GetResourceState('illenium-appearance') == 'started' then
+        if GetResourceState('17mov_CharacterSystem') == 'started' then
+            ev = '17mov'
+        elseif GetResourceState('illenium-appearance') == 'started' then
             ev = 'illenium-appearance:client:openOutfitMenu'
         else
             ev = 'qb-clothing:client:openOutfitMenu'
         end
+    end
+    if ev == '17mov' then
+        ev = Config.Wardrobe17movEvent or 'qb-clothing:client:openOutfitMenu'
     end
     TriggerEvent(ev)
 end

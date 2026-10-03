@@ -17,9 +17,16 @@ Config.DespawnDistance = 130.0
 -- ('legacy' = the old client event 'inventory:server:OpenInventory').
 Config.Inventory = 'auto'
 
--- Wardrobe: client event that opens the outfit menu. 'auto' picks
--- illenium-appearance, then qb-clothing.
+-- Wardrobe: what opens the outfit menu at the room wardrobe.
+--   'auto'  = 17mov_CharacterSystem, then illenium-appearance, then qb-clothing
+--   '17mov' = 17mov_CharacterSystem outfits menu
+--   or any client event name, e.g. 'qb-clothing:client:openOutfitMenu'
 Config.WardrobeEvent = 'auto'
+
+-- Event used to open the 17mov outfits menu. On QBCore 17mov answers the
+-- qb-clothing outfit event; if nothing opens, switch to
+-- '17mov_CharacterSystem:OpenOutfitsMenu'.
+Config.Wardrobe17movEvent = 'qb-clothing:client:openOutfitMenu'
 
 -- "Already owns a home" check for skipIfOwnsAnyProperty. Any of these tables
 -- that exist on your database are checked (missing ones are ignored).

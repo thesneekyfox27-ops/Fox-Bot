@@ -237,7 +237,7 @@ end
 
 local function welcome(src, bKey, n, sameAsLast)
     local b = Config.Buildings[bKey]
-    notify(src, b, ('%s **Room %d** - Floor %d.'):format(
+    notify(src, b, ('%s **Room %d**. Take the elevator to **Floor %d**.'):format(
         sameAsLast and 'Welcome back, you have' or 'You have been assigned', n, floorLabel(b, n)),
         'success', 'key', 8000)
     TriggerClientEvent('nbhd_rooms:client:setRoom', src, bKey, n)
