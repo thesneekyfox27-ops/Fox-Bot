@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="panel" class="hidden">
+    <div class="panel-frame">
+      <div class="panel-header">
+        <img id="panelLogo" class="panel-logo hidden" alt="">
+        <div class="panel-title" id="elevName">ELEVATOR</div>
+        <div class="panel-sub">SELECT FLOOR</div>
+      </div>
+      <div class="floor-grid" id="floorGrid"></div>
+      <div class="panel-footer">
+        <button class="close-btn" id="closeBtn">CLOSE</button>
+      </div>
+    </div>
+  </div>
+  <div id="travel" class="hidden">
+    <div class="travel-frame">
+      <div class="travel-top">
+        <span class="travel-name" id="travelName">ELEVATOR</span>
+        <span class="travel-dest" id="travelDest"></span>
+      </div>
+      <div class="travel-mid">
+        <div class="travel-arrow" id="travelArrow">&#9650;</div>
+        <div class="travel-led" id="travelFloorNum">1</div>
+        <div class="travel-label" id="travelFloorLbl">Ground Floor</div>
+      </div>
+      <div class="travel-dots" id="travelDots"></div>
+    </div>
+  </div>
+
+  <div id="admin" class="hidden">
+    <div class="admin-frame">
+      <div class="admin-header">
+        <img id="adminLogo" class="admin-logo hidden" alt="">
+        <div class="admin-titles">
+          <div class="admin-title" id="adminTitle">ELEVATOR MANAGER</div>
+          <div class="admin-sub" id="adminSub">SELECT OR CREATE</div>
+        </div>
+        <button class="icon-btn" id="adminBack" title="Back">&#8249;</button>
+        <button class="icon-btn danger" id="adminClose" title="Close">&#10005;</button>
+      </div>
+      <div class="admin-body" id="adminBody"></div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
