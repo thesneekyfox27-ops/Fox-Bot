@@ -1,11 +1,12 @@
 -- ============================================================
---  nrp-keepitems - keep your items when you die
+--  nrp-keepitems - keep your essentials when you die
 --
---  Other resources can't be stopped from calling ClearInventory /
---  RemoveItem, so instead this watches every dead or downed player
---  server-side. If their inventory is wiped in one go (what death
---  wipes do) it is put straight back. Items taken one at a time
---  (someone robbing you) are left alone, so nothing can be duped.
+--  Your respawn script still clears the inventory on death. This
+--  watches every dead or downed player server-side; when the
+--  inventory is wiped in one go (what death wipes do), the items on
+--  Config.KeepItems (ID, phone, keys...) are given straight back.
+--  Items taken one at a time (someone robbing you) are left alone,
+--  so nothing can be duped.
 -- ============================================================
 
 local QBCore = exports['qb-core']:GetCoreObject()
@@ -74,11 +75,11 @@ local function log(src, restored)
     local who = P and ('%s %s (%s)'):format(P.PlayerData.charinfo.firstname, P.PlayerData.charinfo.lastname, P.PlayerData.citizenid) or ('id ' .. src)
     local parts = {}
     for _, r in ipairs(restored) do parts[#parts + 1] = ('%dx %s'):format(r.amount, r.name) end
-    local line = ('Blocked a death wipe for %s - gave back: %s'):format(who, table.concat(parts, ', '))
+    local line = ('Death wipe for %s - kept: %s'):format(who, table.concat(parts, ', '))
     print('[nrp-keepitems] ' .. line)
     if Config.Webhook and Config.Webhook ~= '' then
         PerformHttpRequest(Config.Webhook, function() end, 'POST',
-            json.encode({ username = 'Keep Items', embeds = { { title = 'Death wipe blocked', description = line, color = 3066993 } } }),
+            json.encode({ username = 'Keep Items', embeds = { { title = 'Items kept on death', description = line, color = 3066993 } } }),
             { ['Content-Type'] = 'application/json' })
     end
 end
@@ -88,7 +89,7 @@ local function restore(src, snap)
     local now = snapshot(src) or {}
     local restored = {}
     for k, s in pairs(snap) do
-        if not Config.NeverRestore[s.name] then
+        if Config.KeepEverything or Config.KeepItems[s.name] then
             local have = now[k] and now[k].amount or 0
             local missing = s.amount - have
             if missing > 0 and giveBack(src, s, missing) then
@@ -98,7 +99,7 @@ local function restore(src, snap)
     end
     if #restored > 0 then
         log(src, restored)
-        TriggerClientEvent('QBCore:Notify', src, 'Your belongings were kept.', 'success')
+        TriggerClientEvent('QBCore:Notify', src, 'You kept your ID, phone, keys and other essentials.', 'success')
     end
 end
 
