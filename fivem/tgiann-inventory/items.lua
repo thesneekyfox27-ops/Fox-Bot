@@ -1082,7 +1082,7 @@ pizza_slice = {
 ['powerball_ticket']    = { name = 'powerball_ticket',    label = 'PowerBall Ticket',    weight = 10, type = 'item', image = 'powerball_ticket.png',    unique = true, useable = true, shouldClose = true, description = 'A Los Santos Lottery PowerBall ticket.' },
 ['megamillions_ticket'] = { name = 'megamillions_ticket', label = 'MegaMillions Ticket', weight = 10, type = 'item', image = 'megamillions_ticket.png', unique = true, useable = true, shouldClose = true, description = 'A Los Santos Lottery MegaMillions ticket.' },
 
-lotteryticket = {
+lottery_ticket = {   -- key must match the name (was 'lotteryticket', so the scratchcard script couldn't find it)
     name        = 'lottery_ticket',
     label       = 'Lottery Ticket',
     weight      = 10,

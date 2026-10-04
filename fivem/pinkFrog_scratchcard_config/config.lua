@@ -21,10 +21,10 @@ Config.ItemImagePath = 'nui://inventory_images/images'
 -- Items placed on the 3x3 grid (3 copies of each of 3 randomly selected items)
 -- Item names must match your inventory image filenames (e.g. ox_inventory)
 -- 3 item types → grid of 3 copies each = 9 cells (same as blue bingo)
-Config.ScratchItems = {
+Config.ScratchItems = {   -- card pictures only (all pay cash); each needs <name>.png in your item images
     'money',
-    'water',
-    'bandage',
+    'goldbar',
+    'diamond',
 }
 
 -- Reward when player finds 3 matching icons
@@ -36,25 +36,25 @@ Config.ScratchItems = {
 -- The grid always holds 3 of each of 3 symbols and you scratch 3 cells,
 -- so a card wins 1 time in 28 (3.6%).
 Config.ScratchRewards = {
-    money      = { item = 'money',      min = 8,    max = 10,    label = 'Cash' },
-    water      = { item = 'money',      min = 5,    max = 8,     label = 'Cash' },
-    bandage    = { item = 'money',      min = 5,    max = 8,     label = 'Cash' },
+    money      = { item = 'money',      min = 5,    max = 8,     label = 'Cash' },
+    goldbar    = { item = 'money',      min = 5,    max = 8,     label = 'Cash' },
+    diamond    = { item = 'money',      min = 8,    max = 10,    label = 'Cash' },
 }
 
 -- ── BLUE BINGO (blue_bingo) ──────────────────────────────────
--- NRP economy: AP pistols removed. These are only the PICTURES on the card - all pay cash.
-Config.ScratchItemsBlue = {
-    'jammer',
-    'usb_black',
-    'bandage',
+-- NRP economy: AP pistols removed. Money-themed pictures only - all pay cash.
+Config.ScratchItemsBlue = {   -- card pictures only (all pay cash)
+    'moneybag',
+    'goldchain',
+    'rolex',
     'money',
 }
 
 Config.ScratchRewardsBlue = {
     -- CASH ONLY: every symbol pays money; the money symbol is the "big" one
-    jammer       = { item = 'money',      min = 5,  max = 10, label = 'Cash' },
-    usb_black    = { item = 'money',      min = 5,  max = 10, label = 'Cash' },
-    bandage      = { item = 'money',      min = 5,  max = 10, label = 'Cash' },
+    moneybag     = { item = 'money',      min = 5,  max = 10, label = 'Cash' },
+    goldchain    = { item = 'money',      min = 5,  max = 10, label = 'Cash' },
+    rolex        = { item = 'money',      min = 5,  max = 10, label = 'Cash' },
     money        = { item = 'money',      min = 20, max = 50, label = 'Cash' },
 }
 

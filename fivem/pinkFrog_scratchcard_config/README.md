@@ -3,7 +3,7 @@
 `server.lua` / `client.lua` are escrow-encrypted by pinkFrog, so only `shared/config.lua` can be changed.
 Drop this `config.lua` into `pinkFrog_scratchcard/shared/` and restart the resource.
 
-**Cash only.** Every card pays money and nothing else. The pictures on Bingo cards (water, bandage, jammer, USB) are just symbols, and every match pays cash.
+**Cash only.** Every card pays money and nothing else. The pictures on Bingo cards are money-themed symbols (money, gold bar, diamond, money bag, gold chain, Rolex), and every match pays cash.
 Most wins are $5-$10.
 
 | Card | Win chance | Prizes |
