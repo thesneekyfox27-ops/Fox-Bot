@@ -3,8 +3,9 @@
 --
 --  Your respawn script still clears the inventory on death. This
 --  watches every dead or downed player server-side; when the
---  inventory is wiped in one go (what death wipes do), the items on
---  Config.KeepItems (ID, phone, keys...) are given straight back.
+--  inventory is wiped in one go (what death wipes do), every LEGAL
+--  item is given straight back; drugs, dirty money, guns, crime
+--  tools and stolen loot (Config.LoseItems / LosePatterns) stay gone.
 --  Items taken one at a time (someone robbing you) are left alone,
 --  so nothing can be duped.
 -- ============================================================
@@ -84,12 +85,23 @@ local function log(src, restored)
     end
 end
 
+-- legal = kept on death; illegal (lose list / patterns) = gone
+local function keeps(name)
+    if Config.KeepEverything or Config.KeepAnyway[name] then return true end
+    if Config.LoseItems[name] then return false end
+    local lname = name:lower()
+    for _, p in ipairs(Config.LosePatterns) do
+        if lname:find(p) then return false end
+    end
+    return true
+end
+
 -- put back everything in `snap` that is missing now
 local function restore(src, snap)
     local now = snapshot(src) or {}
     local restored = {}
     for k, s in pairs(snap) do
-        if Config.KeepEverything or Config.KeepItems[s.name] then
+        if keeps(s.name) then
             local have = now[k] and now[k].amount or 0
             local missing = s.amount - have
             if missing > 0 and giveBack(src, s, missing) then
@@ -99,7 +111,7 @@ local function restore(src, snap)
     end
     if #restored > 0 then
         log(src, restored)
-        TriggerClientEvent('QBCore:Notify', src, 'You kept your ID, phone, keys and other essentials.', 'success')
+        TriggerClientEvent('QBCore:Notify', src, 'You kept your belongings. Anything illegal is gone.', 'primary')
     end
 end
 
@@ -187,5 +199,6 @@ exports('AllowRemoval', function(src, seconds)
 end)
 
 exports('IsWatching', function(src) return watching[tonumber(src)] ~= nil end)
+exports('KeepsOnDeath', function(name) return keeps(tostring(name)) end)
 
 print('[nrp-keepitems] loaded - items are kept on death')

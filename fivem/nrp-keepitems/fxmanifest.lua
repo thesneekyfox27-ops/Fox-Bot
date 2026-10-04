@@ -4,8 +4,8 @@ lua54 'yes'
 
 name 'nrp-keepitems'
 author 'The Neighborhood RP'
-description 'Keep-list for death: ID, phone, keys etc. survive the respawn inventory wipe'
-version '1.1.0'
+description 'On death + respawn you keep everything legal; drugs, dirty money, guns and stolen loot are lost'
+version '1.2.0'
 
 shared_script 'config.lua'
 server_script 'server.lua'
