@@ -3,19 +3,23 @@ Config = {}
 Config.Enabled = true
 Config.Debug   = false
 
--- How often (ms) a dead/downed player's inventory is checked.
-Config.PollMs = 500
+-- How often (ms) inventories are checked.
+Config.PollMs = 750
 
--- A "wipe" = this share of your item stacks disappearing in ONE check
--- (half a second). Clear-on-death scripts remove everything at once;
--- a player robbing you takes items one at a time, so that is never
--- treated as a wipe (and is never given back - no duping).
-Config.WipeRatio = 0.6   -- 60% of your stacks...
-Config.MinStacks = 2     -- ...and at least this many stacks at once
+-- While you're dead/downed, any KEPT item that disappears comes back,
+-- unless a player within this many metres picked up that exact item at
+-- the same moment (they robbed you - that is never undone).
+Config.RobRange = 6.0
 
--- Keep watching for this many seconds after you're revived/respawned
--- (hospital respawn scripts usually wipe right at respawn).
-Config.WatchAfterReviveSec = 90
+-- After you're revived / respawned, keep watching this many seconds for
+-- the respawn wipe. In this window only a WIPE is undone (most or all of
+-- your stacks gone at once), never normal eating/using items.
+Config.WatchAfterReviveSec = 30
+Config.WipeRatio = 0.5          -- 50%+ of your stacks gone at once = a wipe
+
+-- Count a death the client reports even if the server can't confirm it
+-- (needed for ambulance scripts that don't set QBCore metadata/state bags).
+Config.TrustClientDeath = true
 
 -- ============================================================
 --  WHAT YOU KEEP WHEN YOU DIE + RESPAWN
