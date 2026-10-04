@@ -32,16 +32,17 @@ Config.ScratchItems = {
 -- min   = minimum quantity (inclusive)
 -- max   = maximum quantity (inclusive)
 -- label = display name shown in result overlay
--- NRP economy: the grid always holds 3 of each of 3 items and you scratch 3 cells,
--- so a card wins 1 time in 28 (3.6%). Keep prizes small.
+-- NRP economy: CASH ONLY. The pictures are just symbols - every match pays money.
+-- The grid always holds 3 of each of 3 symbols and you scratch 3 cells,
+-- so a card wins 1 time in 28 (3.6%).
 Config.ScratchRewards = {
-    money      = { item = 'cash',      min = 100,  max = 300,   label = 'cash'    },
-    water      = { item = 'water',      min = 1,    max = 3,     label = 'water'   },
-    bandage    = { item = 'bandage',    min = 1,    max = 2,     label = 'bandage' },
+    money      = { item = 'money',      min = 8,    max = 10,    label = 'Cash' },
+    water      = { item = 'money',      min = 5,    max = 8,     label = 'Cash' },
+    bandage    = { item = 'money',      min = 5,    max = 8,     label = 'Cash' },
 }
 
 -- ── BLUE BINGO (blue_bingo) ──────────────────────────────────
--- NRP economy: AP pistols removed (scratchcards were a gun printer).
+-- NRP economy: AP pistols removed. These are only the PICTURES on the card - all pay cash.
 Config.ScratchItemsBlue = {
     'jammer',
     'usb_black',
@@ -50,10 +51,11 @@ Config.ScratchItemsBlue = {
 }
 
 Config.ScratchRewardsBlue = {
-    jammer       = { item = 'jammer',       min = 1, max = 1, label = 'Jammer'    },
-    usb_black     = { item = 'usb_black',      min = 1, max = 1, label = 'Hack Usb'   },
-    bandage    = { item = 'bandage',    min = 1,  max = 3, label = 'bandage' },
-    money      = { item = 'money',      min = 150,  max = 450,  label = 'Money'   },
+    -- CASH ONLY: every symbol pays money; the money symbol is the "big" one
+    jammer       = { item = 'money',      min = 5,  max = 10, label = 'Cash' },
+    usb_black    = { item = 'money',      min = 5,  max = 10, label = 'Cash' },
+    bandage      = { item = 'money',      min = 5,  max = 10, label = 'Cash' },
+    money        = { item = 'money',      min = 20, max = 50, label = 'Cash' },
 }
 
 -- ── DOLLARS DIAMOND (dollars_diamond) ───────────────────────
@@ -79,10 +81,11 @@ Config.DiamondStrips = {
     -- weight = relative probability that this amount is the winning one.
     -- Total weight = 100, so each weight reads directly as a % of all wins.
     prizes = {
-        { amount = 50,     weight = 60 },  -- 60% of wins → $50
-        { amount = 100,    weight = 25 },  -- 25% of wins → $100
-        { amount = 250,    weight = 12 },  -- 12% of wins → $250
-        { amount = 450,    weight = 3  },  --  3% of wins → $450 (jackpot)
+        { amount = 5,      weight = 45 },  -- 45% of wins → $5
+        { amount = 8,      weight = 30 },  -- 30% of wins → $8
+        { amount = 10,     weight = 17 },  -- 17% of wins → $10
+        { amount = 25,     weight = 6  },  --  6% of wins → $25
+        { amount = 100,    weight = 2  },  --  2% of wins → $100 (jackpot)
     },
 }
 
@@ -100,12 +103,12 @@ Config.ScatcherStrips = {
     --   weight   = relative probability of appearing on a strip (higher = more common)
     --   reward   = item given when win condition is met
     items = {
-        { name = 'diamond',    required = 3, weight = 5,  reward = { item = 'money', min = 400, max = 495, label = 'Money' } },  -- jackpot (3x, rarest)
-        { name = 'pool',       required = 2, weight = 10, reward = { item = 'money', min = 200, max = 300, label = 'Money' } },  -- rare
-        { name = 'crown',      required = 2, weight = 15, reward = { item = 'money', min = 150, max = 250, label = 'Money' } },
-        { name = 'island',     required = 2, weight = 20, reward = { item = 'money', min = 75,  max = 150, label = 'Money' } },
-        { name = 'beach_ball', required = 2, weight = 20, reward = { item = 'money', min = 75,  max = 150, label = 'Money' } },
-        { name = 'palm',       required = 2, weight = 30, reward = { item = 'money', min = 40,  max = 80,  label = 'Money' } },  -- most common
+        { name = 'diamond',    required = 3, weight = 3,  reward = { item = 'money', min = 100, max = 250, label = 'Cash' } },  -- jackpot (3x, rarest)
+        { name = 'pool',       required = 2, weight = 7,  reward = { item = 'money', min = 25,  max = 50,  label = 'Cash' } },  -- rare
+        { name = 'crown',      required = 2, weight = 15, reward = { item = 'money', min = 10,  max = 20,  label = 'Cash' } },
+        { name = 'island',     required = 2, weight = 20, reward = { item = 'money', min = 5,   max = 10,  label = 'Cash' } },
+        { name = 'beach_ball', required = 2, weight = 25, reward = { item = 'money', min = 5,   max = 10,  label = 'Cash' } },
+        { name = 'palm',       required = 2, weight = 30, reward = { item = 'money', min = 5,   max = 8,   label = 'Cash' } },  -- most common
     },
 }
 
