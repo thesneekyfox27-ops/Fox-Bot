@@ -198,6 +198,14 @@ local function stance(ped)
     end
 end
 
+-- Other scripts (crouch on C etc.) can't be stopped from hearing a key,
+-- so while bowling we undo whatever crouch they apply.
+local function uncrouch(ped)
+    ResetPedMovementClipset(ped, 0.0)
+    ResetPedStrafeClipset(ped)
+    SetPedStealthMovement(ped, false, 'DEFAULT_ACTION')
+end
+
 local function holdBall(ped)
     if not ball or not DoesEntityExist(ball) then
         local m = loadModel('prop_bowling_ball')
@@ -378,6 +386,7 @@ local function roll(g, offset, aim, spin, power, err)
     updateControls()
     -- stay on the lane: back on your spot facing the pins, free to move, pick the ball up again
     ClearPedTasksImmediately(ped)
+    uncrouch(ped)
     placePed(ped, g, 0.0, 0.0, 0.0)
     FreezeEntityPosition(ped, false)
     camOff()
@@ -397,6 +406,7 @@ local function aimLoop()
     local offset, aim, spin, power = 0.0, 0.0, 0.0, 0.0
     local step, stepStart = 1, GetGameTimer()
     local camMode = 1
+    local crouchGuard = 0
 
     FreezeEntityPosition(ped, true)
     placePed(ped, g, 0.0, 0.0, AIM_BACK)
@@ -459,23 +469,32 @@ local function aimLoop()
         elseif IsDisabledControlJustPressed(0, 177) then
             if step > 1 then setStep(step - 1)
             else phase = 'pickup'; break end
-        -- C: camera
-        elseif IsDisabledControlJustPressed(0, 26) then
-            camMode = camMode == 1 and 2 or 1
+        -- C or V: cycle the camera (your crouch is undone right after - see below)
+        elseif IsDisabledControlJustPressed(0, 26) or IsDisabledControlJustPressed(0, 0) then
+            camMode = camMode % 3 + 1
+            crouchGuard = GetGameTimer() + 1500
+        end
+        if GetGameTimer() < crouchGuard then
+            uncrouch(ped)
+            stance(ped)
         end
 
         if camMode == 1 then
             -- in front of the bowler (who waits further back), low and wide: the red
             -- marker at the foul line, the arrows and the pins are all on screen
             camAt(along(g, AIM_BACK + 1.25, 0.0, g.laneZ + 1.15), along(g, 8.0, 0.0, g.laneZ - 0.15))
-        else
+        elseif camMode == 2 then
             -- turned round to watch the bowler in their stance
             camAt(along(g, AIM_BACK + 3.2, 1.1, g.A.z + 0.7), along(g, AIM_BACK, 0.0, g.A.z + 0.15))
+        else
+            -- side view: bowler and the lane ahead
+            camAt(along(g, AIM_BACK + 0.6, 2.0, g.laneZ + 1.7), along(g, 4.0, 0.0, g.laneZ + 0.2))
         end
     end
 
     if phase == 'pickup' then
         ClearPedTasks(ped)
+        uncrouch(ped)
         placePed(ped, g, 0.0, 0.0, 0.0)   -- back on your spot
         if ball then DetachEntity(ball, true, false); del(ball); ball = nil end
         FreezeEntityPosition(ped, false)

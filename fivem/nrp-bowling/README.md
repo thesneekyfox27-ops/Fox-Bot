@@ -1,4 +1,4 @@
-# nrp-bowling v2.5.2
+# nrp-bowling v2.5.3
 
 A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map resource, unchanged).
 
@@ -39,7 +39,8 @@ A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map re
      On release they crouch and let the ball go.
    - While aiming, the bowler waits a couple of steps back on the approach.
      The camera sits low in front of them with a wide lens, so the red marker, the arrows and the pins are all on screen.
-     **C** turns it round to face the bowler.
+     **C** or **V** cycles 3 cameras: down the lane, facing the bowler, side view.
+     If C is your crouch key, the crouch is cancelled straight away while you bowl.
    - When you lock in power, the bowler steps up to the line and swings the ball through underhand.
      GTA has no real bowling animation, so this is the closest built-in one.
      Set `Config.AnimPreset = 'original'` for loaf_bowling's grenade animations, or put a custom animation in `Config.Anims`.
@@ -48,7 +49,8 @@ A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map re
      On release they crouch and let the ball go.
    - While aiming, the bowler waits a couple of steps back on the approach.
      The camera sits low in front of them with a wide lens, so the red marker, the arrows and the pins are all on screen.
-     **C** turns it round to face the bowler.
+     **C** or **V** cycles 3 cameras: down the lane, facing the bowler, side view.
+     If C is your crouch key, the crouch is cancelled straight away while you bowl.
    - When you lock in power, the bowler steps up to the line and swings the ball through underhand.
      GTA has no real bowling animation, so this is the closest built-in one.
      Set `Config.AnimPreset = 'original'` for loaf_bowling's grenade animations, or put a custom animation in `Config.Anims`.
