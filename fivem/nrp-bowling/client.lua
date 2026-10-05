@@ -115,21 +115,52 @@ RegisterNetEvent('nrp-bowling:sfx', function(kind, laneId, from)
     playSfx(kind, laneId)
 end)
 
--- background music inside the alley
+-- background music inside the alley. The state is re-sent every few seconds:
+-- a message sent before the page has loaded (script restart while you're inside)
+-- is lost, and resending is harmless (the page ignores "on" when already on).
+local function inAlley()
+    local A = SND.ambient
+    local p = GetEntityCoords(PlayerPedId())
+    return #(p.xy - A.center.xy) < A.radius and math.abs(p.z - A.center.z) < (A.height or 6.0), #(p.xy - A.center.xy)
+end
+
+local function sendAmbient(on)
+    local A = SND.ambient
+    ui({ action = 'ambient', on = on, files = A.files, volume = (A.volume or 0.25) * (SND.volume or 1.0) })
+end
+
 CreateThread(function()
     local A = SND.ambient
     if not A or not A.enabled or not A.files or #A.files == 0 then return end
-    local inside = false
+    local inside, lastSend = nil, 0
     while true do
-        local p = GetEntityCoords(PlayerPedId())
-        local now = #(p.xy - A.center.xy) < A.radius and math.abs(p.z - A.center.z) < (A.height or 6.0)
-        if now ~= inside then
-            inside = now
-            ui({ action = 'ambient', on = inside, files = A.files, volume = (A.volume or 0.25) * (SND.volume or 1.0) })
+        local now = inAlley()
+        if now ~= inside or GetGameTimer() - lastSend > 5000 then
+            inside, lastSend = now, GetGameTimer()
+            sendAmbient(inside)
         end
         Wait(1000)
     end
 end)
+
+-- the page tells us when a sound can't play, so it shows up in F8
+RegisterNUICallback('soundError', function(d, cb)
+    print(('[nrp-bowling] sound "%s" did not play: %s'):format(tostring(d.file), tostring(d.err)))
+    cb('ok')
+end)
+
+-- /bowlsound: test the sounds wherever you are
+RegisterCommand('bowlsound', function()
+    ui({ action = 'sfx', file = (SND.strike or {}).file or 'strike.mp3', volume = 0.8 })
+    local A = SND.ambient
+    if A and A.enabled then
+        local inside, d = inAlley()
+        print(('[nrp-bowling] played the strike sound. Music area: %.1f m from its centre (radius %.1f) - %s.'):format(
+            d, A.radius, inside and 'you are inside, music should be on' or 'you are OUTSIDE it, so no music'))
+        if inside then sendAmbient(true) end
+    end
+    notify('Playing a test sound - see F8 for details.', 'primary')
+end, false)
 
 local function controls(kind, extra)
     ui({ action = 'controls', kind = kind, extra = extra })

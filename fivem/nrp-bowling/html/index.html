@@ -528,22 +528,41 @@ window.addEventListener('keydown', (e) => {
 
 /* ---------- messages ---------- */
 /* ---------- sounds ---------- */
+const soundUrl = (file) => new URL('sounds/' + file, location.href).href;
+const soundErr = (file, err) => post('soundError', { file, err: String(err && (err.name || err.message) || err) });
+let blocked = [];   // sounds the browser refused to start before any click; retried on the first click/key
+function tryPlay(a, file) {
+    const p = a.play();
+    if (p && p.catch) p.catch((e) => {
+        if (e && e.name === 'NotAllowedError') blocked.push(a);
+        if (!e || e.name !== 'NotSupportedError') soundErr(file, e);   // missing files are reported by onerror
+    });
+}
+function unlock() {
+    const list = blocked; blocked = [];
+    list.forEach(a => a.play().catch(() => {}));
+}
+window.addEventListener('mousedown', unlock);
+window.addEventListener('keydown', unlock);
 function sfx(file, volume) {
     try {
-        const a = new Audio('sounds/' + file);
+        const a = new Audio(soundUrl(file));
         a.volume = Math.max(0, Math.min(1, volume ?? 1));
-        a.play().catch(() => {});   // missing file (e.g. no strike.mp3 yet) just stays silent
-    } catch (_) {}
+        a.onerror = () => soundErr(file, 'file missing or unreadable');
+        tryPlay(a, file);
+    } catch (e) { soundErr(file, e); }
 }
 /* background music: plays the list in order, loops back round, fades in/out */
 const AMB = { list: [], i: 0, el: null, target: 0, vol: 0.25, fade: null };
 function ambStart() {
     if (!AMB.list.length) return;
-    const el = new Audio('sounds/' + AMB.list[AMB.i % AMB.list.length]);
+    const file = AMB.list[AMB.i % AMB.list.length];
+    const el = new Audio(soundUrl(file));
     el.volume = 0;
-    el.onended = el.onerror = () => { if (AMB.el !== el) return; AMB.i++; AMB.el = null; if (AMB.target > 0) ambStart(); };
+    el.onended = () => { if (AMB.el !== el) return; AMB.i++; AMB.el = null; if (AMB.target > 0) ambStart(); };
+    el.onerror = () => { soundErr(file, 'file missing or unreadable'); if (AMB.el !== el) return; AMB.i++; AMB.el = null; if (AMB.target > 0 && AMB.i < 50) setTimeout(ambStart, 2000); };
     AMB.el = el;
-    el.play().catch(() => {});
+    tryPlay(el, file);
     ambFade();
 }
 function ambient(d) {
