@@ -110,7 +110,7 @@ Config.Sounds = {
     release = { file = 'release.mp3', volume = 0.7 },   -- ball leaves the hand
     pins    = { file = 'pins.mp3',    volume = 0.8 },   -- ball hits the pins
     spare   = { file = 'spare.mp3',   volume = 0.7 },
-    strike  = { file = 'strike.mp3',  volume = 0.8 },   -- add html/sounds/strike.mp3 (silent until you do)
+    strike  = { file = 'strike.mp3',  volume = 0.8 },
     -- background music inside the building: plays the files in order and loops
     -- back round (1, 2, 1, 2 ...), fading in/out as you walk in or out
     ambient = {
