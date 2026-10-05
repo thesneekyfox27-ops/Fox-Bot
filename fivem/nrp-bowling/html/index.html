@@ -382,6 +382,11 @@ function power(d) {
 
 
 /* ---------- price sheet ---------- */
+/* Lua {[1]=9,[2]=17} arrives as the array [9,17] (0-based) - read it either way */
+function priceOf(prices, games) {
+    if (Array.isArray(prices)) return prices[games - 1];
+    return (prices || {})[games] ?? (prices || {})[String(games)];
+}
 let M = null, sel = null, invited = new Set();
 function seatsFor(s) { if (!s) return 0; return s.kind === 'ticket' ? M.maxPlayers : s.players; }
 function renderMenu() {
@@ -390,7 +395,7 @@ function renderMenu() {
     let t = `<tr><th>PRICES</th>${tickets.map(k => `<th>${esc(k.label.toUpperCase())}${k.sub ? `<small>(${esc(k.sub)})</small>` : ''}</th>`).join('')}</tr>`;
     [1, 2].forEach(g => {
         t += `<tr><td>${g} GAME${g > 1 ? 'S' : ''}</td>` + tickets.map(k => {
-            const pr = (k.prices || {})[g] ?? arr(k.prices)[g - 1];
+            const pr = priceOf(k.prices, g);
             const on = sel && sel.kind === 'ticket' && sel.ticket === k.id && sel.games === g;
             return `<td><span class="price ${on ? 'sel' : ''}" data-k="${k.id}" data-g="${g}" data-p="${pr}">${money(pr)}</span></td>`;
         }).join('') + '</tr>';
@@ -486,7 +491,7 @@ function showInvite(d) {
     tk.innerHTML = '';
     if (!d.prepaid) arr(d.tickets).forEach(t => {
         const b = document.createElement('button');
-        const pr = (t.prices || {})[d.games] ?? arr(t.prices)[d.games - 1];
+        const pr = priceOf(t.prices, d.games);
         b.textContent = `${t.label} ${money(pr)}`;
         b.className = t.id === ivTicket ? 'on' : '';
         b.onclick = () => { ivTicket = t.id; tk.querySelectorAll('button').forEach(x => x.className = ''); b.className = 'on'; };
@@ -497,7 +502,7 @@ function showInvite(d) {
     if (d.prepaid) { $('ivPay').innerHTML = ''; $('ivPay').classList.add('hidden'); }
     else payPicker($('ivPay'), d.payMethods, ivPay, (id) => { ivPay = id; });
     if (!d.prepaid && arr(d.tickets).length === 1) {
-        const t0 = arr(d.tickets)[0], pr0 = (t0.prices || {})[d.games] ?? arr(t0.prices)[d.games - 1];
+        const t0 = arr(d.tickets)[0], pr0 = priceOf(t0.prices, d.games);
         $('ivTxt').innerHTML += ` Your ticket is <b>${money(pr0)}</b>.`;
     }
     $('invite').classList.remove('hidden');

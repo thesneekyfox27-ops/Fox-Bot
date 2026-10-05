@@ -1,4 +1,4 @@
-# nrp-bowling v2.7.0
+# nrp-bowling v2.7.1
 
 A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map resource, unchanged).
 
