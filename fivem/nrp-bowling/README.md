@@ -1,4 +1,4 @@
-# nrp-bowling v2.3.1
+# nrp-bowling v2.4.0
 
 A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map resource, unchanged).
 
@@ -30,17 +30,20 @@ A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map re
 5. On your turn, a **glowing ring with a bouncing arrow** marks where to stand, and a **flashing map blip** shows your lane.
    Step into the ring and press **E** to pick up your ball.
    After every ball you're free to move again; walk back into the ring and press **E** for your next one.
-6. **Skill-based throw.** A **"Your Shot" lane panel** on the left of the screen shows your shot.
-   It's UI only; nothing is drawn on the real lane. Each marker swings by itself. Press **SPACE** to lock each one:
+6. **Skill-based throw.** The markers are painted on the real lane, like the video, and each one swings by itself.
+   Press **SPACE** to lock each one:
    1. **Position:** a red marker slides along the foul line.
-   2. **Direction:** an arrow sweeps left and right down the lane.
-   3. **Spin:** a sideways arrow grows left and right. The ball hooks that way late in the lane.
+   2. **Direction:** a dark arrow sweeps left and right down the lane.
+   3. **Spin:** a sideways arrow on the lane; the ball hooks that way late in the lane.
    4. **Power:** stop the meter in the blue for a perfectly accurate ball.
-
    **BACKSPACE** goes back a step, and **C** changes the camera.
    - Your character stands still in a two-hand bowler's stance the whole time; only the ball's start spot moves.
      On release they crouch and let the ball go.
-   - The camera sits in front of the bowler, low over the lane looking at the pins.
+   - The camera sits just in front of the bowler looking down the lane, so they're out of the way and the markers are in view.
+     **C** turns it round to face the bowler.
+   - Your character stands still in a two-hand bowler's stance the whole time; only the ball's start spot moves.
+     On release they crouch and let the ball go.
+   - The camera sits just in front of the bowler looking down the lane, so they're out of the way and the markers are in view.
      **C** turns it round to face the bowler.
    - The panel shows the predicted path with the hook, and the pins at the end of the lane.
    - It shows the locked values (position cm, direction °, spin %).

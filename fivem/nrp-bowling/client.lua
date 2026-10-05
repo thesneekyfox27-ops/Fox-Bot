@@ -211,6 +211,61 @@ local function holdBall(ped)
     AttachEntityToEntity(ball, ped, GetPedBoneIndex(ped, 24818), 0.08, 0.30, 0.0, 0.0, 0.0, 0.0, false, true, false, true, 0, true)
 end
 
+-- flat shapes painted on the lane (both windings so they show from any angle)
+local function tri(p1, p2, p3, r, g, b, a)
+    DrawPoly(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, p3.x, p3.y, p3.z, r, g, b, a)
+    DrawPoly(p3.x, p3.y, p3.z, p2.x, p2.y, p2.z, p1.x, p1.y, p1.z, r, g, b, a)
+end
+
+local function quad(a1, a2, b1, b2, r, g, b, a)
+    tri(a1, a2, b1, r, g, b, a)
+    tri(a2, b2, b1, r, g, b, a)
+end
+
+-- point on the lane `fwd` metres down a line that starts at side offset `side`
+-- and heads `aim` degrees off straight
+local function onLine(g, side, aim, fwd, z)
+    local d = rotate(g.dir, aim)
+    local start = g.A.xy + g.dir * 1.2 + g.lat * side
+    local p = start + d * fwd
+    return vector3(p.x, p.y, z or (g.laneZ + 0.012))
+end
+
+-- step 1: red marker where the ball will be released
+local function drawPosition(g, side)
+    local tip  = along(g, 1.75, side, g.laneZ + 0.012)
+    local l    = along(g, 1.05, side - 0.16, g.laneZ + 0.012)
+    local r    = along(g, 1.05, side + 0.16, g.laneZ + 0.012)
+    tri(l, r, tip, 230, 40, 40, 190)
+end
+
+-- step 2: long dark arrow showing the direction
+local function drawDirection(g, side, aim)
+    local d = rotate(g.dir, aim)
+    local w = vector2(d.y, -d.x) * 0.07
+    local function at(f, off) local p = onLine(g, side, aim, f).xy + w * off; return vector3(p.x, p.y, g.laneZ + 0.012) end
+    quad(at(0.6, -1), at(0.6, 1), at(9.0, -1), at(9.0, 1), 40, 36, 30, 200)
+    local hl, hr = onLine(g, side, aim, 9.0).xy + w * 2.6, onLine(g, side, aim, 9.0).xy - w * 2.6
+    tri(vector3(hl.x, hl.y, g.laneZ + 0.012), vector3(hr.x, hr.y, g.laneZ + 0.012), at(9.9, 0), 40, 36, 30, 200)
+end
+
+-- step 3: sideways arrow - which way and how hard the ball hooks
+local function drawSpin(g, side, aim, spin)
+    if math.abs(spin) < 0.04 then return end
+    local c = onLine(g, side, aim, 7.0)
+    local len = 0.9 * spin
+    local w = 0.06
+    local a1 = vector3(c.x, c.y, c.z) + vector3(g.dir.x, g.dir.y, 0) * w
+    local a2 = vector3(c.x, c.y, c.z) - vector3(g.dir.x, g.dir.y, 0) * w
+    local e  = c.xy + g.lat * len
+    local b1 = vector3(e.x, e.y, c.z) + vector3(g.dir.x, g.dir.y, 0) * w
+    local b2 = vector3(e.x, e.y, c.z) - vector3(g.dir.x, g.dir.y, 0) * w
+    quad(a1, a2, b1, b2, 40, 36, 30, 200)
+    local tip = e + g.lat * (0.22 * (spin > 0 and 1 or -1))
+    tri(vector3(e.x, e.y, c.z) + vector3(g.dir.x, g.dir.y, 0) * 0.16, vector3(e.x, e.y, c.z) - vector3(g.dir.x, g.dir.y, 0) * 0.16,
+        vector3(tip.x, tip.y, c.z), 40, 36, 30, 200)
+end
+
 -- an indicator that swings -1..1 and back; `rate` = sweeps per second
 local function swing(t, rate)
     local x = (t * rate) % 2.0
@@ -351,7 +406,7 @@ local function aimLoop()
     end
     setStep(1)
 
-    local lastUi, lastView = 0, 0
+    local lastUi = 0
     while phase == 'aim' do
         Wait(0)
         DisableAllControlActions(0)
@@ -377,14 +432,10 @@ local function aimLoop()
             end
         end
 
-        -- update the on-screen lane panel (UI only, nothing is drawn on the real lane)
-        if GetGameTimer() - lastView > 33 then
-            lastView = GetGameTimer()
-            ui({ action = 'aimview', step = step, offset = offset, aim = aim, spin = spin,
-                 maxOffset = B.maxOffset, maxAim = B.maxAim, laneHalf = Config.LaneHalfWidth,
-                 length = g.D, hook = B.maxHook, speed = (B.minSpeed + B.maxSpeed) / 2,
-                 standing = turn and turn.standing or 10 })
-        end
+        -- markers painted on the real lane (the bowler stays put; only the ball spot moves)
+        drawPosition(g, offset)
+        if step >= 2 then drawDirection(g, offset, aim) end
+        if step >= 3 then drawSpin(g, offset, aim, spin) end
 
         -- SPACE locks the current step
         if IsDisabledControlJustPressed(0, 22) then
@@ -393,7 +444,6 @@ local function aimLoop()
                 setStep(step + 1)
             else
                 ui({ action = 'caption' })
-                ui({ action = 'aimview', hide = true })
                 ui({ action = 'power', hide = true, value = power, sweet = B.sweetSpot })
                 roll(g, offset, aim, spin, power, sweetError(power))
                 break
@@ -408,8 +458,9 @@ local function aimLoop()
         end
 
         if camMode == 1 then
-            -- in front of the bowler, low over the lane, looking at the pins (nothing in the way)
-            camAt(along(g, 1.6, 0.0, g.laneZ + 0.95), along(g, g.D, 0.0, g.laneZ + 0.1))
+            -- just in front of the bowler, looking down the lane: the bowler is out of the
+            -- way and the red position marker at the foul line is still in view
+            camAt(along(g, 0.45, 0.0, g.laneZ + 1.05), along(g, g.D * 0.75, 0.0, g.laneZ - 0.35))
         else
             -- turned round to watch the bowler in their stance
             camAt(along(g, 3.4, 1.1, g.A.z + 0.7), along(g, 0.0, 0.0, g.A.z + 0.15))
@@ -422,7 +473,6 @@ local function aimLoop()
         FreezeEntityPosition(ped, false)
         camOff()
         ui({ action = 'caption' })
-        ui({ action = 'aimview', hide = true })
         ui({ action = 'power', hide = true, value = 0 })
         updateControls()
     end
@@ -505,7 +555,6 @@ local function cleanupAll()
     ClearPedTasks(ped)
     FreezeEntityPosition(ped, false)
     ui({ action = 'board', hide = true })
-    ui({ action = 'aimview', hide = true })
     ui({ action = 'caption' })
     ui({ action = 'power', hide = true })
     controls(nil)

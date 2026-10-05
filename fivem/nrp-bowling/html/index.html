@@ -105,20 +105,6 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: transparen
 #power .lbl { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; letter-spacing: 2px; text-shadow: 0 1px 3px rgba(0,0,0,.8); }
 
 
-/* =============== on-screen lane panel (aiming) =============== */
-#aimview { position: fixed; left: 28px; top: 50%; transform: translateY(-50%); width: 300px; background: rgba(13,19,48,.94); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 12px 12px 10px; box-shadow: 0 14px 40px rgba(0,0,0,.55); }
-#aimview .av-h { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
-#aimview .av-h .t { font-size: 22px; line-height: 1; }
-#aimview .av-h .s { font-size: 11px; font-weight: 800; letter-spacing: 1px; color: var(--muted); }
-#aimview svg { display: block; width: 276px; height: 360px; }
-#aimview .vals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
-#aimview .v { background: #161d44; border-radius: 8px; padding: 6px 4px; text-align: center; border: 1px solid transparent; }
-#aimview .v span { display: block; font-size: 9px; font-weight: 800; letter-spacing: 1px; color: var(--muted); }
-#aimview .v b { font-size: 14px; }
-#aimview .v.on { border-color: var(--gold); box-shadow: 0 0 10px rgba(255,210,63,.5); }
-#aimview .v.locked b { color: var(--cyan); }
-#aimview .warn { margin-top: 6px; text-align: center; font-size: 12px; font-weight: 900; letter-spacing: 2px; color: #ff6b81; height: 14px; }
-
 /* =============== banner =============== */
 #banner { position: fixed; top: 54%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; }
 #banner .big { font-size: 110px; line-height: .9; }
@@ -223,17 +209,6 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: transparen
 
 <div id="power" class="hidden"><div class="sweet" id="pSweet"></div><div class="fill" id="pFill" style="width:0"></div><div class="lbl">PRESS SPACE IN THE BLUE</div></div>
 <div id="caption" class="hidden"><div class="tx" id="capTx"></div><div class="st"><div class="dots" id="capDots"></div><span><b style="color:#fff">SPACE</b> lock in &middot; <b style="color:#fff">BACKSPACE</b> back</span></div></div>
-
-<div id="aimview" class="hidden">
-    <div class="av-h"><span class="t disp neon-blue">YOUR SHOT</span><span class="s" id="avPins">10 PINS UP</span></div>
-    <svg id="avSvg" viewBox="0 0 276 360"></svg>
-    <div class="vals">
-        <div class="v" id="avP"><span>POSITION</span><b>-</b></div>
-        <div class="v" id="avD"><span>DIRECTION</span><b>-</b></div>
-        <div class="v" id="avS"><span>SPIN</span><b>-</b></div>
-    </div>
-    <div class="warn" id="avWarn"></div>
-</div>
 
 <div id="banner" class="hidden"><div class="big disp" id="bnBig">STRIKE!</div><div class="who" id="bnWho"></div></div>
 
@@ -399,76 +374,6 @@ function power(d) {
 }
 
 
-/* ---------- on-screen lane panel ---------- */
-function aimview(d) {
-    if (d.hide) { $('aimview').classList.add('hidden'); return; }
-    $('aimview').classList.remove('hidden');
-    const W = 276, top = 40, bot = 350, hbTop = 46, hbBot = 104;
-    const half = d.laneHalf || 0.53, L = (d.length || 18) + 0.9;
-    // lane metres -> panel pixels (narrows towards the pins for depth)
-    const P = (lat, fwd) => {
-        const t = Math.max(0, Math.min(1, fwd / L));
-        const hb = hbBot + (hbTop - hbBot) * t;
-        return [W / 2 + (lat / half) * hb, bot - t * (bot - top)];
-    };
-    const pt = (lat, fwd) => P(lat, fwd).join(',');
-    let g = '';
-    // gutters + lane + foul line
-    g += `<polygon points="${pt(-half - 0.24, 0)} ${pt(half + 0.24, 0)} ${pt(half + 0.24, L)} ${pt(-half - 0.24, L)}" fill="#2b2f3d"/>`;
-    g += `<polygon points="${pt(-half, 0)} ${pt(half, 0)} ${pt(half, L)} ${pt(-half, L)}" fill="#d9bf7a"/>`;
-    for (let i = -3; i <= 3; i++) {   // boards
-        const a = P(i * half / 3.5, 0), b = P(i * half / 3.5, L);
-        g += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="rgba(120,90,30,.18)" stroke-width="1"/>`;
-    }
-    const fl = [P(-half, 1.2), P(half, 1.2)];
-    g += `<line x1="${fl[0][0]}" y1="${fl[0][1]}" x2="${fl[1][0]}" y2="${fl[1][1]}" stroke="#7a2020" stroke-width="2"/>`;
-    // target arrows on the lane (like real lane markings)
-    [-2, -1, 0, 1, 2].forEach(k => { const c = P(k * 0.16, 4.6 + Math.abs(k) * 0.3); g += `<polygon points="${c[0]},${c[1] - 6} ${c[0] - 3},${c[1] + 3} ${c[0] + 3},${c[1] + 3}" fill="rgba(90,60,20,.45)"/>`; });
-    // pins
-    const D = d.length || 18, rows = [[0], [-0.15, 0.15], [-0.3, 0, 0.3], [-0.45, -0.15, 0.15, 0.45]];
-    rows.forEach((r, i) => r.forEach(x => { const c = P(x, D + i * 0.26); g += `<circle cx="${c[0]}" cy="${c[1]}" r="3.6" fill="#fff" stroke="#c22" stroke-width="1"/>`; }));
-
-    const off = d.offset || 0, aim = d.aim || 0, spin = d.spin || 0, step = d.step || 1;
-    const rad = aim * Math.PI / 180;
-    // predicted path (same model as the real roll: straight, then hook after 40% of the lane)
-    let side = off, fwd = 1.2, sideV = Math.sin(rad) * d.speed, fwdV = Math.cos(rad) * d.speed, path = [P(side, fwd)], gutter = false;
-    for (let i = 0; i < 600 && fwd < D; i++) {
-        const dt = 0.02;
-        if (step >= 3 && fwd > D * 0.4) sideV += spin * d.hook * dt;
-        fwd += fwdV * dt; side += sideV * dt;
-        if (i % 5 === 0) path.push(P(side, fwd));
-        if (Math.abs(side) > half) { gutter = true; break; }
-    }
-    if (step >= 2) {
-        const col = gutter ? '#ff4d6a' : (step >= 3 ? '#ffd23f' : '#2b261c');
-        const pts = path.map(p => p.join(',')).join(' ');
-        g += `<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="${step >= 3 ? 3 : 5}" ${step >= 3 ? 'stroke-dasharray="6 4"' : ''} stroke-linecap="round"/>`;
-        const e = path[path.length - 1], p2 = path[Math.max(0, path.length - 3)];
-        const ang = Math.atan2(e[1] - p2[1], e[0] - p2[0]);
-        const ah = (a) => [e[0] + Math.cos(a) * 10, e[1] + Math.sin(a) * 10].join(',');
-        g += `<polygon points="${e[0] + Math.cos(ang) * 6},${e[1] + Math.sin(ang) * 6} ${ah(ang + 2.5)} ${ah(ang - 2.5)}" fill="${col}"/>`;
-    }
-    // spin arrow across the lane
-    if (step >= 3 && Math.abs(spin) > 0.03) {
-        const c = P(off + Math.tan(rad) * D * 0.55, D * 0.55), len = spin * 46;
-        g += `<line x1="${c[0]}" y1="${c[1]}" x2="${c[0] + len}" y2="${c[1]}" stroke="#2b261c" stroke-width="6"/>`;
-        g += `<polygon points="${c[0] + len + Math.sign(len) * 10},${c[1]} ${c[0] + len},${c[1] - 8} ${c[0] + len},${c[1] + 8}" fill="#2b261c"/>`;
-    }
-    // ball position marker
-    const b = P(off, 1.2);
-    g += `<polygon points="${b[0]},${b[1] - 22} ${b[0] - 11},${b[1]} ${b[0] + 11},${b[1]}" fill="rgba(230,40,40,.9)"/>`;
-    g += `<circle cx="${b[0]}" cy="${b[1] + 7}" r="6" fill="#1b1b2b" stroke="#fff" stroke-width="1.5"/>`;
-    $('avSvg').innerHTML = g;
-
-    $('avPins').textContent = `${d.standing} PIN${d.standing === 1 ? '' : 'S'} UP`;
-    const set = (id, n, txt) => { const el = $(id); el.className = 'v' + (step === n ? ' on' : step > n ? ' locked' : ''); el.querySelector('b').textContent = step >= n ? txt : '-'; };
-    const pos = Math.round(off * 100);
-    set('avP', 1, pos === 0 ? 'CENTER' : (pos < 0 ? 'L ' : 'R ') + Math.abs(pos) + 'cm');
-    set('avD', 2, (aim >= 0 ? '+' : '') + aim.toFixed(1) + '\u00B0');
-    set('avS', 3, Math.abs(spin) < 0.03 ? 'NONE' : (spin < 0 ? 'L ' : 'R ') + Math.round(Math.abs(spin) * 100) + '%');
-    $('avWarn').textContent = (step >= 2 && gutter) ? 'GUTTER!' : '';
-}
-
 /* ---------- price sheet ---------- */
 let M = null, sel = null, invited = new Set();
 function seatsFor(s) { if (!s) return 0; return s.kind === 'ticket' ? M.maxPlayers : s.players; }
@@ -598,7 +503,6 @@ window.addEventListener('message', (e) => {
         case 'boardVisible': boardNear = !!d.show; boardShow(); break;
         case 'banner': banner(d.name, d.text, d.final); break;
         case 'caption': caption(d); break;
-        case 'aimview': aimview(d); break;
         case 'power': power(d); break;
         case 'menu': M = d.data; sel = null; invited = new Set(); $('oSel').innerHTML = '<div class="l">Pick something from the menu</div><div class="d">Tap a price on the left.</div>'; renderMenu(); $('menu').classList.remove('hidden'); break;
         case 'lanes': renderLanes(d.lanes); break;
