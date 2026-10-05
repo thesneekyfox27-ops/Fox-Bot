@@ -113,3 +113,15 @@ function Scoring.callout(standingBefore, knocked)
     if knocked == 0 then return 'GUTTER' end
     return (knocked == 1) and '1 PIN' or (knocked .. ' PINS')
 end
+
+-- Highest score still possible (every remaining ball knocks down everything left)
+function Scoring.maxPossible(rolls, n)
+    local r = {}
+    for i, v in ipairs(rolls) do r[i] = v end
+    for _ = 1, 30 do
+        local st = Scoring.state(r, n)
+        if st.done then break end
+        r[#r + 1] = st.standing
+    end
+    return Scoring.total(r, n)
+end

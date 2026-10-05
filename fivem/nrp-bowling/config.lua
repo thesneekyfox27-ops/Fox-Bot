@@ -2,12 +2,45 @@ Config = {}
 
 Config.AlleyName = 'Neighborhood Lanes'
 
--- ── Prices ─────────────────────────────────────────────────────
-Config.Price   = 15        -- per player, per game (shoes + lane)
+-- ── Prices (the neon price sheet at the desk) ──────────────────
 Config.Account = 'cash'    -- 'cash' or 'bank' (falls back to bank if cash is short)
 
-Config.MaxPlayers  = 4     -- per lane
-Config.GameLengths = { 10, 5 }   -- frames: full game or quick game
+-- Single tickets: every player pays their own (invited friends pay when they accept)
+Config.Tickets = {
+    { id = 'adult',  label = 'Adult',  sub = '',          prices = { [1] = 9,  [2] = 17 } },
+    { id = 'junior', label = 'Junior', sub = 'UNDER 16',  prices = { [1] = 8,  [2] = 16 } },
+}
+
+-- Game deals: based on 2 games, the host pays for the whole group
+Config.GameDeals = {
+    { players = 2, price = 34 },
+    { players = 3, price = 51 },
+    { players = 4, price = 68 },
+    { players = 5, price = 85 },
+    { players = 6, price = 102 },
+}
+
+-- Family deals: based on 1 game each, the host pays for the whole family
+Config.FamilyDeals = {
+    { players = 4, label = '2 adults + 2 juniors', price = 34 },
+    { players = 5, label = '2 adults + 3 juniors', price = 42 },
+}
+
+Config.MaxPlayers  = 6     -- per lane
+Config.Frames      = 10    -- frames per game
+Config.InviteRange   = 12.0   -- metres: who shows up in the invite list
+Config.InviteSeconds = 45     -- how long an invite stays open
+Config.BookingSeconds = 90    -- pick a lane within this time or you're refunded
+
+-- ── Staff ped (sells games) ───────────────────────────────────
+-- Stand where you want her, type /bowlcoords, paste the vector4 here.
+Config.Staff = {
+    model    = 'a_f_y_hipster_01',
+    coords   = vector4(-142.55, -251.95, 43.2, 250.0),
+    scenario = 'WORLD_HUMAN_STAND_IMPATIENT',
+    spawnDistance = 70.0,
+}
+Config.Target = 'auto'     -- 'auto' (ox_target, then qb-target) or 'off' (press E)
 
 -- ── Timers ─────────────────────────────────────────────────────
 Config.TurnTimeout  = 120  -- seconds to bowl before you're removed (AFK)
@@ -18,9 +51,13 @@ Config.Ball = {
     minSpeed   = 6.5,   -- m/s at 0% power
     maxSpeed   = 12.5,  -- m/s at 100% power
     maxHook    = 0.9,   -- sideways m/s² at full spin (kicks in after 40% of the lane)
-    maxAim     = 5.0,   -- degrees left/right you can aim
-    maxOffset  = 0.42,  -- metres left/right you can stand on the approach
-    meterSpeed = 0.85,  -- power meter sweeps per second (higher = harder)
+    maxAim     = 4.5,   -- degrees left/right the direction arrow swings
+    maxOffset  = 0.42,  -- metres left/right the position marker slides
+    -- skill input: how fast each indicator swings (sweeps per second, higher = harder)
+    positionSpeed  = 0.55,
+    directionSpeed = 0.70,
+    spinSpeed      = 0.65,
+    meterSpeed     = 0.85,
     sweetSpot  = { 0.80, 0.94 },  -- release in this band = perfect accuracy
     maxError   = 2.2,   -- degrees of random error at the worst release
 }
@@ -30,7 +67,7 @@ Config.LaneHalfWidth = 0.53
 Config.GutterOffset  = 0.68
 
 -- ── Places ─────────────────────────────────────────────────────
-Config.Desk = vector3(-141.83, -252.71, 44.0)   -- front desk / ball rack (rent a lane here)
+Config.Desk = vector3(-141.83, -252.71, 44.0)   -- ball rack (blip + decorative balls)
 
 Config.Blip = { sprite = 103, color = 27, scale = 0.75 }
 

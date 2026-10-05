@@ -201,27 +201,66 @@ local function holdBall(ped)
     AttachEntityToEntity(ball, ped, GetPedBoneIndex(ped, 57005), 0.09, 0.03, -0.02, -78.0, 13.0, 28.0, false, true, true, true, 0, true)
 end
 
--- dots showing where the ball will go (aim + hook at medium power)
-local function drawGuide(g, offset, aim, spin)
+-- flat shapes painted on the lane (both windings so they show from any angle)
+local function tri(p1, p2, p3, r, g, b, a)
+    DrawPoly(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, p3.x, p3.y, p3.z, r, g, b, a)
+    DrawPoly(p3.x, p3.y, p3.z, p2.x, p2.y, p2.z, p1.x, p1.y, p1.z, r, g, b, a)
+end
+
+local function quad(a1, a2, b1, b2, r, g, b, a)
+    tri(a1, a2, b1, r, g, b, a)
+    tri(a2, b2, b1, r, g, b, a)
+end
+
+-- point on the lane `fwd` metres down a line that starts at side offset `side`
+-- and heads `aim` degrees off straight
+local function onLine(g, side, aim, fwd, z)
     local d = rotate(g.dir, aim)
-    local latSpeed = (d.x * g.lat.x + d.y * g.lat.y)   -- sideways share of the aim
-    local speed = (B.minSpeed + B.maxSpeed) / 2
-    local side, sideV, fwd = offset, latSpeed * speed, 1.2
-    local fwdV = speed * math.sqrt(math.max(0.0, 1 - latSpeed * latSpeed))
-    local dt = 0.05
-    local last = along(g, fwd, side, g.laneZ + 0.03)
-    for i = 1, 400 do
-        if fwd > g.D then break end
-        if fwd > g.D * 0.4 then sideV = sideV + spin * B.maxHook * dt end
-        fwd, side = fwd + fwdV * dt, side + sideV * dt
-        if i % 6 == 0 then
-            local p = along(g, fwd, side, g.laneZ + 0.03)
-            local off = math.abs(side) > Config.LaneHalfWidth
-            DrawLine(last.x, last.y, last.z, p.x, p.y, p.z, off and 255 or 242, off and 80 or 178, off and 80 or 61, 200)
-            last = p
-            if off then break end
-        end
-    end
+    local start = g.A.xy + g.dir * 1.2 + g.lat * side
+    local p = start + d * fwd
+    return vector3(p.x, p.y, z or (g.laneZ + 0.012))
+end
+
+-- step 1: red marker where the ball will be released
+local function drawPosition(g, side)
+    local tip  = along(g, 1.75, side, g.laneZ + 0.012)
+    local l    = along(g, 1.05, side - 0.16, g.laneZ + 0.012)
+    local r    = along(g, 1.05, side + 0.16, g.laneZ + 0.012)
+    tri(l, r, tip, 230, 40, 40, 190)
+end
+
+-- step 2: long dark arrow showing the direction
+local function drawDirection(g, side, aim)
+    local d = rotate(g.dir, aim)
+    local w = vector2(d.y, -d.x) * 0.07
+    local function at(f, off) local p = onLine(g, side, aim, f).xy + w * off; return vector3(p.x, p.y, g.laneZ + 0.012) end
+    quad(at(0.6, -1), at(0.6, 1), at(9.0, -1), at(9.0, 1), 40, 36, 30, 200)
+    local hl, hr = onLine(g, side, aim, 9.0).xy + w * 2.6, onLine(g, side, aim, 9.0).xy - w * 2.6
+    tri(vector3(hl.x, hl.y, g.laneZ + 0.012), vector3(hr.x, hr.y, g.laneZ + 0.012), at(9.9, 0), 40, 36, 30, 200)
+end
+
+-- step 3: sideways arrow - which way and how hard the ball hooks
+local function drawSpin(g, side, aim, spin)
+    if math.abs(spin) < 0.04 then return end
+    local c = onLine(g, side, aim, 7.0)
+    local len = 0.9 * spin
+    local w = 0.06
+    local a1 = vector3(c.x, c.y, c.z) + vector3(g.dir.x, g.dir.y, 0) * w
+    local a2 = vector3(c.x, c.y, c.z) - vector3(g.dir.x, g.dir.y, 0) * w
+    local e  = c.xy + g.lat * len
+    local b1 = vector3(e.x, e.y, c.z) + vector3(g.dir.x, g.dir.y, 0) * w
+    local b2 = vector3(e.x, e.y, c.z) - vector3(g.dir.x, g.dir.y, 0) * w
+    quad(a1, a2, b1, b2, 40, 36, 30, 200)
+    local tip = e + g.lat * (0.22 * (spin > 0 and 1 or -1))
+    tri(vector3(e.x, e.y, c.z) + vector3(g.dir.x, g.dir.y, 0) * 0.16, vector3(e.x, e.y, c.z) - vector3(g.dir.x, g.dir.y, 0) * 0.16,
+        vector3(tip.x, tip.y, c.z), 40, 36, 30, 200)
+end
+
+-- an indicator that swings -1..1 and back; `rate` = sweeps per second
+local function swing(t, rate)
+    local x = (t * rate) % 2.0
+    local tri01 = x < 1.0 and x or (2.0 - x)
+    return tri01 * 2.0 - 1.0
 end
 
 local function sweetError(power)
@@ -324,91 +363,105 @@ local function roll(g, offset, aim, spin, power, err)
     TriggerServerEvent('nrp-bowling:roll', knocked)
 end
 
+local STEPS = {
+    { id = 'position',  text = 'Select initial bowling ball\'s', hi = 'position' },
+    { id = 'direction', text = 'Select bowling ball', hi = 'direction' },
+    { id = 'spin',      text = 'Select bowling ball', hi = 'spin' },
+    { id = 'power',     text = 'Select bowling ball', hi = 'power' },
+}
+
 local function aimLoop()
     local ped = PlayerPedId()
     local g = geo(myLane)
-    local offset, aim, spin = 0.0, 0.0, 0.0
-    local charging, power, dirSign = false, 0.0, 1
-    local camMode, lastPower = 1, 0
+    local offset, aim, spin, power = 0.0, 0.0, 0.0, 0.0
+    local step, stepStart = 1, GetGameTimer()
+    local camMode = 1
 
     FreezeEntityPosition(ped, true)
-    placePed(ped, g, offset, aim)
+    placePed(ped, g, 0.0, 0.0)
     holdBall(ped)
     camOn()
     phase = 'aim'
     updateControls()
-    ui({ action = 'aim', offset = 0, aim = 0, spin = 0 })
 
+    local function setStep(n)
+        step, stepStart = n, GetGameTimer()
+        ui({ action = 'caption', text = STEPS[n].text, hi = STEPS[n].hi, step = n, steps = #STEPS })
+        if STEPS[n].id == 'power' then ui({ action = 'power', value = 0, sweet = B.sweetSpot })
+        else ui({ action = 'power', hide = true, value = 0 }) end
+    end
+    setStep(1)
+
+    local lastUi = 0
     while phase == 'aim' do
         Wait(0)
         DisableAllControlActions(0)
         EnableControlAction(0, 245, true)   -- chat
         EnableControlAction(0, 249, true)   -- push to talk
-        local dt = GetFrameTime()
 
         if not IsEntityPlayingAnim(ped, ANIM, 'aimlive_l', 3) then
             TaskPlayAnim(ped, loadDict(ANIM), 'aimlive_l', 8.0, -8.0, -1, 49, 0, false, false, false)
         end
 
-        local moved = false
-        if not charging then
-            -- A / D: step left / right on the approach
-            if IsDisabledControlPressed(0, 34) then offset = math.max(-B.maxOffset, offset - 0.6 * dt); moved = true end
-            if IsDisabledControlPressed(0, 35) then offset = math.min(B.maxOffset, offset + 0.6 * dt); moved = true end
-            -- arrows or mouse: aim
-            local turnIn = GetDisabledControlNormal(0, 1) * 0.6
-            if IsDisabledControlPressed(0, 174) then turnIn = turnIn - 2.0 * dt end
-            if IsDisabledControlPressed(0, 175) then turnIn = turnIn + 2.0 * dt end
-            if turnIn ~= 0 then aim = math.max(-B.maxAim, math.min(B.maxAim, aim - turnIn)); moved = true end
-            -- Q / E: spin (hook)
-            if IsDisabledControlJustPressed(0, 44) then spin = math.max(-1.0, spin - 0.25); moved = true end
-            if IsDisabledControlJustPressed(0, 38) then spin = math.min(1.0, spin + 0.25); moved = true end
-            -- C: camera
-            if IsDisabledControlJustPressed(0, 26) then camMode = camMode == 1 and 2 or 1 end
-            -- BACKSPACE: step off
-            if IsDisabledControlJustPressed(0, 177) then
-                phase = 'pickup'
-                break
-            end
-        end
-        if moved then
-            placePed(ped, g, offset, aim)
-            ui({ action = 'aim', offset = offset / B.maxOffset, aim = aim / B.maxAim, spin = spin })
-        end
-
-        -- SPACE: hold to charge, release to bowl
-        if IsDisabledControlPressed(0, 22) then
-            if not charging then charging, power, dirSign = true, 0.0, 1 end
-            power = power + dirSign * B.meterSpeed * 2 * dt
-            if power >= 1.0 then power, dirSign = 1.0, -1 elseif power <= 0.0 then power, dirSign = 0.0, 1 end
-            if GetGameTimer() - lastPower > 30 then
-                lastPower = GetGameTimer()
+        local t = (GetGameTimer() - stepStart) / 1000.0
+        local id = STEPS[step].id
+        -- the live (swinging) value for this step
+        if id == 'position' then
+            offset = swing(t + 0.5 / B.positionSpeed, B.positionSpeed) * B.maxOffset
+            placePed(ped, g, offset, 0.0)
+        elseif id == 'direction' then
+            aim = swing(t + 0.5 / B.directionSpeed, B.directionSpeed) * B.maxAim
+        elseif id == 'spin' then
+            spin = swing(t + 0.5 / B.spinSpeed, B.spinSpeed)
+        elseif id == 'power' then
+            power = (swing(t, B.meterSpeed) + 1.0) / 2.0
+            if GetGameTimer() - lastUi > 30 then
+                lastUi = GetGameTimer()
                 ui({ action = 'power', value = power, sweet = B.sweetSpot })
             end
-        elseif charging then
-            ui({ action = 'power', hide = true, value = power, sweet = B.sweetSpot })
-            local err = sweetError(power)
-            roll(g, offset, aim, spin, power, err)
-            break
         end
 
-        drawGuide(g, offset, aim, spin)
+        -- paint the lane
+        drawPosition(g, offset)
+        if step >= 2 then drawDirection(g, offset, aim) end
+        if step >= 3 then drawSpin(g, offset, aim, spin) end
+
+        -- SPACE locks the current step
+        if IsDisabledControlJustPressed(0, 22) then
+            PlaySoundFrontend(-1, 'SELECT', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
+            if step < #STEPS then
+                if id == 'direction' then placePed(ped, g, offset, aim) end
+                setStep(step + 1)
+            else
+                ui({ action = 'caption' })
+                ui({ action = 'power', hide = true, value = power, sweet = B.sweetSpot })
+                roll(g, offset, aim, spin, power, sweetError(power))
+                break
+            end
+        -- BACKSPACE: back one step (or put the ball down)
+        elseif IsDisabledControlJustPressed(0, 177) then
+            if step > 1 then setStep(step - 1)
+            else phase = 'pickup'; break end
+        -- C: camera
+        elseif IsDisabledControlJustPressed(0, 26) then
+            camMode = camMode == 1 and 2 or 1
+        end
+
         if camMode == 1 then
-            local p = along(g, -2.6, offset * 0.6, g.A.z + 1.45)
-            camAt(p, along(g, g.D * 0.6, 0.0, g.laneZ))
+            -- low, behind the ball, looking down the lane (like a real approach)
+            camAt(along(g, -1.4, offset * 0.4, g.laneZ + 1.05), along(g, g.D, offset * 0.2, g.laneZ - 0.2))
         else
-            local p = along(g, -0.9, offset + 0.35, g.laneZ + 0.55)
-            camAt(p, along(g, g.D, offset * 0.3, g.laneZ + 0.2))
+            camAt(along(g, -3.0, 0.0, g.A.z + 1.9), along(g, g.D * 0.55, 0.0, g.laneZ))
         end
     end
 
     if phase == 'pickup' then
-        -- stepped off without bowling
         ClearPedTasks(ped)
         if ball then DetachEntity(ball, true, false); del(ball); ball = nil end
         FreezeEntityPosition(ped, false)
         camOff()
-        ui({ action = 'aim', hide = true })
+        ui({ action = 'caption' })
+        ui({ action = 'power', hide = true, value = 0 })
         updateControls()
     end
 end
@@ -525,33 +578,163 @@ RegisterKeyMapping('bowlleave', 'Bowling: leave your lane', 'keyboard', 'DELETE'
 -- ------------------------------------------------------------
 --  Front desk + rack balls + blip
 -- ------------------------------------------------------------
-RegisterNUICallback('close', function(_, cb)
+local function unfocus()
     deskOpen = false
     SetNuiFocus(false, false)
+end
+
+RegisterNUICallback('close', function(_, cb) unfocus(); cb('ok') end)
+
+RegisterNUICallback('buy', function(order, cb)
+    TriggerServerEvent('nrp-bowling:buy', order)
     cb('ok')
 end)
 
-RegisterNUICallback('open', function(d, cb)
-    deskOpen = false
-    SetNuiFocus(false, false)
-    TriggerServerEvent('nrp-bowling:open', tonumber(d.lane), tonumber(d.frames))
+RegisterNUICallback('chooseLane', function(d, cb)
+    unfocus()
+    TriggerServerEvent('nrp-bowling:chooseLane', d.lane)
     cb('ok')
 end)
 
-RegisterNUICallback('join', function(d, cb)
-    deskOpen = false
-    SetNuiFocus(false, false)
-    TriggerServerEvent('nrp-bowling:join', tonumber(d.lane))
+RegisterNUICallback('cancelBooking', function(_, cb)
+    unfocus()
+    TriggerServerEvent('nrp-bowling:cancelBooking')
     cb('ok')
 end)
 
-local function openDesk()
-    QBCore.Functions.TriggerCallback('nrp-bowling:lanes', function(data)
+RegisterNUICallback('inviteAnswer', function(d, cb)
+    SetNuiFocus(false, false)
+    TriggerServerEvent('nrp-bowling:inviteAnswer', d.accept == true, d.ticket)
+    cb('ok')
+end)
+
+local function openMenu()
+    if deskOpen or myLane then
+        if myLane then notify(('You\'re on lane %d. Press DELETE to leave it first.'):format(myLane), 'error') end
+        return
+    end
+    QBCore.Functions.TriggerCallback('nrp-bowling:menu', function(data)
         deskOpen = true
         SetNuiFocus(true, true)
-        ui({ action = 'desk', data = data })
+        ui({ action = 'menu', data = data })
     end)
 end
+
+RegisterNetEvent('nrp-bowling:pickLane', function(list)
+    deskOpen = true
+    SetNuiFocus(true, true)
+    ui({ action = 'lanes', lanes = list })
+end)
+
+RegisterNetEvent('nrp-bowling:closeMenu', function()
+    unfocus()
+    ui({ action = 'closeMenu' })
+end)
+
+RegisterNetEvent('nrp-bowling:invited', function(d)
+    if myLane then return end
+    SetNuiFocus(true, true)
+    ui({ action = 'invite', data = d })
+    PlaySoundFrontend(-1, 'Text_Arrive_Tone', 'Phone_SoundSet_Default', true)
+end)
+
+RegisterNetEvent('nrp-bowling:inviteGone', function()
+    ui({ action = 'inviteGone' })
+    if not deskOpen then SetNuiFocus(false, false) end
+end)
+
+-- ------------------------------------------------------------
+--  Staff ped (streamed in when you're nearby)
+-- ------------------------------------------------------------
+local staff = nil
+local usingTarget = false
+
+local function addTarget(ped)
+    local mode = Config.Target
+    if mode == 'off' then return false end
+    if GetResourceState('ox_target') == 'started' then
+        exports.ox_target:addLocalEntity(ped, { {
+            name = 'nrp_bowling_staff', label = 'Buy a game', icon = 'fa-solid fa-bowling-ball', distance = 2.5,
+            onSelect = openMenu,
+        } })
+        return true
+    end
+    if GetResourceState('qb-target') == 'started' then
+        exports['qb-target']:AddTargetEntity(ped, {
+            options = { { type = 'client', icon = 'fas fa-bowling-ball', label = 'Buy a game', action = openMenu } },
+            distance = 2.5,
+        })
+        return true
+    end
+    return false
+end
+
+local function floorZ(x, y, z)
+    for _ = 1, 20 do
+        local ok, gz = GetGroundZFor_3dCoord(x, y, z + 1.5, false)
+        if ok and gz > z - 2.0 and gz < z + 1.5 then return gz end
+        Wait(50)
+    end
+    return z
+end
+
+local function spawnStaff()
+    local S = Config.Staff
+    local m = loadModel(S.model)
+    if not m then return print('[nrp-bowling] staff model is not valid: ' .. tostring(S.model)) end
+    local c = S.coords
+    RequestCollisionAtCoord(c.x, c.y, c.z)
+    local interior = GetInteriorAtCoords(c.x, c.y, c.z)
+    if interior ~= 0 then
+        PinInteriorInMemory(interior)
+        local t = GetGameTimer() + 4000
+        while not IsInteriorReady(interior) and GetGameTimer() < t do Wait(50) end
+    end
+    local z = floorZ(c.x, c.y, c.z)
+    local ped = CreatePed(4, m, c.x, c.y, z, c.w, false, true)
+    SetEntityCoords(ped, c.x, c.y, z, false, false, false, false)
+    SetEntityHeading(ped, c.w)
+    SetEntityInvincible(ped, true)
+    SetPedCanRagdoll(ped, false)
+    SetBlockingOfNonTemporaryEvents(ped, true)
+    SetPedFleeAttributes(ped, 0, false)
+    local t = GetGameTimer() + 3000
+    while not HasCollisionLoadedAroundEntity(ped) and GetGameTimer() < t do Wait(50) end
+    Wait(250)
+    FreezeEntityPosition(ped, true)
+    if S.scenario then TaskStartScenarioInPlace(ped, S.scenario, 0, true) end
+    SetModelAsNoLongerNeeded(m)
+    staff = ped
+    usingTarget = addTarget(ped)
+end
+
+CreateThread(function()
+    local shown = false
+    while true do
+        local sleep = 1000
+        local c = Config.Staff.coords
+        local d = #(GetEntityCoords(PlayerPedId()) - vector3(c.x, c.y, c.z))
+        if d < Config.Staff.spawnDistance then
+            if not (staff and DoesEntityExist(staff)) then spawnStaff() end
+        elseif staff and d > Config.Staff.spawnDistance + 30.0 then
+            del(staff); staff = nil
+        end
+        if staff and not usingTarget and not myLane then
+            if d < 10.0 then sleep = 0 end
+            if d < 2.2 and not deskOpen then
+                if not shown then ui({ action = 'prompt', key = 'E', text = 'Buy a game' }); shown = true end
+                if IsControlJustReleased(0, 38) then ui({ action = 'prompt' }); shown = false; openMenu() end
+            elseif shown then ui({ action = 'prompt' }); shown = false end
+        elseif shown then ui({ action = 'prompt' }); shown = false end
+        Wait(sleep)
+    end
+end)
+
+RegisterCommand('bowlcoords', function()
+    local p, h = GetEntityCoords(PlayerPedId()), GetEntityHeading(PlayerPedId())
+    print(('[nrp-bowling] vector4(%.2f, %.2f, %.2f, %.1f)'):format(p.x, p.y, p.z, h))
+    notify('Coords printed in F8.', 'primary')
+end, false)
 
 CreateThread(function()
     local b = AddBlipForCoord(Config.Desk.x, Config.Desk.y, Config.Desk.z)
@@ -566,7 +749,6 @@ end)
 
 local rackBalls = {}
 CreateThread(function()
-    local shown = false
     while true do
         local sleep = 1000
         local pos = GetEntityCoords(PlayerPedId())
@@ -588,17 +770,6 @@ CreateThread(function()
             rackBalls = {}
         end
 
-        if d < 12.0 and not myLane then
-            sleep = 0
-            DrawMarker(2, Config.Desk.x, Config.Desk.y, Config.Desk.z + 0.2, 0, 0, 0, 0, 180.0, 0, 0.25, 0.25, 0.2, 242, 178, 61, 200, true, true, 2, false, nil, nil, false)
-            if d < 1.8 and not deskOpen then
-                if not shown then ui({ action = 'prompt', key = 'E', text = 'Rent a lane' }); shown = true end
-                if IsControlJustReleased(0, 38) then
-                    ui({ action = 'prompt' }); shown = false
-                    openDesk()
-                end
-            elseif shown then ui({ action = 'prompt' }); shown = false end
-        elseif shown then ui({ action = 'prompt' }); shown = false end
         Wait(sleep)
     end
 end)
@@ -607,5 +778,6 @@ AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
     cleanupAll()
     for _, o in ipairs(rackBalls) do del(o) end
+    del(staff)
     SetNuiFocus(false, false)
 end)

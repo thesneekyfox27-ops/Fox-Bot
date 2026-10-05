@@ -1,53 +1,57 @@
-# nrp-bowling v2.0.0
+# nrp-bowling v2.1.0
 
 A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map resource, unchanged).
 
 ## Install
-1. **Remove `loaf_bowling`** from your resources and server.cfg.
-2. Keep the `bowling` map resource. Drop in `nrp-bowling`.
-3. server.cfg:
+1. Remove `loaf_bowling`. Keep the `bowling` map resource.
+2. server.cfg:
    ```
    ensure bowling
    ensure nrp-bowling
    ```
+3. **Place the staff ped:** stand where you want her behind the desk, type `/bowlcoords`, and paste the vector4 into `Config.Staff.coords`.
 
-## How players use it
-1. **Front desk** (blip "Neighborhood Lanes", gold marker at the ball rack): press **E**.
-   - Pick a lane and **Open Lane** (full 10-frame game or quick 5-frame game). It costs **$15 per player**.
-   - Friends click **Join** on that lane (up to 4 bowlers).
-2. Walk to your lane (it's set as your waypoint). The lane owner presses **G** at the lane to start.
-3. On your turn, a gold marker lights up on the approach. Press **E** to pick up your ball.
-4. Bowl:
-   | Key | Action |
-   |---|---|
-   | **A / D** | step left / right on the approach |
-   | **← / →** or mouse | aim (±5°) |
-   | **Q / E** | spin left / right; the ball hooks in the back of the lane |
-   | **SPACE** (hold) | power meter. Release in the **green** for a straight, accurate ball |
-   | **C** | swap camera |
-   | **BACKSPACE** | step off without bowling |
-   - A guide line on the lane shows where the ball will go with your aim and spin. It turns red if it heads for the gutter.
-5. The camera follows the ball, then switches to a pin cam. Pins are counted, the fallen ones are swept away, and the standing ones stay for your second ball.
-6. **DELETE** leaves your lane at any time (rebindable in Settings > Key Bindings > FiveM).
+## How it works
+1. **Talk to the staff ped** at the desk (ox_target / qb-target, or press **E**). The neon price sheet opens:
+   | | Adult | Junior |
+   |---|---|---|
+   | 1 game | $9 | $8 |
+   | 2 games | $17 | $16 |
+   - **Game deals** (2 games, host pays for everyone): 2–6 players, $34–$102.
+   - **Family deals** (1 game each, host pays): family of 4 $34, family of 5 $42.
+   - Tick friends standing near you to **invite** them, then **Pay & pick lane**.
+2. **Pick your lane** at the desk, or hit **Auto pick a free lane**. Don't pick within 90 s and you're refunded.
+3. **Invites** pop up for your friends with a 45 s timer:
+   - On a deal they join **free**.
+   - On a single ticket they choose adult or junior and pay when they join.
+4. The lane owner presses **G** at the lane to start. 2-game tickets and deals play game 1 and then game 2 automatically.
+5. On your turn, press **E** at the gold marker to pick up your ball.
+6. **Skill-based throw.** Each marker is drawn on the lane and swings by itself. Press **SPACE** to lock each one:
+   1. **Position:** a red marker slides along the foul line.
+   2. **Direction:** an arrow sweeps left and right down the lane.
+   3. **Spin:** a sideways arrow grows left and right. The ball hooks that way late in the lane.
+   4. **Power:** stop the meter in the blue for a perfectly accurate ball.
+
+   **BACKSPACE** goes back a step, and **C** changes the camera.
+7. **Lane monitor:** red and blue player rows, white frame boxes, yellow scores, **Max** possible score, the total, and "Game 1 of 2".
+   STRIKE / SPARE / GUTTER banners show, and the winner is announced at the end.
+8. **DELETE** leaves your lane.
 
 ## Mechanics
-- **Real ten-pin scoring:** strikes, spares, and the 10th-frame bonus balls, on a live score sheet for everyone on the lane.
-- **Power meter:** the sweet spot is 80–94%. Releasing outside it adds up to ±2.2° of random error, so skill matters.
-- **Gutter balls:** a ball that leaves the 1.05 m lane drops into the gutter and rolls past the pins (0 pins).
-- **Physics:** the ball is guided down the lane (consistent rolls, hook from spin), then real physics takes over just before the pins.
-  A pin counts as down if it tips past 20°, drops into the pit, or is knocked off the deck.
-- **Multiplayer:** everyone bowls frame 1 before anyone bowls frame 2. Other bowlers see your ball and pins.
-- **Server-checked:** the server only accepts rolls from whoever's turn it is, and never more pins than are standing.
-- **Fail-safes:**
+- Real ten-pin scoring: strikes, spares, and 10th-frame bonus balls.
+- The ball rolls on a guided path (aim + hook), then real physics hits the pins.
+  - Gutter balls roll past the pins.
+  - Fallen pins are counted and swept away; standing pins stay for ball 2.
+- The server only accepts rolls from whoever's turn it is, and never more pins than are standing. Prices are charged on the server.
+- Fail-safes:
   - Walking more than 45 m away removes you from the game.
-  - Taking more than 2 minutes on your turn removes you (AFK).
+  - Taking more than 2 minutes on your turn removes you.
   - Leaving or disconnecting passes the turn on.
-  - An empty lane frees itself, and a finished lane frees itself 15 s after the winner banner.
-- **Rack balls** at the desk spawn locally only, so they no longer duplicate for every player.
+  - Finished or empty lanes free themselves.
 
-## Tuning (config.lua)
-- `Config.Price`, `Config.MaxPlayers`, `Config.GameLengths`
-- `Config.Ball`: speeds, hook strength, aim/position limits, power meter speed, sweet spot, error
-- `Config.LaneHalfWidth` / `Config.GutterOffset`: gutter detection
-- `Config.TurnTimeout`, `Config.LeaveDistance`
-- `Config.Lanes`: approach spot + 10 pin spots per lane (same coords as the original)
+## Config (config.lua)
+- `Config.Tickets`, `Config.GameDeals`, `Config.FamilyDeals`: prices
+- `Config.Staff`: ped model, coords, scenario
+- `Config.Ball`: swing speeds (`positionSpeed`, `directionSpeed`, `spinSpeed`, `meterSpeed`; higher = harder),
+  plus sweet spot, ball speeds, hook strength, aim/position range
+- `Config.MaxPlayers`, `Config.InviteRange`, `Config.InviteSeconds`, `Config.BookingSeconds`, `Config.TurnTimeout`
