@@ -1,4 +1,4 @@
-# nrp-bowling v2.3.0
+# nrp-bowling v2.3.1
 
 A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map resource, unchanged).
 
@@ -27,7 +27,9 @@ A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map re
    - On a deal they join **free**.
    - On a single ticket they choose adult or junior and pay when they join.
 4. The lane owner presses **G** at the lane to start. 2-game tickets and deals play game 1 and then game 2 automatically.
-5. On your turn, press **E** at the gold marker to pick up your ball.
+5. On your turn, a **glowing ring with a bouncing arrow** marks where to stand, and a **flashing map blip** shows your lane.
+   Step into the ring and press **E** to pick up your ball.
+   After every ball you're free to move again; walk back into the ring and press **E** for your next one.
 6. **Skill-based throw.** A **"Your Shot" lane panel** on the left of the screen shows your shot.
    It's UI only; nothing is drawn on the real lane. Each marker swings by itself. Press **SPACE** to lock each one:
    1. **Position:** a red marker slides along the foul line.

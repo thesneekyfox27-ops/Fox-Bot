@@ -315,6 +315,10 @@ local function roll(g, offset, aim, spin, power, err)
     local knocked = countAndSweep()
     phase = 'wait'
     updateControls()
+    -- hand control back: walk back to the marker and pick up the ball for the next one
+    FreezeEntityPosition(ped, false)
+    ClearPedTasks(ped)
+    camOff()
     TriggerServerEvent('nrp-bowling:roll', knocked)
 end
 
@@ -446,8 +450,29 @@ RegisterNetEvent('nrp-bowling:lane', function(v)
     if phase ~= 'aim' and phase ~= 'rolling' and phase ~= 'pickup' then updateControls() end
 end)
 
+local turnBlip = nil
+local function clearTurnBlip()
+    if turnBlip and DoesBlipExist(turnBlip) then RemoveBlip(turnBlip) end
+    turnBlip = nil
+end
+
+local function setTurnBlip(id)
+    clearTurnBlip()
+    local a = Config.Lanes[id].approach
+    turnBlip = AddBlipForCoord(a.x, a.y, a.z)
+    SetBlipSprite(turnBlip, 103)
+    SetBlipColour(turnBlip, 48)
+    SetBlipScale(turnBlip, 0.85)
+    SetBlipAsShortRange(turnBlip, false)
+    SetBlipFlashes(turnBlip, true)
+    BeginTextCommandSetBlipName('STRING')
+    AddTextComponentSubstringPlayerName(('Bowl here - lane %d'):format(id))
+    EndTextCommandSetBlipName(turnBlip)
+end
+
 RegisterNetEvent('nrp-bowling:yourTurn', function(id, t)
     if id ~= myLane then return end
+    setTurnBlip(id)
     turn = t
     if t.reset or #rack == 0 then spawnRack(id) end
     phase = 'pickup'
@@ -471,6 +496,7 @@ RegisterNetEvent('nrp-bowling:turnOver', function()
 end)
 
 local function cleanupAll()
+    clearTurnBlip()
     phase, myLane, laneView, turn = nil, nil, nil, nil
     clearRack()
     if ball then del(ball); ball = nil end
@@ -502,11 +528,16 @@ CreateThread(function()
 
             if phase == 'pickup' then
                 sleep = 0
-                DrawMarker(27, g.A.x, g.A.y, g.A.z - 0.95, 0, 0, 0, 0, 0, 0, 0.9, 0.9, 0.9, 242, 178, 61, 160, false, false, 2, true, nil, nil, false)
-                if dist < 1.6 then
+                local fz = g.laneZ   -- lane floor height (the old marker was a metre under it)
+                DrawMarker(1, g.A.x, g.A.y, fz - 0.05, 0, 0, 0, 0, 0, 0, 1.1, 1.1, 0.35, 255, 63, 134, 110, false, false, 2, false, nil, nil, false)
+                DrawMarker(25, g.A.x, g.A.y, fz + 0.03, 0, 0, 0, 0, 0, 0, 1.3, 1.3, 1.0, 255, 210, 63, 200, false, false, 2, true, nil, nil, false)
+                DrawMarker(0, g.A.x, g.A.y, fz + 1.9, 0, 0, 0, 0, 0, 0, 0.35, 0.35, 0.35, 255, 210, 63, 220, true, true, 2, false, nil, nil, false)
+                local d2 = #(GetEntityCoords(ped).xy - g.A.xy)
+                if d2 < 1.3 then
                     if not ballPrompt then ui({ action = 'prompt', key = 'E', text = 'Pick up your ball' }); ballPrompt = true end
                     if IsControlJustReleased(0, 38) then
                         ui({ action = 'prompt' }); ballPrompt = false
+                        clearTurnBlip()
                         aimLoop()
                     end
                 elseif ballPrompt then
