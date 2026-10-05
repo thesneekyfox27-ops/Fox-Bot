@@ -734,7 +734,7 @@ end)
 
 RegisterNUICallback('inviteAnswer', function(d, cb)
     SetNuiFocus(false, false)
-    TriggerServerEvent('nrp-bowling:inviteAnswer', d.accept == true, d.ticket)
+    TriggerServerEvent('nrp-bowling:inviteAnswer', d.accept == true, d.ticket, d.pay)
     cb('ok')
 end)
 

@@ -1,4 +1,4 @@
-# nrp-bowling v2.6.0
+# nrp-bowling v2.6.1
 
 A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map resource, unchanged).
 
@@ -22,11 +22,13 @@ A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map re
    - **Game deals** (2 games, host pays for everyone): 2–6 players, $34–$102.
      A deal **stays locked until you've invited enough friends** standing near you to fill it; the button shows "Invite N more".
      The server checks this as well.
-   - Tick friends standing near you to invite them, then **Pay & pick lane**.
+   - Tick friends standing near you to invite them, choose **Cash** or **Card**, then **Pay & pick lane**.
+     Card takes the money from the bank. Refunds go back to the same place you paid from.
+     `Config.PayMethods` sets the options (remove one to allow only the other); `Config.Account` is the one picked by default.
 2. **Pick your lane** at the desk, or hit **Auto pick a free lane**. Don't pick within 90 s and you're refunded.
 3. **Invites** pop up for your friends with a 45 s timer:
    - On a deal they join **free**.
-   - On a single ticket they pay the adult price when they join.
+   - On a single ticket they pay the adult price when they join, by cash or card (their choice on the invite).
 4. The lane owner presses **G** at the lane to start. 2-game tickets and deals play game 1 and then game 2 automatically.
 5. On your turn, a **blue marker with a bouncing arrow** shows your lane's **ball return**, and a **flashing map blip** points to it.
    Press **E** there: your character bends down and picks up a ball.

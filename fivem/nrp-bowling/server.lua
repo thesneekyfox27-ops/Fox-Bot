@@ -23,22 +23,29 @@ local function nameOf(src)
     return ('%s %s.'):format(ci.firstname or '?', (ci.lastname or '?'):sub(1, 1))
 end
 
-local function charge(src, amount, why)
-    if amount <= 0 then return true end
-    local P = QBCore.Functions.GetPlayer(src)
-    if not P then return false end
-    if P.Functions.GetMoney(Config.Account) >= amount then
-        return P.Functions.RemoveMoney(Config.Account, amount, why or 'bowling')
-    end
-    if Config.Account ~= 'bank' and P.Functions.GetMoney('bank') >= amount then
-        return P.Functions.RemoveMoney('bank', amount, why or 'bowling')
-    end
-    return false
+-- the payment method the player picked (cash / card); anything else -> the default
+local function payMethod(m)
+    for _, pm in ipairs(Config.PayMethods) do if pm.id == m then return pm end end
+    for _, pm in ipairs(Config.PayMethods) do if pm.id == Config.Account then return pm end end
+    return Config.PayMethods[1]
 end
 
-local function refund(src, amount)
+-- charge from the chosen account only; returns the account used, or nil + a reason
+local function charge(src, amount, why, method)
+    local pm = payMethod(method)
+    if amount <= 0 then return pm.id end
     local P = QBCore.Functions.GetPlayer(src)
-    if P and amount > 0 then P.Functions.AddMoney(Config.Account, amount, 'bowling-refund') end
+    if not P then return nil end
+    if P.Functions.GetMoney(pm.id) < amount then
+        return nil, ('Not enough %s - that costs $%d.'):format(pm.id == 'bank' and 'in the bank' or 'cash', amount)
+    end
+    if P.Functions.RemoveMoney(pm.id, amount, why or 'bowling') then return pm.id end
+    return nil
+end
+
+local function refund(src, amount, account)
+    local P = QBCore.Functions.GetPlayer(src)
+    if P and amount > 0 then P.Functions.AddMoney(account or Config.Account, amount, 'bowling-refund') end
 end
 
 local function coordsOf(src)
@@ -308,6 +315,7 @@ QBCore.Functions.CreateCallback('nrp-bowling:menu', function(src, cb)
     cb({
         name = Config.AlleyName, tickets = Config.Tickets, gameDeals = Config.GameDeals,
         familyDeals = Config.FamilyDeals, maxPlayers = Config.MaxPlayers, nearby = nearby,
+        payMethods = Config.PayMethods, defaultPay = payMethod(Config.Account).id,
         onLane = playerLane[src], booked = bookings[src] ~= nil,
     })
 end)
@@ -364,14 +372,15 @@ RegisterNetEvent('nrp-bowling:buy', function(order)
         return notify(src, ('Invite %d more friend%s nearby to buy this deal.'):format(seats - 1 - #inv, (seats - 1 - #inv) == 1 and '' or 's'), 'error')
     end
 
-    if not charge(src, price, 'bowling-' .. (order.kind or 'ticket')) then
-        return notify(src, ('That costs $%d.'):format(price), 'error')
+    local account, why = charge(src, price, 'bowling-' .. (order.kind or 'ticket'), order.pay)
+    if not account then
+        return notify(src, why or ('That costs $%d.'):format(price), 'error')
     end
     bookings[src] = {
-        games = games, seats = seats, prepaid = prepaid, ticket = order.ticket,
+        games = games, seats = seats, prepaid = prepaid, ticket = order.ticket, account = account,
         invite = inv, paid = price, label = label, expires = os.time() + Config.BookingSeconds,
     }
-    notify(src, ('Paid $%d - %s. Pick your lane.'):format(price, label), 'success')
+    notify(src, ('Paid $%d by %s - %s. Pick your lane.'):format(price, payMethod(account).label:lower(), label), 'success')
     TriggerClientEvent('nrp-bowling:pickLane', src, freeLanes())
 end)
 
@@ -413,6 +422,7 @@ RegisterNetEvent('nrp-bowling:chooseLane', function(id)
             TriggerClientEvent('nrp-bowling:invited', other, {
                 host = hostName, lane = id, games = b.games, prepaid = b.prepaid,
                 tickets = (not b.prepaid) and Config.Tickets or nil,
+                payMethods = (not b.prepaid) and Config.PayMethods or nil, defaultPay = payMethod(Config.Account).id,
                 seconds = Config.InviteSeconds, defaultTicket = t.id,
             })
         end
@@ -424,12 +434,12 @@ RegisterNetEvent('nrp-bowling:cancelBooking', function()
     local b = bookings[src]
     if not b then return end
     bookings[src] = nil
-    refund(src, b.paid)
+    refund(src, b.paid, b.account)
     notify(src, ('Refunded $%d.'):format(b.paid), 'primary')
 end)
 
 -- answer an invite: prepaid deals are free, otherwise pay your own ticket
-RegisterNetEvent('nrp-bowling:inviteAnswer', function(accept, ticketId)
+RegisterNetEvent('nrp-bowling:inviteAnswer', function(accept, ticketId, pay)
     local src = source
     local inv = invites[src]
     invites[src] = nil
@@ -448,8 +458,9 @@ RegisterNetEvent('nrp-bowling:inviteAnswer', function(accept, ticketId)
     else
         local t = ticketById(ticketId)
         local price = t.prices[lane.games] or t.prices[1]
-        if not charge(src, price, 'bowling-ticket') then
-            return notify(src, ('A %s ticket is $%d.'):format(t.label:lower(), price), 'error')
+        local account, why = charge(src, price, 'bowling-ticket', pay)
+        if not account then
+            return notify(src, why or ('A %s ticket is $%d.'):format(t.label:lower(), price), 'error')
         end
     end
     addToLane(lane, src)
@@ -531,7 +542,7 @@ CreateThread(function()
         for src, b in pairs(bookings) do
             if now > b.expires then
                 bookings[src] = nil
-                refund(src, b.paid)
+                refund(src, b.paid, b.account)
                 notify(src, ('You didn\'t pick a lane - refunded $%d.'):format(b.paid), 'primary')
                 TriggerClientEvent('nrp-bowling:closeMenu', src)
             end

@@ -3,7 +3,13 @@ Config = {}
 Config.AlleyName = 'Neighborhood Lanes'
 
 -- ── Prices (the neon price sheet at the desk) ──────────────────
-Config.Account = 'cash'    -- 'cash' or 'bank' (falls back to bank if cash is short)
+Config.Account = 'cash'    -- default payment picked on the menu: 'cash' or 'bank'
+-- Payment options players choose from (price sheet + invite card).
+-- Remove one to force the other. 'bank' = paying by card.
+Config.PayMethods = {
+    { id = 'cash', label = 'Cash' },
+    { id = 'bank', label = 'Card' },
+}
 
 -- Single tickets: every player pays their own (invited friends pay when they accept)
 Config.Tickets = {

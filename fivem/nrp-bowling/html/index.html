@@ -156,6 +156,10 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: transparen
 .inv.on .box { background: var(--cyan); border-color: var(--cyan); color: #04202a; }
 .inv.off { opacity: .4; cursor: default; }
 .empty { color: var(--muted); font-size: 12px; padding: 8px 2px; }
+.paym { display: flex; gap: 8px; }
+.paym button { flex: 1; padding: 8px; border-radius: 10px; border: 2px solid #3a4a8a; background: #121a3e; color: #fff; font-weight: 800; cursor: pointer; font-size: 12px; letter-spacing: 1px; }
+.paym button.on { border-color: var(--gold); color: var(--gold); box-shadow: 0 0 10px rgba(255,210,63,.35); }
+#invite .paym { margin-bottom: 10px; }
 .total { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--muted); }
 .total b { font-size: 34px; color: #fff; font-family: 'Lanes', Impact, sans-serif; letter-spacing: 1px; }
 .btn { border: none; border-radius: 12px; padding: 12px; cursor: pointer; font-family: 'Lanes', Impact, sans-serif; font-size: 22px; letter-spacing: 2px; background: linear-gradient(var(--hot), #b8123a); color: #fff; box-shadow: 0 0 14px rgba(255,45,85,.6), 0 4px 0 #6c0a22; }
@@ -252,6 +256,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: transparen
             <div class="sel-card" id="oSel"><div class="l">Pick something from the menu</div><div class="d">Tap a price on the left.</div></div>
             <div class="inv-h">INVITE FRIENDS <span id="oSeats"></span></div>
             <div class="invlist" id="oInv"></div>
+            <div class="paym" id="oPayM"></div>
             <div class="total">Total <b id="oTotal">$0</b></div>
             <button class="btn" id="oPay" disabled>PAY &amp; PICK LANE</button>
         </div>
@@ -274,6 +279,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: transparen
     <div class="h disp neon-pink">BOWLING INVITE</div>
     <div class="t" id="ivTxt"></div>
     <div class="tk" id="ivTk"></div>
+    <div class="paym" id="ivPay"></div>
     <div class="row"><button class="btn alt" id="ivNo" style="background:linear-gradient(#3a4a8a,#25306a);color:#fff;box-shadow:none">DECLINE</button><button class="btn" id="ivYes">JOIN</button></div>
     <div class="timer"><i id="ivBar"></i></div>
 </div>
@@ -405,6 +411,20 @@ function renderMenu() {
         label: `Family of ${el.dataset.n} · 1 game each`, desc: `You pay for the family. Invite up to ${+el.dataset.n - 1} family members - free for them.` }));
     renderOrder();
 }
+/* cash / card picker: draws the buttons into el, calls back with the id */
+function payPicker(el, methods, current, onPick) {
+    el.innerHTML = '';
+    const list = arr(methods);
+    el.classList.toggle('hidden', list.length < 2);
+    list.forEach(m => {
+        const b = document.createElement('button');
+        b.textContent = (m.id === 'bank' ? '💳 ' : '💵 ') + String(m.label).toUpperCase();
+        b.className = m.id === current ? 'on' : '';
+        b.onclick = () => { onPick(m.id); el.querySelectorAll('button').forEach(x => x.className = ''); b.className = 'on'; };
+        el.appendChild(b);
+    });
+}
+let payWith = 'cash';
 function pick(s) { sel = s; const max = seatsFor(s) - 1; invited = new Set([...invited].slice(0, Math.max(0, max))); renderMenu(); }
 function renderOrder() {
     if (!sel) { $('oPay').disabled = true; $('oTotal').textContent = '$0'; }
@@ -432,7 +452,7 @@ function renderOrder() {
 $('oPay').onclick = () => {
     if (!sel) return;
     $('oPay').disabled = true; $('oPay').textContent = 'PAYING...';
-    post('buy', { kind: sel.kind, ticket: sel.ticket, games: sel.games, players: sel.players, invite: [...invited] });
+    post('buy', { kind: sel.kind, ticket: sel.ticket, games: sel.games, players: sel.players, invite: [...invited], pay: payWith });
     setTimeout(() => renderOrder(), 2500);
 };
 function closeAll() { $('menu').classList.add('hidden'); $('lanePick').classList.add('hidden'); }
@@ -456,7 +476,7 @@ $('lpAuto').onclick = () => { closeAll(); post('chooseLane', { lane: 'auto' }); 
 $('lpCancel').onclick = () => { closeAll(); post('cancelBooking'); };
 
 /* ---------- invite ---------- */
-let IV = null, ivTicket = null, ivTimer = null;
+let IV = null, ivTicket = null, ivTimer = null, ivPay = 'cash';
 function showInvite(d) {
     IV = d; ivTicket = d.defaultTicket;
     const games = `${d.games} game${d.games > 1 ? 's' : ''}`;
@@ -473,6 +493,9 @@ function showInvite(d) {
         tk.appendChild(b);
     });
     tk.classList.toggle('hidden', !!d.prepaid || arr(d.tickets).length < 2);
+    ivPay = d.defaultPay || 'cash';
+    if (d.prepaid) { $('ivPay').innerHTML = ''; $('ivPay').classList.add('hidden'); }
+    else payPicker($('ivPay'), d.payMethods, ivPay, (id) => { ivPay = id; });
     if (!d.prepaid && arr(d.tickets).length === 1) {
         const t0 = arr(d.tickets)[0], pr0 = (t0.prices || {})[d.games] ?? arr(t0.prices)[d.games - 1];
         $('ivTxt').innerHTML += ` Your ticket is <b>${money(pr0)}</b>.`;
@@ -487,7 +510,7 @@ function showInvite(d) {
 function answer(yes) {
     clearTimeout(ivTimer); ivTimer = null;
     $('invite').classList.add('hidden');
-    post('inviteAnswer', { accept: yes, ticket: ivTicket });
+    post('inviteAnswer', { accept: yes, ticket: ivTicket, pay: ivPay });
 }
 $('ivYes').onclick = () => answer(true);
 $('ivNo').onclick = () => answer(false);
@@ -512,7 +535,8 @@ window.addEventListener('message', (e) => {
         case 'banner': banner(d.name, d.text, d.final); break;
         case 'caption': caption(d); break;
         case 'power': power(d); break;
-        case 'menu': M = d.data; sel = null; invited = new Set(); $('oSel').innerHTML = '<div class="l">Pick something from the menu</div><div class="d">Tap a price on the left.</div>'; renderMenu(); $('menu').classList.remove('hidden'); break;
+        case 'menu': M = d.data; sel = null; invited = new Set();
+            payWith = M.defaultPay || 'cash'; payPicker($('oPayM'), M.payMethods, payWith, (id) => { payWith = id; }); $('oSel').innerHTML = '<div class="l">Pick something from the menu</div><div class="d">Tap a price on the left.</div>'; renderMenu(); $('menu').classList.remove('hidden'); break;
         case 'lanes': renderLanes(d.lanes); break;
         case 'closeMenu': closeAll(); break;
         case 'invite': showInvite(d.data); break;
