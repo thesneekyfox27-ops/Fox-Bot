@@ -1,4 +1,4 @@
-# nrp-bowling v2.1.0
+# nrp-bowling v2.2.0
 
 A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map resource, unchanged).
 
@@ -26,13 +26,17 @@ A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map re
    - On a single ticket they choose adult or junior and pay when they join.
 4. The lane owner presses **G** at the lane to start. 2-game tickets and deals play game 1 and then game 2 automatically.
 5. On your turn, press **E** at the gold marker to pick up your ball.
-6. **Skill-based throw.** Each marker is drawn on the lane and swings by itself. Press **SPACE** to lock each one:
+6. **Skill-based throw.** A **"Your Shot" lane panel** on the left of the screen shows your shot.
+   It's UI only; nothing is drawn on the real lane. Each marker swings by itself. Press **SPACE** to lock each one:
    1. **Position:** a red marker slides along the foul line.
    2. **Direction:** an arrow sweeps left and right down the lane.
    3. **Spin:** a sideways arrow grows left and right. The ball hooks that way late in the lane.
    4. **Power:** stop the meter in the blue for a perfectly accurate ball.
 
    **BACKSPACE** goes back a step, and **C** changes the camera.
+   - The panel shows the predicted path with the hook, and the pins at the end of the lane.
+   - It shows the locked values (position cm, direction °, spin %).
+   - It warns **GUTTER!** if your line leaves the lane.
 7. **Lane monitor:** red and blue player rows, white frame boxes, yellow scores, **Max** possible score, the total, and "Game 1 of 2".
    STRIKE / SPARE / GUTTER banners show, and the winner is announced at the end.
 8. **DELETE** leaves your lane.
