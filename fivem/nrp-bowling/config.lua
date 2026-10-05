@@ -115,13 +115,16 @@ Config.Sounds = {
     strike  = { file = 'strike.mp3',  volume = 0.7 },
     gutter  = { file = 'gutter.mp3',  volume = 0.7 },   -- no pins down
     -- background music inside the building: plays the files in order and loops
-    -- back round (1, 2, 1, 2 ...), fading in/out as you walk in or out
+    -- back round (1, 2, 1, 2 ...), fading in/out as you walk in or out.
+    -- Only plays when you're INSIDE the bowling alley's interior (MLO), so it
+    -- can't be heard from the street. radius/height are just an outer limit.
     ambient = {
         enabled = true,
         files   = { 'ambient1.mp3', 'ambient2.mp3' },
         volume  = 0.25,
         center  = vector3(-157.7, -263.9, 44.0),   -- middle of the alley
-        radius  = 26.0,                             -- you hear it inside this distance
+        radius  = 30.0,                             -- outer limit around the centre
+        insideOnly = true,                          -- must be inside the building's interior
         height  = 6.0,                              -- ...and within this many metres up/down
     },
 }

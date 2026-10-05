@@ -118,10 +118,19 @@ end)
 -- background music inside the alley. The state is re-sent every few seconds:
 -- a message sent before the page has loaded (script restart while you're inside)
 -- is lost, and resending is harmless (the page ignores "on" when already on).
+local alleyInterior = 0
 local function inAlley()
     local A = SND.ambient
-    local p = GetEntityCoords(PlayerPedId())
-    return #(p.xy - A.center.xy) < A.radius and math.abs(p.z - A.center.z) < (A.height or 6.0), #(p.xy - A.center.xy)
+    local ped = PlayerPedId()
+    local p = GetEntityCoords(ped)
+    local d = #(p.xy - A.center.xy)
+    if d > A.radius or math.abs(p.z - A.center.z) > (A.height or 6.0) then return false, d end
+    if A.insideOnly == false then return true, d end
+    -- inside the building = in the same interior as the middle of the alley
+    if alleyInterior == 0 then alleyInterior = GetInteriorAtCoords(A.center.x, A.center.y, A.center.z) end
+    local mine = GetInteriorFromEntity(ped)
+    if alleyInterior == 0 then return mine ~= 0, d end   -- map not loaded yet: any interior here counts
+    return mine == alleyInterior, d
 end
 
 local function sendAmbient(on)
@@ -139,7 +148,7 @@ CreateThread(function()
             inside, lastSend = now, GetGameTimer()
             sendAmbient(inside)
         end
-        Wait(1000)
+        Wait(500)
     end
 end)
 
@@ -157,6 +166,7 @@ RegisterCommand('bowlsound', function()
         local inside, d = inAlley()
         print(('[nrp-bowling] played the strike sound. Music area: %.1f m from its centre (radius %.1f) - %s.'):format(
             d, A.radius, inside and 'you are inside, music should be on' or 'you are OUTSIDE it, so no music'))
+        print(('[nrp-bowling] interior: alley %d, you %d'):format(alleyInterior, GetInteriorFromEntity(PlayerPedId())))
         if inside then sendAmbient(true) end
     end
     notify('Playing a test sound - see F8 for details.', 'primary')
