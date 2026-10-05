@@ -14,7 +14,6 @@ local ball     = nil
 local cam      = nil
 local lastSeq  = 0
 local deskOpen = false
-local ballPrompt = false
 
 local B = Config.Ball
 
@@ -190,8 +189,8 @@ end
 -- ------------------------------------------------------------
 -- Bowler's stance: both hands holding the ball at the chest (no weapon needed,
 -- so no T-pose). Release: a low crouching put-down, like letting the ball go.
-local STANCE  = { dict = 'anim@heists@box_carry@', anim = 'idle' }
-local RELEASE = { dict = 'pickup_object', anim = 'putdown_low' }
+local STANCE  = Config.Anims.stance
+local RELEASE = Config.Anims.release
 
 local function stance(ped)
     if not IsEntityPlayingAnim(ped, STANCE.dict, STANCE.anim, 3) then
@@ -299,8 +298,8 @@ local function roll(g, offset, aim, spin, power, err)
     -- step up to the line, then the crouching release
     camAt(along(g, -0.6, 1.2, g.laneZ + 1.2), along(g, 2.0, offset, g.laneZ + 0.2))
     placePed(ped, g, 0.0, 0.0, 0.0)
-    TaskPlayAnim(ped, loadDict(RELEASE.dict), RELEASE.anim, 4.0, -4.0, 1400, 0, 0, false, false, false)
-    Wait(550)   -- ball leaves the hand at the bottom of the crouch
+    TaskPlayAnim(ped, loadDict(RELEASE.dict), RELEASE.anim, 4.0, -4.0, RELEASE.duration or 1500, 0, 0, false, false, false)
+    Wait(RELEASE.releaseAt or 600)   -- ball leaves the hand at the bottom of the swing
     DetachEntity(ball, true, false)
     local start = along(g, 1.2, offset, g.laneZ + 0.13)
     SetEntityCoordsNoOffset(ball, start.x, start.y, start.z, false, false, false)
@@ -536,7 +535,6 @@ RegisterNetEvent('nrp-bowling:yourTurn', function(id, t)
     updateControls()
     if t.roll == 1 then
         PlaySoundFrontend(-1, 'Text_Arrive_Tone', 'Phone_SoundSet_Default', true)
-        notify(('Your turn - frame %d'):format(t.frame), 'success')
     end
 end)
 
@@ -587,17 +585,15 @@ CreateThread(function()
                 local fz = g.laneZ   -- lane floor height (the old marker was a metre under it)
                 DrawMarker(1, g.A.x, g.A.y, fz - 0.05, 0, 0, 0, 0, 0, 0, 1.1, 1.1, 0.35, 255, 63, 134, 110, false, false, 2, false, nil, nil, false)
                 DrawMarker(25, g.A.x, g.A.y, fz + 0.03, 0, 0, 0, 0, 0, 0, 1.3, 1.3, 1.0, 255, 210, 63, 200, false, false, 2, true, nil, nil, false)
-                DrawMarker(0, g.A.x, g.A.y, fz + 1.9, 0, 0, 0, 0, 0, 0, 0.35, 0.35, 0.35, 255, 210, 63, 220, true, true, 2, false, nil, nil, false)
                 local d2 = #(GetEntityCoords(ped).xy - g.A.xy)
+                if d2 > 1.3 then
+                    DrawMarker(0, g.A.x, g.A.y, fz + 2.6, 0, 0, 0, 0, 0, 0, 0.3, 0.3, 0.3, 255, 210, 63, 200, true, true, 2, false, nil, nil, false)
+                end
                 if d2 < 1.3 then
-                    if not ballPrompt then ui({ action = 'prompt', key = 'E', text = 'Pick up your ball' }); ballPrompt = true end
                     if IsControlJustReleased(0, 38) then
-                        ui({ action = 'prompt' }); ballPrompt = false
                         clearTurnBlip()
                         aimLoop()
                     end
-                elseif ballPrompt then
-                    ui({ action = 'prompt' }); ballPrompt = false
                 end
             elseif phase == 'lobby' then
                 local owner = false

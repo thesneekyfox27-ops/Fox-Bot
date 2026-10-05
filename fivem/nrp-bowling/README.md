@@ -1,4 +1,4 @@
-# nrp-bowling v2.5.0
+# nrp-bowling v2.5.1
 
 A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map resource, unchanged).
 
@@ -40,14 +40,16 @@ A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map re
    - While aiming, the bowler waits a couple of steps back on the approach.
      The camera sits low in front of them with a wide lens, so the red marker, the arrows and the pins are all on screen.
      **C** turns it round to face the bowler.
-   - When you lock in power, the bowler steps up to the line, crouches and lets the ball go.
+   - When you lock in power, the bowler steps up to the line and swings the ball through underhand.
+     GTA has no real bowling animation, so this is the closest built-in one (`Config.Anims` lets you swap in a custom one).
    - After every ball you're put back on your spot on the lane, facing the pins. Press **E** to pick up the ball again.
    - Your character stands still in a two-hand bowler's stance the whole time; only the ball's start spot moves.
      On release they crouch and let the ball go.
    - While aiming, the bowler waits a couple of steps back on the approach.
      The camera sits low in front of them with a wide lens, so the red marker, the arrows and the pins are all on screen.
      **C** turns it round to face the bowler.
-   - When you lock in power, the bowler steps up to the line, crouches and lets the ball go.
+   - When you lock in power, the bowler steps up to the line and swings the ball through underhand.
+     GTA has no real bowling animation, so this is the closest built-in one (`Config.Anims` lets you swap in a custom one).
    - After every ball you're put back on your spot on the lane, facing the pins. Press **E** to pick up the ball again.
 7. **Lane monitor:** red and blue player rows, white frame boxes, yellow scores, **Max** possible score, the total, and "Game 1 of 2".
    STRIKE / SPARE / GUTTER banners show, and the winner is announced at the end.

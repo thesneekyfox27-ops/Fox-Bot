@@ -44,6 +44,15 @@ Config.Target = 'auto'     -- 'auto' (ox_target, then qb-target) or 'off' (press
 Config.TurnTimeout  = 120  -- seconds to bowl before you're removed (AFK)
 Config.LeaveDistance = 45.0 -- walk this far from your lane and you leave the game
 
+-- ── Animations ─────────────────────────────────────────────────
+-- GTA has no real bowling animation, so these are the closest built-in ones.
+-- If you get a custom bowling animation resource, put its dict/anim here.
+Config.Anims = {
+    stance  = { dict = 'anim@heists@box_carry@',        anim = 'idle' },   -- both hands holding the ball at the chest
+    release = { dict = 'anim@heists@narcotics@trash',    anim = 'throw_b',  -- low underhand swing forward
+                duration = 1500, releaseAt = 620 },                       -- ms: ball leaves the hand at releaseAt
+}
+
 -- ── Ball physics ───────────────────────────────────────────────
 Config.Ball = {
     minSpeed   = 6.5,   -- m/s at 0% power
