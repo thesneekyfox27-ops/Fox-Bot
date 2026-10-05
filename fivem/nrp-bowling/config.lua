@@ -104,13 +104,16 @@ Config.Blip = { sprite = 103, color = 27, scale = 0.75 }
 -- ── Sounds ──────────────────────────────────────────────────────
 -- Files live in html/sounds/. Drop in your own mp3 with the same name to swap one.
 -- Lane sounds are heard by everyone near that lane (quieter further away).
+-- The clips are all levelled to the same loudness, so at 0.7 each one sits a
+-- little above the background music without being loud. Turn one up/down here.
 Config.Sounds = {
     volume       = 1.0,     -- master volume for everything below (0.0 - 1.0)
     hearDistance = 25.0,    -- lane sounds fade out to nothing at this distance
     release = { file = 'release.mp3', volume = 0.7 },   -- ball leaves the hand
-    pins    = { file = 'pins.mp3',    volume = 0.8 },   -- ball hits the pins
+    pins    = { file = 'pins.mp3',    volume = 0.7 },   -- ball hits the pins
     spare   = { file = 'spare.mp3',   volume = 0.7 },
-    strike  = { file = 'strike.mp3',  volume = 0.8 },
+    strike  = { file = 'strike.mp3',  volume = 0.7 },
+    gutter  = { file = 'gutter.mp3',  volume = 0.7 },   -- no pins down
     -- background music inside the building: plays the files in order and loops
     -- back round (1, 2, 1, 2 ...), fading in/out as you walk in or out
     ambient = {

@@ -523,7 +523,8 @@ RegisterNetEvent('nrp-bowling:roll', function(knocked)
     local call = Scoring.callout(st.standing, knocked)
     banner(lane, cur.name, call, { knocked = knocked })
     if call == 'STRIKE!' then TriggerClientEvent('nrp-bowling:sfx', -1, 'strike', lane.id)
-    elseif call == 'SPARE!' then TriggerClientEvent('nrp-bowling:sfx', -1, 'spare', lane.id) end
+    elseif call == 'SPARE!' then TriggerClientEvent('nrp-bowling:sfx', -1, 'spare', lane.id)
+    elseif call == 'GUTTER' then TriggerClientEvent('nrp-bowling:sfx', -1, 'gutter', lane.id) end
 
     local after = Scoring.state(cur.rolls, Config.Frames)
     if after.done or after.frame ~= st.frame then

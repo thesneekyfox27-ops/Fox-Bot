@@ -1,4 +1,4 @@
-# nrp-bowling v2.8.1
+# nrp-bowling v2.8.2
 
 A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map resource, unchanged).
 
@@ -63,6 +63,8 @@ All sound files are in `html/sounds/`. To swap one, drop in your own mp3 with th
 - `release.mp3`: when the ball leaves your hand.
 - `pins.mp3`: when the ball hits the pins.
 - `spare.mp3` and `strike.mp3`: play on a spare or strike.
+- `gutter.mp3`: plays when a ball knocks down no pins.
+- All of these clips are levelled to the same loudness. At volume 0.7 they sit a little above the background music (0.25).
 - `ambient1.mp3` and `ambient2.mp3`: background music inside the building.
   They play one after the other and loop back round, fading in as you walk in and out as you leave.
   `Config.Sounds.ambient` sets the area (`center` / `radius`) and the volume.
