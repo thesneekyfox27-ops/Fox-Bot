@@ -1,4 +1,4 @@
-# nrp-bowling v2.6.1
+# nrp-bowling v2.7.0
 
 A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map resource, unchanged).
 
@@ -10,10 +10,11 @@ A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map re
    ensure nrp-bowling
    ```
 3. **Place the staff ped in game:** as an admin, stand where she should be (facing where customers stand) and type **`/bowlstaff`**.
-   She moves there for everyone right away and the spot is saved (`staff.json`), so it survives restarts.
+   She moves there for everyone right away and the spot is saved on the server (resource KVP, backed up to `staff.json`).
+   It survives restarts and dropping in a new version of the zip.
    (`/bowlcoords` still prints your position if you'd rather put it in `Config.Staff.coords`.)
 4. **Place each lane's ball return:** as an admin, stand at the ball return for a lane and type **`/bowlreturn 1`** (the lane number).
-   With no number it picks the lane whose circle is closest. Spots are saved to `returns.json`.
+   With no number it picks the lane whose circle is closest. Spots are saved the same way (KVP + `returns.json`), so they stay after restarts and updates.
    Lanes you skip use a guess (behind the circle, between the lane pair; see `Config.ReturnBack` / `Config.ReturnSide`).
 
 ## How it works
@@ -31,8 +32,8 @@ A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map re
    - On a single ticket they pay the adult price when they join, by cash or card (their choice on the invite).
 4. The lane owner presses **G** at the lane to start. 2-game tickets and deals play game 1 and then game 2 automatically.
 5. On your turn, a **blue marker with a bouncing arrow** shows your lane's **ball return**, and a **flashing map blip** points to it.
-   Press **E** there: your character bends down and picks up a ball.
-   Then **walk the ball** (no running, jumping or crouching) to the **glowing ring** on the lane and press **E** to start aiming.
+   Press **E** there: your character bends down and picks up a ball in their right hand.
+   Then **walk the ball** at your side (no running, jumping or crouching) to the **glowing ring** on the lane and press **E** to start aiming.
    After every ball you're free to move again; go back to the ball return for your next one.
 6. **Skill-based throw.** The markers are painted on the real lane, like the video, and each one swings by itself.
    Press **SPACE** to lock each one:
@@ -41,7 +42,7 @@ A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map re
    3. **Spin:** a sideways arrow on the lane; the ball hooks that way late in the lane.
    4. **Power:** stop the meter in the blue for a perfectly accurate ball.
    **BACKSPACE** goes back a step, and **C** changes the camera.
-   - Your character stands still in a two-hand bowler's stance the whole time; only the ball's start spot moves.
+   - Your character stands still holding the ball the whole time; only the ball's start spot moves.
      On release they swing the ball through underhand.
    - While aiming, the bowler waits a couple of steps back on the approach.
      The camera sits low in front of them with a wide lens, so the red marker, the arrows and the pins are all on screen.
@@ -49,7 +50,8 @@ A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map re
      If C is your crouch key, the crouch is cancelled straight away while you bowl.
    - When you lock in power, the bowler walks up to the line and swings the ball through underhand.
      GTA has no real bowling animation, so this is the closest built-in one.
-     Set `Config.AnimPreset = 'original'` for loaf_bowling's grenade animations, or put a custom animation in `Config.Anims`.
+     The default is `Config.AnimPreset = 'original'` (loaf_bowling's animations, ball in the right hand).
+     Set it to `'bowling'` for a two-hand hold and underhand swing, or put a custom animation in `Config.Anims`.
    - **BACKSPACE** on the first step steps you out of the circle, still holding the ball.
    - After every ball you're left at the line; walk back to the ball return for the next one.
 7. **Lane monitor:** red and blue player rows, white frame boxes, yellow scores, **Max** possible score, the total, and "Game 1 of 2".

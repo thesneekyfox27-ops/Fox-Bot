@@ -57,13 +57,28 @@ end
 --  Staff ped position (admins move her in game with /bowlstaff;
 --  saved to staff.json so it survives restarts)
 -- ------------------------------------------------------------
+-- Saved spots live in the server's resource KVP store, which survives restarts
+-- AND replacing the resource folder with a new zip. The .json file is a backup
+-- copy (and is read once to migrate older saves).
+local function loadSaved(key, file)
+    local raw = GetResourceKvpString(key)
+    if not raw or raw == '' then raw = LoadResourceFile(GetCurrentResourceName(), file) end
+    local ok, d = pcall(json.decode, raw or '')
+    if ok and type(d) == 'table' then return d end
+end
+
+local function saveSpot(key, file, data)
+    local raw = json.encode(data)
+    SetResourceKvp(key, raw)
+    SaveResourceFile(GetCurrentResourceName(), file, raw, -1)
+end
+
 local STAFF_FILE = 'staff.json'
 local staffPos = Config.Staff.coords
 
 do
-    local raw = LoadResourceFile(GetCurrentResourceName(), STAFF_FILE)
-    local ok, d = pcall(json.decode, raw or '')
-    if ok and type(d) == 'table' and d.x then staffPos = vector4(d.x, d.y, d.z, d.w or 0.0) end
+    local d = loadSaved('staff', STAFF_FILE)
+    if d and d.x then staffPos = vector4(d.x, d.y, d.z, d.w or 0.0) end
 end
 
 local function staffPayload() return { x = staffPos.x, y = staffPos.y, z = staffPos.z, w = staffPos.w } end
@@ -82,7 +97,7 @@ RegisterCommand('bowlstaff', function(src)
     local ped = GetPlayerPed(src)
     local c = GetEntityCoords(ped)
     staffPos = vector4(c.x, c.y, c.z, (GetEntityHeading(ped) + 180.0) % 360.0)   -- she faces you
-    SaveResourceFile(GetCurrentResourceName(), STAFF_FILE, json.encode(staffPayload()), -1)
+    saveSpot('staff', STAFF_FILE, staffPayload())
     TriggerClientEvent('nrp-bowling:staffPos', -1, staffPayload())
     notify(src, 'Bowling staff moved here and saved. She faces the way you came from.', 'success')
 end, false)
@@ -96,9 +111,8 @@ local RETURN_FILE = 'returns.json'
 local returns = {}
 
 do
-    local raw = LoadResourceFile(GetCurrentResourceName(), RETURN_FILE)
-    local ok, d = pcall(json.decode, raw or '')
-    if ok and type(d) == 'table' then
+    local d = loadSaved('returns', RETURN_FILE)
+    if d then
         for k, v in pairs(d) do
             local id = tonumber(k)
             if id and type(v) == 'table' and v.x then returns[id] = { x = v.x, y = v.y, z = v.z } end
@@ -129,7 +143,7 @@ RegisterCommand('bowlreturn', function(src, args)
     end
     if not Config.Lanes[id] then return notify(src, 'No such lane.', 'error') end
     returns[id] = { x = c.x, y = c.y, z = c.z - 1.0 }   -- floor height
-    SaveResourceFile(GetCurrentResourceName(), RETURN_FILE, json.encode(returnsPayload()), -1)
+    saveSpot('returns', RETURN_FILE, returnsPayload())
     TriggerClientEvent('nrp-bowling:returns', -1, returnsPayload())
     notify(src, ('Ball return for lane %d set here and saved.'):format(id), 'success')
 end, false)

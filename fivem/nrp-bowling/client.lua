@@ -242,6 +242,7 @@ local CARRY  = Config.Anims.carry
 
 -- walking with the ball: upper-body hold so the legs still walk
 local function carry(ped)
+    if not CARRY then return end   -- no carry anim: ball just sits in your hand
     if not IsEntityPlayingAnim(ped, CARRY.dict, CARRY.anim, 3) then
         TaskPlayAnim(ped, loadDict(CARRY.dict), CARRY.anim, 4.0, -4.0, -1, CARRY.flag or 49, 0, false, false, false)
     end
@@ -779,6 +780,7 @@ end)
 local staff = nil
 local usingTarget = false
 local staffPos = Config.Staff.coords   -- the server sends the saved spot (/bowlstaff)
+local staffSynced = false              -- don't spawn her until we know the saved spot
 
 local function addTarget(ped)
     local mode = Config.Target
@@ -845,7 +847,7 @@ CreateThread(function()
         local sleep = 1000
         local c = staffPos
         local d = #(GetEntityCoords(PlayerPedId()) - vector3(c.x, c.y, c.z))
-        if d < Config.Staff.spawnDistance then
+        if d < Config.Staff.spawnDistance and staffSynced then
             if not (staff and DoesEntityExist(staff)) then spawnStaff() end
         elseif staff and d > Config.Staff.spawnDistance + 30.0 then
             del(staff); staff = nil
@@ -863,6 +865,7 @@ end)
 
 RegisterNetEvent('nrp-bowling:staffPos', function(p)
     staffPos = vector4(p.x, p.y, p.z, p.w)
+    staffSynced = true
     if staff then del(staff); staff = nil end   -- respawns at the new spot on the next check
 end)
 
@@ -876,9 +879,16 @@ RegisterNetEvent('nrp-bowling:returns', function(list)
 end)
 
 CreateThread(function()
+    -- ask for the saved staff / ball return spots; keep asking until the server
+    -- answers (it may still be starting after a restart), then fall back to config
     Wait(1500)
-    TriggerServerEvent('nrp-bowling:staffPos')
-    TriggerServerEvent('nrp-bowling:returns')
+    for _ = 1, 10 do
+        TriggerServerEvent('nrp-bowling:staffPos')
+        TriggerServerEvent('nrp-bowling:returns')
+        Wait(2000)
+        if staffSynced then return end
+    end
+    staffSynced = true
 end)
 
 RegisterCommand('bowlcoords', function()

@@ -52,10 +52,10 @@ Config.LeaveDistance = 45.0 -- walk this far from your lane and you leave the ga
 
 -- ── Animations ─────────────────────────────────────────────────
 -- GTA has no real bowling animation, so every bowling script borrows one.
---   'bowling'  = two-hand hold at the waist + low underhand swing (default)
---   'original' = what loaf_bowling used: grenade aim pose + overhand grenade lob
+--   'original' = what loaf_bowling used: ball in the right hand at your side (default)
+--   'bowling'  = two-hand hold at the waist + low underhand swing
 -- Or put any dict/anim of your own (e.g. a custom bowling animation) in Config.Anims.
-Config.AnimPreset = 'bowling'
+Config.AnimPreset = 'original'
 
 local ANIM_PRESETS = {
     bowling = {
@@ -65,14 +65,16 @@ local ANIM_PRESETS = {
     original = {
         stance  = { dict = 'weapons@projectile@', anim = 'aimlive_l', flag = 17, ballBone = 57005, ballOffset = vector3(0.09, 0.03, -0.02), ballRot = vector3(-78.0, 13.0, 28.0) },
         release = { dict = 'weapons@projectile@', anim = 'throw_l_fb_stand', duration = 900, releaseAt = 150 },
+        carry   = false,   -- walk normally, ball in your right hand at your side
     },
 }
-Config.Anims = ANIM_PRESETS[Config.AnimPreset] or ANIM_PRESETS.bowling
+Config.Anims = ANIM_PRESETS[Config.AnimPreset] or ANIM_PRESETS.original
 
 -- Grabbing the ball off the ball return, then carrying it to the circle
--- (flag 49 = upper body only + loop, so you can walk while holding it)
+-- (flag 49 = upper body only + loop, so you can walk while holding it;
+--  carry = false walks normally with the ball in hand)
 Config.Anims.pickup = Config.Anims.pickup or { dict = 'anim@mp_snowball', anim = 'pickup_snowball', duration = 1100, grabAt = 550 }
-Config.Anims.carry  = Config.Anims.carry  or { dict = 'anim@heists@box_carry@', anim = 'idle', flag = 49 }
+if Config.Anims.carry == nil then Config.Anims.carry = { dict = 'anim@heists@box_carry@', anim = 'idle', flag = 49 } end
 
 -- ── Ball physics ───────────────────────────────────────────────
 Config.Ball = {
