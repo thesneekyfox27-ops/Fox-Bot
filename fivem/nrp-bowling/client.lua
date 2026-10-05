@@ -7,7 +7,7 @@ local QBCore = exports['qb-core']:GetCoreObject()
 
 local myLane   = nil    -- lane id we're on
 local laneView = nil    -- last score sheet from the server
-local phase    = nil    -- nil | 'lobby' | 'wait' | 'pickup' | 'aim' | 'rolling'
+local phase    = nil    -- nil | 'lobby' | 'wait' | 'pickup' | 'carry' | 'aim' | 'rolling'
 local turn     = nil    -- { frame, roll, standing, reset, frames }
 local rack     = {}     -- [i] = { obj, spot, standing }
 local ball     = nil
@@ -67,6 +67,23 @@ end
 local function along(g, fwd, side, z)
     local p = g.A.xy + g.dir * fwd + g.lat * side
     return vector3(p.x, p.y, z or g.laneZ)
+end
+
+-- where you grab your ball: saved spot (/bowlreturn) > Config ret > a guess
+local returns = {}
+local function returnSpot(id)
+    if returns[id] then return returns[id] end
+    local L = Config.Lanes[id]
+    if L.ret then return L.ret end
+    local g = geo(id)
+    local partner = Config.Lanes[(id % 2 == 1) and id + 1 or id - 1]
+    local side = 1.0
+    if partner then
+        local rel = vector2(partner.approach.x, partner.approach.y) - g.A.xy
+        side = (rel.x * g.lat.x + rel.y * g.lat.y) >= 0 and 1.0 or -1.0
+    end
+    local p = g.A.xy - g.dir * Config.ReturnBack + g.lat * (side * Config.ReturnSide)
+    return vector3(p.x, p.y, g.A.z)
 end
 
 local function rotate(v, deg)
@@ -220,6 +237,29 @@ local function holdBall(ped)
     AttachEntityToEntity(ball, ped, bone, o.x, o.y, o.z, r.x, r.y, r.z, false, true, false, true, 0, true)
 end
 
+local PICKUP = Config.Anims.pickup
+local CARRY  = Config.Anims.carry
+
+-- walking with the ball: upper-body hold so the legs still walk
+local function carry(ped)
+    if not IsEntityPlayingAnim(ped, CARRY.dict, CARRY.anim, 3) then
+        TaskPlayAnim(ped, loadDict(CARRY.dict), CARRY.anim, 4.0, -4.0, -1, CARRY.flag or 49, 0, false, false, false)
+    end
+end
+
+-- bend down at the ball return, the ball comes up into your hands
+local function grabBall(ped, spot)
+    local c = GetEntityCoords(ped)
+    SetEntityHeading(ped, headingOf(spot.x - c.x, spot.y - c.y))
+    FreezeEntityPosition(ped, true)
+    TaskPlayAnim(ped, loadDict(PICKUP.dict), PICKUP.anim, 4.0, -4.0, PICKUP.duration or 1100, 0, 0, false, false, false)
+    Wait(PICKUP.grabAt or 550)
+    holdBall(ped)
+    Wait(math.max(0, (PICKUP.duration or 1100) - (PICKUP.grabAt or 550)))
+    FreezeEntityPosition(ped, false)
+    carry(ped)
+end
+
 -- flat shapes painted on the lane (both windings so they show from any angle)
 local function tri(p1, p2, p3, r, g, b, a)
     DrawPoly(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, p3.x, p3.y, p3.z, r, g, b, a)
@@ -305,8 +345,19 @@ local function roll(g, offset, aim, spin, power, err)
     phase = 'rolling'
     updateControls()
 
-    -- step up to the line, then the crouching release
+    -- walk up to the line holding the ball, then the release
     camAt(along(g, -0.6, 1.2, g.laneZ + 1.2), along(g, 2.0, offset, g.laneZ + 0.2))
+    local line = along(g, 0.0, 0.0, g.A.z)
+    FreezeEntityPosition(ped, false)
+    TaskGoStraightToCoord(ped, line.x, line.y, line.z, 1.0, 2500, headingOf(g.dir.x, g.dir.y), 0.05)
+    carry(ped)
+    local walkEnd = GetGameTimer() + 2500
+    while GetGameTimer() < walkEnd and #(GetEntityCoords(ped).xy - line.xy) > 0.25 do
+        Wait(0)
+        DisableAllControlActions(0)
+        carry(ped)
+    end
+    FreezeEntityPosition(ped, true)
     placePed(ped, g, 0.0, 0.0, 0.0)
     TaskPlayAnim(ped, loadDict(RELEASE.dict), RELEASE.anim, 4.0, -4.0, RELEASE.duration or 1500, 0, 0, false, false, false)
     Wait(RELEASE.releaseAt or 600)   -- ball leaves the hand at the bottom of the swing
@@ -468,7 +519,7 @@ local function aimLoop()
         -- BACKSPACE: back one step (or put the ball down)
         elseif IsDisabledControlJustPressed(0, 177) then
             if step > 1 then setStep(step - 1)
-            else phase = 'pickup'; break end
+            else phase = 'carry'; break end
         -- C or V: cycle the camera (your crouch is undone right after - see below)
         elseif IsDisabledControlJustPressed(0, 26) or IsDisabledControlJustPressed(0, 0) then
             camMode = camMode % 3 + 1
@@ -492,12 +543,12 @@ local function aimLoop()
         end
     end
 
-    if phase == 'pickup' then
+    if phase == 'carry' then
+        -- stepped out of the circle: still holding the ball
         ClearPedTasks(ped)
         uncrouch(ped)
-        placePed(ped, g, 0.0, 0.0, 0.0)   -- back on your spot
-        if ball then DetachEntity(ball, true, false); del(ball); ball = nil end
         FreezeEntityPosition(ped, false)
+        carry(ped)
         camOff()
         ui({ action = 'caption' })
         ui({ action = 'power', hide = true, value = 0 })
@@ -524,7 +575,7 @@ RegisterNetEvent('nrp-bowling:lane', function(v)
     end
     if phase == 'lobby' and v.status == 'playing' then phase = 'wait' end
     if v.status == 'done' and phase ~= 'rolling' then phase = 'wait' end
-    if phase ~= 'aim' and phase ~= 'rolling' and phase ~= 'pickup' then updateControls() end
+    if phase ~= 'aim' and phase ~= 'rolling' and phase ~= 'pickup' and phase ~= 'carry' then updateControls() end
 end)
 
 local turnBlip = nil
@@ -535,7 +586,7 @@ end
 
 local function setTurnBlip(id)
     clearTurnBlip()
-    local a = Config.Lanes[id].approach
+    local a = returnSpot(id)
     turnBlip = AddBlipForCoord(a.x, a.y, a.z)
     SetBlipSprite(turnBlip, 103)
     SetBlipColour(turnBlip, 48)
@@ -561,7 +612,7 @@ end)
 
 RegisterNetEvent('nrp-bowling:turnOver', function()
     SetTimeout(2500, function()
-        if phase ~= 'aim' and phase ~= 'pickup' then
+        if phase ~= 'aim' and phase ~= 'pickup' and phase ~= 'carry' then
             clearRack()
             camOff()
             ClearPedTasks(PlayerPedId())
@@ -602,19 +653,35 @@ CreateThread(function()
             local dist = #(GetEntityCoords(ped) - g.A)
 
             if phase == 'pickup' then
+                -- 1) grab a ball from the ball return
                 sleep = 0
-                local fz = g.laneZ   -- lane floor height (the old marker was a metre under it)
+                local r = returnSpot(myLane)
+                DrawMarker(25, r.x, r.y, r.z + 0.03, 0, 0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 63, 200, 255, 200, false, false, 2, true, nil, nil, false)
+                local d2 = #(GetEntityCoords(ped).xy - r.xy)
+                if d2 > 1.4 then
+                    DrawMarker(0, r.x, r.y, r.z + 2.4, 0, 0, 0, 0, 0, 0, 0.3, 0.3, 0.3, 63, 200, 255, 200, true, true, 2, false, nil, nil, false)
+                elseif IsControlJustReleased(0, 38) and not IsPedInAnyVehicle(ped, false) then
+                    grabBall(ped, r)
+                    phase = 'carry'
+                    updateControls()
+                end
+            elseif phase == 'carry' then
+                -- 2) walk the ball to the circle (no running, jumping or crouching)
+                sleep = 0
+                for _, c in ipairs({ 21, 22, 24, 25, 36, 44, 140, 141, 142 }) do DisableControlAction(0, c, true) end
+                if IsControlJustPressed(0, 26) or IsDisabledControlJustPressed(0, 36) then uncrouch(ped) end
+                if GetPedStealthMovement(ped) then uncrouch(ped) end
+                if not ball or not DoesEntityExist(ball) then holdBall(ped) end
+                carry(ped)
+                local fz = g.laneZ
                 DrawMarker(1, g.A.x, g.A.y, fz - 0.05, 0, 0, 0, 0, 0, 0, 1.1, 1.1, 0.35, 255, 63, 134, 110, false, false, 2, false, nil, nil, false)
                 DrawMarker(25, g.A.x, g.A.y, fz + 0.03, 0, 0, 0, 0, 0, 0, 1.3, 1.3, 1.0, 255, 210, 63, 200, false, false, 2, true, nil, nil, false)
                 local d2 = #(GetEntityCoords(ped).xy - g.A.xy)
                 if d2 > 1.3 then
                     DrawMarker(0, g.A.x, g.A.y, fz + 2.6, 0, 0, 0, 0, 0, 0, 0.3, 0.3, 0.3, 255, 210, 63, 200, true, true, 2, false, nil, nil, false)
-                end
-                if d2 < 1.3 then
-                    if IsControlJustReleased(0, 38) then
-                        clearTurnBlip()
-                        aimLoop()
-                    end
+                elseif IsControlJustReleased(0, 38) then
+                    clearTurnBlip()
+                    aimLoop()
                 end
             elseif phase == 'lobby' then
                 local owner = false
@@ -799,9 +866,19 @@ RegisterNetEvent('nrp-bowling:staffPos', function(p)
     if staff then del(staff); staff = nil end   -- respawns at the new spot on the next check
 end)
 
+RegisterNetEvent('nrp-bowling:returns', function(list)
+    returns = {}
+    for k, v in pairs(list or {}) do
+        local id = tonumber(k)
+        if id then returns[id] = vector3(v.x, v.y, v.z) end
+    end
+    if turnBlip and myLane and (phase == 'pickup' or phase == 'carry') then setTurnBlip(myLane) end
+end)
+
 CreateThread(function()
     Wait(1500)
     TriggerServerEvent('nrp-bowling:staffPos')
+    TriggerServerEvent('nrp-bowling:returns')
 end)
 
 RegisterCommand('bowlcoords', function()

@@ -292,10 +292,11 @@ const CONTROLS = {
     lobbyOwner: (x) => ({ t: `LANE ${x.lane}`, s: 'WAITING TO START', rows: [[K('G'), 'Start the game (at your lane)'], [K('DEL'), 'Leave lane']], note: `${x.players} bowler${x.players === 1 ? '' : 's'} on the lane. Invited friends can still accept.` }),
     lobby:      (x) => ({ t: `LANE ${x.lane}`, s: 'WAITING TO START', rows: [[K('DEL'), 'Leave lane']], note: 'Waiting for the lane owner to start the game.' }),
     wait:       (x) => ({ t: `LANE ${x.lane}`, s: 'UP NOW', rows: [[K('DEL'), 'Leave lane']], note: `${esc(x.who)} is bowling.` }),
-    pickup:     (x) => ({ t: `FRAME ${x.frame}`, s: `BALL ${x.roll} - ${x.standing} PINS UP`, rows: [[K('E'), 'Pick up your ball at the marker']], note: "It's your turn! Walk to the glowing marker on your lane." }),
+    pickup:     (x) => ({ t: `FRAME ${x.frame}`, s: `BALL ${x.roll} - ${x.standing} PINS UP`, rows: [[K('E'), 'Grab a ball from the ball return']], note: "It's your turn! Go to the ball return (glowing ball marker)." }),
+    carry:      (x) => ({ t: `FRAME ${x.frame}`, s: `BALL ${x.roll} - ${x.standing} PINS UP`, rows: [[K('E'), 'Step into the circle and bowl']], note: 'Carry your ball to the glowing circle on your lane.' }),
     aim:        (x) => ({ t: `FRAME ${x.frame}`, s: `BALL ${x.roll} - ${x.standing} PINS UP`, rows: [
                     [K('SPACE'), 'Lock in position, direction, spin, power'],
-                    [K('BKSP'), 'Back a step / put the ball down'],
+                    [K('BKSP'), 'Back a step / step out of the circle'],
                     [K('C') + K('V'), 'Cycle camera (3 views)']],
                   note: 'Each marker swings on its own - time your SPACE press. Spin hooks the ball late in the lane.' }),
     rolling:    (x) => ({ t: `FRAME ${x.frame}`, s: 'ROLLING...', rows: [], note: 'Watch it go!' }),

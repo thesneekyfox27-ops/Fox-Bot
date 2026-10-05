@@ -63,6 +63,11 @@ local ANIM_PRESETS = {
 }
 Config.Anims = ANIM_PRESETS[Config.AnimPreset] or ANIM_PRESETS.bowling
 
+-- Grabbing the ball off the ball return, then carrying it to the circle
+-- (flag 49 = upper body only + loop, so you can walk while holding it)
+Config.Anims.pickup = Config.Anims.pickup or { dict = 'anim@mp_snowball', anim = 'pickup_snowball', duration = 1100, grabAt = 550 }
+Config.Anims.carry  = Config.Anims.carry  or { dict = 'anim@heists@box_carry@', anim = 'idle', flag = 49 }
+
 -- ── Ball physics ───────────────────────────────────────────────
 Config.Ball = {
     minSpeed   = 6.5,   -- m/s at 0% power
@@ -97,6 +102,13 @@ Config.RackBalls = {
     vector3(-141.0329, -252.2919, 43.22288), vector3(-141.1889, -252.734, 43.22288),
     vector3(-141.33, -253.1166, 43.22288),   vector3(-141.4617, -253.4859, 43.22288),
 }
+
+-- Ball return (where you grab your ball each turn). Best way: stand at a
+-- lane's ball return in game and type /bowlreturn [lane] (admin) - it's saved
+-- to returns.json. Or add `ret = vector3(x, y, floorZ)` to a lane below.
+-- Lanes with neither use a guess: behind the stand spot, between the lane pair.
+Config.ReturnBack = 2.4    -- guess: metres behind the stand spot
+Config.ReturnSide = 1.5    -- guess: metres sideways toward the paired lane
 
 -- One entry per lane: where you stand to bowl, and the 10 pin spots
 -- (first pin = head pin). Taken from the original script / Breze MLO.

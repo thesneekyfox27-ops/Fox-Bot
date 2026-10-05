@@ -80,6 +80,53 @@ RegisterCommand('bowlstaff', function(src)
     notify(src, 'Bowling staff moved here and saved. She faces the way you came from.', 'success')
 end, false)
 
+-- ------------------------------------------------------------
+--  Ball return spots (where you grab your ball). Admins stand at
+--  a lane's ball return and type /bowlreturn [lane]; saved to
+--  returns.json. Lanes without one use Config / an auto guess.
+-- ------------------------------------------------------------
+local RETURN_FILE = 'returns.json'
+local returns = {}
+
+do
+    local raw = LoadResourceFile(GetCurrentResourceName(), RETURN_FILE)
+    local ok, d = pcall(json.decode, raw or '')
+    if ok and type(d) == 'table' then
+        for k, v in pairs(d) do
+            local id = tonumber(k)
+            if id and type(v) == 'table' and v.x then returns[id] = { x = v.x, y = v.y, z = v.z } end
+        end
+    end
+end
+
+local function returnsPayload()
+    local out = {}
+    for id, v in pairs(returns) do out[tostring(id)] = v end
+    return out
+end
+
+RegisterNetEvent('nrp-bowling:returns', function()
+    TriggerClientEvent('nrp-bowling:returns', source, returnsPayload())
+end)
+
+RegisterCommand('bowlreturn', function(src, args)
+    if src == 0 or not isAdmin(src) then return end
+    local c = GetEntityCoords(GetPlayerPed(src))
+    local id = tonumber(args[1])
+    if not id then   -- no number: the lane whose stand spot is closest
+        local best
+        for i, L in ipairs(Config.Lanes) do
+            local d = #(c - vector3(L.approach.x, L.approach.y, L.approach.z))
+            if not best or d < best then best, id = d, i end
+        end
+    end
+    if not Config.Lanes[id] then return notify(src, 'No such lane.', 'error') end
+    returns[id] = { x = c.x, y = c.y, z = c.z - 1.0 }   -- floor height
+    SaveResourceFile(GetCurrentResourceName(), RETURN_FILE, json.encode(returnsPayload()), -1)
+    TriggerClientEvent('nrp-bowling:returns', -1, returnsPayload())
+    notify(src, ('Ball return for lane %d set here and saved.'):format(id), 'success')
+end, false)
+
 local function nearStaff(src)
     local c, s = coordsOf(src), staffPos
     return c and #(c - vector3(s.x, s.y, s.z)) < 6.0

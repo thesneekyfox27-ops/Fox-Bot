@@ -1,4 +1,4 @@
-# nrp-bowling v2.5.3
+# nrp-bowling v2.6.0
 
 A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map resource, unchanged).
 
@@ -12,6 +12,9 @@ A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map re
 3. **Place the staff ped in game:** as an admin, stand where she should be (facing where customers stand) and type **`/bowlstaff`**.
    She moves there for everyone right away and the spot is saved (`staff.json`), so it survives restarts.
    (`/bowlcoords` still prints your position if you'd rather put it in `Config.Staff.coords`.)
+4. **Place each lane's ball return:** as an admin, stand at the ball return for a lane and type **`/bowlreturn 1`** (the lane number).
+   With no number it picks the lane whose circle is closest. Spots are saved to `returns.json`.
+   Lanes you skip use a guess (behind the circle, between the lane pair; see `Config.ReturnBack` / `Config.ReturnSide`).
 
 ## How it works
 1. **Talk to the staff ped** at the desk (ox_target / qb-target, or press **E**). The neon price sheet opens:
@@ -25,9 +28,10 @@ A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map re
    - On a deal they join **free**.
    - On a single ticket they pay the adult price when they join.
 4. The lane owner presses **G** at the lane to start. 2-game tickets and deals play game 1 and then game 2 automatically.
-5. On your turn, a **glowing ring with a bouncing arrow** marks where to stand, and a **flashing map blip** shows your lane.
-   Step into the ring and press **E** to pick up your ball.
-   After every ball you're free to move again; walk back into the ring and press **E** for your next one.
+5. On your turn, a **blue marker with a bouncing arrow** shows your lane's **ball return**, and a **flashing map blip** points to it.
+   Press **E** there: your character bends down and picks up a ball.
+   Then **walk the ball** (no running, jumping or crouching) to the **glowing ring** on the lane and press **E** to start aiming.
+   After every ball you're free to move again; go back to the ball return for your next one.
 6. **Skill-based throw.** The markers are painted on the real lane, like the video, and each one swings by itself.
    Press **SPACE** to lock each one:
    1. **Position:** a red marker slides along the foul line.
@@ -36,25 +40,16 @@ A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map re
    4. **Power:** stop the meter in the blue for a perfectly accurate ball.
    **BACKSPACE** goes back a step, and **C** changes the camera.
    - Your character stands still in a two-hand bowler's stance the whole time; only the ball's start spot moves.
-     On release they crouch and let the ball go.
+     On release they swing the ball through underhand.
    - While aiming, the bowler waits a couple of steps back on the approach.
      The camera sits low in front of them with a wide lens, so the red marker, the arrows and the pins are all on screen.
      **C** or **V** cycles 3 cameras: down the lane, facing the bowler, side view.
      If C is your crouch key, the crouch is cancelled straight away while you bowl.
-   - When you lock in power, the bowler steps up to the line and swings the ball through underhand.
+   - When you lock in power, the bowler walks up to the line and swings the ball through underhand.
      GTA has no real bowling animation, so this is the closest built-in one.
      Set `Config.AnimPreset = 'original'` for loaf_bowling's grenade animations, or put a custom animation in `Config.Anims`.
-   - After every ball you're put back on your spot on the lane, facing the pins. Press **E** to pick up the ball again.
-   - Your character stands still in a two-hand bowler's stance the whole time; only the ball's start spot moves.
-     On release they crouch and let the ball go.
-   - While aiming, the bowler waits a couple of steps back on the approach.
-     The camera sits low in front of them with a wide lens, so the red marker, the arrows and the pins are all on screen.
-     **C** or **V** cycles 3 cameras: down the lane, facing the bowler, side view.
-     If C is your crouch key, the crouch is cancelled straight away while you bowl.
-   - When you lock in power, the bowler steps up to the line and swings the ball through underhand.
-     GTA has no real bowling animation, so this is the closest built-in one.
-     Set `Config.AnimPreset = 'original'` for loaf_bowling's grenade animations, or put a custom animation in `Config.Anims`.
-   - After every ball you're put back on your spot on the lane, facing the pins. Press **E** to pick up the ball again.
+   - **BACKSPACE** on the first step steps you out of the circle, still holding the ball.
+   - After every ball you're left at the line; walk back to the ball return for the next one.
 7. **Lane monitor:** red and blue player rows, white frame boxes, yellow scores, **Max** possible score, the total, and "Game 1 of 2".
    STRIKE / SPARE / GUTTER banners show, and the winner is announced at the end.
 8. **DELETE** leaves your lane.
