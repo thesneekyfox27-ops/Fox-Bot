@@ -1,4 +1,4 @@
-# nrp-bowling v2.7.1
+# nrp-bowling v2.8.0
 
 A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map resource, unchanged).
 
@@ -57,6 +57,18 @@ A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map re
 7. **Lane monitor:** red and blue player rows, white frame boxes, yellow scores, **Max** possible score, the total, and "Game 1 of 2".
    STRIKE / SPARE / GUTTER banners show, and the winner is announced at the end.
 8. **DELETE** leaves your lane.
+
+## Sounds
+All sound files are in `html/sounds/`. To swap one, drop in your own mp3 with the same name. Volumes are set in `Config.Sounds`.
+- `release.mp3`: when the ball leaves your hand.
+- `pins.mp3`: when the ball hits the pins.
+- `spare.mp3` and `strike.mp3`: play on a spare or strike.
+  **`strike.mp3` isn't included yet.** Add it to `html/sounds/` and it plays automatically; until then strikes stay silent.
+- `ambient1.mp3` and `ambient2.mp3`: background music inside the building.
+  They play one after the other and loop back round, fading in as you walk in and out as you leave.
+  `Config.Sounds.ambient` sets the area (`center` / `radius`) and the volume.
+
+Lane sounds are heard by everyone near that lane, and get quieter the further away you are (`hearDistance`).
 
 ## Mechanics
 - Real ten-pin scoring: strikes, spares, and 10th-frame bonus balls.

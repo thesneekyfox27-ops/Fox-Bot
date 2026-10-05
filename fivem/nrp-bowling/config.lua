@@ -101,6 +101,28 @@ Config.Desk = vector3(-141.83, -252.71, 44.0)   -- ball rack (blip + decorative 
 
 Config.Blip = { sprite = 103, color = 27, scale = 0.75 }
 
+-- ── Sounds ──────────────────────────────────────────────────────
+-- Files live in html/sounds/. Drop in your own mp3 with the same name to swap one.
+-- Lane sounds are heard by everyone near that lane (quieter further away).
+Config.Sounds = {
+    volume       = 1.0,     -- master volume for everything below (0.0 - 1.0)
+    hearDistance = 25.0,    -- lane sounds fade out to nothing at this distance
+    release = { file = 'release.mp3', volume = 0.7 },   -- ball leaves the hand
+    pins    = { file = 'pins.mp3',    volume = 0.8 },   -- ball hits the pins
+    spare   = { file = 'spare.mp3',   volume = 0.7 },
+    strike  = { file = 'strike.mp3',  volume = 0.8 },   -- add html/sounds/strike.mp3 (silent until you do)
+    -- background music inside the building: plays the files in order and loops
+    -- back round (1, 2, 1, 2 ...), fading in/out as you walk in or out
+    ambient = {
+        enabled = true,
+        files   = { 'ambient1.mp3', 'ambient2.mp3' },
+        volume  = 0.25,
+        center  = vector3(-157.7, -263.9, 44.0),   -- middle of the alley
+        radius  = 26.0,                             -- you hear it inside this distance
+        height  = 6.0,                              -- ...and within this many metres up/down
+    },
+}
+
 -- Decorative balls on the rack (only spawned locally when you're nearby)
 Config.RackBalls = {
     vector3(-141.0396, -252.3092, 43.82756), vector3(-141.1883, -252.7568, 43.82756),

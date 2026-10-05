@@ -520,7 +520,10 @@ RegisterNetEvent('nrp-bowling:roll', function(knocked)
     if knocked > st.standing then knocked = st.standing end
 
     cur.rolls[#cur.rolls + 1] = knocked
-    banner(lane, cur.name, Scoring.callout(st.standing, knocked), { knocked = knocked })
+    local call = Scoring.callout(st.standing, knocked)
+    banner(lane, cur.name, call, { knocked = knocked })
+    if call == 'STRIKE!' then TriggerClientEvent('nrp-bowling:sfx', -1, 'strike', lane.id)
+    elseif call == 'SPARE!' then TriggerClientEvent('nrp-bowling:sfx', -1, 'spare', lane.id) end
 
     local after = Scoring.state(cur.rolls, Config.Frames)
     if after.done or after.frame ~= st.frame then
@@ -530,6 +533,23 @@ RegisterNetEvent('nrp-bowling:roll', function(knocked)
         startTurn(lane)
     end
 end)
+
+-- the bowler's ball sounds -> everyone (each client checks if they're close enough)
+local lastSfx = {}
+RegisterNetEvent('nrp-bowling:sfx', function(kind)
+    local src = source
+    if kind ~= 'release' and kind ~= 'pins' then return end
+    local id = playerLane[src]
+    local lane = id and lanes[id]
+    local cur = lane and lane.status == 'playing' and lane.players[lane.turn]
+    if not cur or cur.src ~= src then return end
+    local now = GetGameTimer()
+    if lastSfx[src] and now - lastSfx[src] < 400 then return end
+    lastSfx[src] = now
+    TriggerClientEvent('nrp-bowling:sfx', -1, kind, id, src)
+end)
+
+AddEventHandler('playerDropped', function() lastSfx[source] = nil end)
 
 -- ------------------------------------------------------------
 --  Housekeeping: AFK, walked away, expired bookings/invites

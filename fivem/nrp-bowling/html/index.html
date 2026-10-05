@@ -527,6 +527,44 @@ window.addEventListener('keydown', (e) => {
 });
 
 /* ---------- messages ---------- */
+/* ---------- sounds ---------- */
+function sfx(file, volume) {
+    try {
+        const a = new Audio('sounds/' + file);
+        a.volume = Math.max(0, Math.min(1, volume ?? 1));
+        a.play().catch(() => {});   // missing file (e.g. no strike.mp3 yet) just stays silent
+    } catch (_) {}
+}
+/* background music: plays the list in order, loops back round, fades in/out */
+const AMB = { list: [], i: 0, el: null, target: 0, vol: 0.25, fade: null };
+function ambStart() {
+    if (!AMB.list.length) return;
+    const el = new Audio('sounds/' + AMB.list[AMB.i % AMB.list.length]);
+    el.volume = 0;
+    el.onended = el.onerror = () => { if (AMB.el !== el) return; AMB.i++; AMB.el = null; if (AMB.target > 0) ambStart(); };
+    AMB.el = el;
+    el.play().catch(() => {});
+    ambFade();
+}
+function ambient(d) {
+    if (d.on) { AMB.list = arr(d.files); AMB.vol = d.volume ?? 0.25; AMB.target = AMB.vol; if (!AMB.el) ambStart(); }
+    else AMB.target = 0;
+    ambFade();
+}
+function ambFade() {
+    if (AMB.fade) return;
+    AMB.fade = setInterval(() => {
+        const el = AMB.el;
+        if (!el) { clearInterval(AMB.fade); AMB.fade = null; return; }
+        const step = 0.02, v = el.volume;
+        if (Math.abs(v - AMB.target) <= step) {
+            el.volume = AMB.target;
+            if (AMB.target === 0) { el.pause(); AMB.el = null; }
+            clearInterval(AMB.fade); AMB.fade = null;
+        } else el.volume = v + (AMB.target > v ? step : -step);
+    }, 100);
+}
+
 window.addEventListener('message', (e) => {
     const d = e.data || {};
     switch (d.action) {
@@ -535,6 +573,8 @@ window.addEventListener('message', (e) => {
             else $('prompt').classList.add('hidden');
             break;
         case 'controls': controls(d.kind, d.extra); break;
+        case 'sfx': sfx(d.file, d.volume); break;
+        case 'ambient': ambient(d); break;
         case 'board': if (d.hide) { boardWanted = false; boardShow(); break; } boardWanted = true; renderBoard(d.view, d.me); boardShow(); break;
         case 'boardVisible': boardNear = !!d.show; boardShow(); break;
         case 'banner': banner(d.name, d.text, d.final); break;

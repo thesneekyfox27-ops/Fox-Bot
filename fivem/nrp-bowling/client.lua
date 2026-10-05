@@ -97,6 +97,40 @@ end
 -- ------------------------------------------------------------
 local function ui(msg) SendNUIMessage(msg) end
 
+-- sound for a lane, louder the closer you are to it
+local SND = Config.Sounds or {}
+local function playSfx(kind, laneId)
+    local s, L = SND[kind], Config.Lanes[laneId or 0]
+    if not s or not L then return end
+    local a = L.approach
+    local d = #(GetEntityCoords(PlayerPedId()) - vector3(a.x, a.y, a.z))
+    local far = SND.hearDistance or 25.0
+    if d > far then return end
+    local vol = (s.volume or 1.0) * (SND.volume or 1.0) * math.max(0.15, 1.0 - d / far)
+    ui({ action = 'sfx', file = s.file, volume = vol })
+end
+
+RegisterNetEvent('nrp-bowling:sfx', function(kind, laneId, from)
+    if from and from == GetPlayerServerId(PlayerId()) then return end   -- already played it ourselves
+    playSfx(kind, laneId)
+end)
+
+-- background music inside the alley
+CreateThread(function()
+    local A = SND.ambient
+    if not A or not A.enabled or not A.files or #A.files == 0 then return end
+    local inside = false
+    while true do
+        local p = GetEntityCoords(PlayerPedId())
+        local now = #(p.xy - A.center.xy) < A.radius and math.abs(p.z - A.center.z) < (A.height or 6.0)
+        if now ~= inside then
+            inside = now
+            ui({ action = 'ambient', on = inside, files = A.files, volume = (A.volume or 0.25) * (SND.volume or 1.0) })
+        end
+        Wait(1000)
+    end
+end)
+
 local function controls(kind, extra)
     ui({ action = 'controls', kind = kind, extra = extra })
 end
@@ -363,6 +397,8 @@ local function roll(g, offset, aim, spin, power, err)
     TaskPlayAnim(ped, loadDict(RELEASE.dict), RELEASE.anim, 4.0, -4.0, RELEASE.duration or 1500, 0, 0, false, false, false)
     Wait(RELEASE.releaseAt or 600)   -- ball leaves the hand at the bottom of the swing
     DetachEntity(ball, true, false)
+    playSfx('release', myLane)
+    TriggerServerEvent('nrp-bowling:sfx', 'release')
     local start = along(g, 1.2, offset, g.laneZ + 0.13)
     SetEntityCoordsNoOffset(ball, start.x, start.y, start.z, false, false, false)
     FreezeEntityPosition(ball, false)
@@ -405,7 +441,11 @@ local function roll(g, offset, aim, spin, power, err)
 
             if prog > g.D - 1.3 then
                 impact, impactAt = true, GetGameTimer()
-                if not gutter then releasePins() end
+                if not gutter then
+                    releasePins()
+                    playSfx('pins', myLane)
+                    TriggerServerEvent('nrp-bowling:sfx', 'pins')
+                end
             end
         else
             -- pin cam: watch them fall
