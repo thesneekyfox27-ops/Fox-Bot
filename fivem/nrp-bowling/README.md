@@ -1,4 +1,4 @@
-# nrp-bowling v2.4.0
+# nrp-bowling v2.5.0
 
 A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map resource, unchanged).
 
@@ -15,17 +15,15 @@ A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map re
 
 ## How it works
 1. **Talk to the staff ped** at the desk (ox_target / qb-target, or press **E**). The neon price sheet opens:
-   | | Adult | Junior |
-   |---|---|---|
-   | 1 game | $9 | $8 |
-   | 2 games | $17 | $16 |
+   - **Adult tickets:** 1 game $9, 2 games $17. Friends you invite pay for their own ticket when they accept.
    - **Game deals** (2 games, host pays for everyone): 2–6 players, $34–$102.
-   - **Family deals** (1 game each, host pays): family of 4 $34, family of 5 $42.
-   - Tick friends standing near you to **invite** them, then **Pay & pick lane**.
+     A deal **stays locked until you've invited enough friends** standing near you to fill it; the button shows "Invite N more".
+     The server checks this as well.
+   - Tick friends standing near you to invite them, then **Pay & pick lane**.
 2. **Pick your lane** at the desk, or hit **Auto pick a free lane**. Don't pick within 90 s and you're refunded.
 3. **Invites** pop up for your friends with a 45 s timer:
    - On a deal they join **free**.
-   - On a single ticket they choose adult or junior and pay when they join.
+   - On a single ticket they pay the adult price when they join.
 4. The lane owner presses **G** at the lane to start. 2-game tickets and deals play game 1 and then game 2 automatically.
 5. On your turn, a **glowing ring with a bouncing arrow** marks where to stand, and a **flashing map blip** shows your lane.
    Step into the ring and press **E** to pick up your ball.
@@ -39,12 +37,18 @@ A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map re
    **BACKSPACE** goes back a step, and **C** changes the camera.
    - Your character stands still in a two-hand bowler's stance the whole time; only the ball's start spot moves.
      On release they crouch and let the ball go.
-   - The camera sits just in front of the bowler looking down the lane, so they're out of the way and the markers are in view.
+   - While aiming, the bowler waits a couple of steps back on the approach.
+     The camera sits low in front of them with a wide lens, so the red marker, the arrows and the pins are all on screen.
      **C** turns it round to face the bowler.
+   - When you lock in power, the bowler steps up to the line, crouches and lets the ball go.
+   - After every ball you're put back on your spot on the lane, facing the pins. Press **E** to pick up the ball again.
    - Your character stands still in a two-hand bowler's stance the whole time; only the ball's start spot moves.
      On release they crouch and let the ball go.
-   - The camera sits just in front of the bowler looking down the lane, so they're out of the way and the markers are in view.
+   - While aiming, the bowler waits a couple of steps back on the approach.
+     The camera sits low in front of them with a wide lens, so the red marker, the arrows and the pins are all on screen.
      **C** turns it round to face the bowler.
+   - When you lock in power, the bowler steps up to the line, crouches and lets the ball go.
+   - After every ball you're put back on your spot on the lane, facing the pins. Press **E** to pick up the ball again.
 7. **Lane monitor:** red and blue player rows, white frame boxes, yellow scores, **Max** possible score, the total, and "Game 1 of 2".
    STRIKE / SPARE / GUTTER banners show, and the winner is announced at the end.
 8. **DELETE** leaves your lane.
@@ -62,7 +66,7 @@ A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map re
   - Finished or empty lanes free themselves.
 
 ## Config (config.lua)
-- `Config.Tickets`, `Config.GameDeals`, `Config.FamilyDeals`: prices
+- `Config.Tickets` (adult only), `Config.GameDeals`, `Config.FamilyDeals` (empty = off): prices
 - `Config.Staff`: ped model, coords, scenario
 - `Config.Ball`: swing speeds (`positionSpeed`, `directionSpeed`, `spinSpeed`, `meterSpeed`; higher = harder),
   plus sweet spot, ball speeds, hook strength, aim/position range

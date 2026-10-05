@@ -167,7 +167,7 @@ end
 local function camOn()
     if not cam then
         cam = CreateCam('DEFAULT_SCRIPTED_CAMERA', true)
-        SetCamFov(cam, 55.0)
+        SetCamFov(cam, 70.0)
         RenderScriptCams(true, true, 600, true, false)
     end
 end
@@ -281,8 +281,10 @@ local function sweetError(power)
     return (math.random() < 0.5 and -e or e)
 end
 
-local function placePed(ped, g, offset, aim)
-    local p = along(g, 0.0, offset, g.A.z)
+local AIM_BACK = -1.6   -- where the bowler waits while aiming (metres behind the stand spot)
+
+local function placePed(ped, g, offset, aim, fwd)
+    local p = along(g, fwd or 0.0, offset, g.A.z)
     SetEntityCoords(ped, p.x, p.y, p.z, false, false, false, false)
     local d = rotate(g.dir, aim)
     SetEntityHeading(ped, headingOf(d.x, d.y))
@@ -294,6 +296,9 @@ local function roll(g, offset, aim, spin, power, err)
     phase = 'rolling'
     updateControls()
 
+    -- step up to the line, then the crouching release
+    camAt(along(g, -0.6, 1.2, g.laneZ + 1.2), along(g, 2.0, offset, g.laneZ + 0.2))
+    placePed(ped, g, 0.0, 0.0, 0.0)
     TaskPlayAnim(ped, loadDict(RELEASE.dict), RELEASE.anim, 4.0, -4.0, 1400, 0, 0, false, false, false)
     Wait(550)   -- ball leaves the hand at the bottom of the crouch
     DetachEntity(ball, true, false)
@@ -370,9 +375,10 @@ local function roll(g, offset, aim, spin, power, err)
     local knocked = countAndSweep()
     phase = 'wait'
     updateControls()
-    -- hand control back: walk back to the marker and pick up the ball for the next one
+    -- stay on the lane: back on your spot facing the pins, free to move, pick the ball up again
+    ClearPedTasksImmediately(ped)
+    placePed(ped, g, 0.0, 0.0, 0.0)
     FreezeEntityPosition(ped, false)
-    ClearPedTasks(ped)
     camOff()
     TriggerServerEvent('nrp-bowling:roll', knocked)
 end
@@ -392,7 +398,7 @@ local function aimLoop()
     local camMode = 1
 
     FreezeEntityPosition(ped, true)
-    placePed(ped, g, 0.0, 0.0)
+    placePed(ped, g, 0.0, 0.0, AIM_BACK)
     holdBall(ped)
     camOn()
     phase = 'aim'
@@ -458,17 +464,18 @@ local function aimLoop()
         end
 
         if camMode == 1 then
-            -- just in front of the bowler, looking down the lane: the bowler is out of the
-            -- way and the red position marker at the foul line is still in view
-            camAt(along(g, 0.45, 0.0, g.laneZ + 1.05), along(g, g.D * 0.75, 0.0, g.laneZ - 0.35))
+            -- in front of the bowler (who waits further back), low and wide: the red
+            -- marker at the foul line, the arrows and the pins are all on screen
+            camAt(along(g, AIM_BACK + 1.25, 0.0, g.laneZ + 1.15), along(g, 8.0, 0.0, g.laneZ - 0.15))
         else
             -- turned round to watch the bowler in their stance
-            camAt(along(g, 3.4, 1.1, g.A.z + 0.7), along(g, 0.0, 0.0, g.A.z + 0.15))
+            camAt(along(g, AIM_BACK + 3.2, 1.1, g.A.z + 0.7), along(g, AIM_BACK, 0.0, g.A.z + 0.15))
         end
     end
 
     if phase == 'pickup' then
         ClearPedTasks(ped)
+        placePed(ped, g, 0.0, 0.0, 0.0)   -- back on your spot
         if ball then DetachEntity(ball, true, false); del(ball); ball = nil end
         FreezeEntityPosition(ped, false)
         camOff()

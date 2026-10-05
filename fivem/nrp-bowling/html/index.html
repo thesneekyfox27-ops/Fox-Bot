@@ -238,7 +238,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: transparen
                 <div class="sub">BASED ON 2 GAMES &middot; HOST PAYS FOR THE GROUP</div>
                 <div id="mGame"></div>
             </div>
-            <div class="dealbox neon-box">
+            <div class="dealbox neon-box" id="famBox">
                 <div class="title disp neon-pink">FAMILY DEALS</div>
                 <div class="sub">BASED ON 1 GAME</div>
                 <div class="fam-h">Family of</div>
@@ -397,8 +397,9 @@ function renderMenu() {
     });
     $('mGame').innerHTML = arr(M.gameDeals).map(d => `<div class="deal ${sel && sel.kind === 'game' && sel.players === d.players ? 'sel' : ''}" data-n="${d.players}" data-p="${d.price}"><span>${d.players} PLAYER GAME DEAL</span><span class="v">$${d.price.toFixed(2)}</span></div>`).join('');
     $('mGame').querySelectorAll('.deal').forEach(el => el.onclick = () => pick({ kind: 'game', players: +el.dataset.n, price: +el.dataset.p,
-        label: `${el.dataset.n} player game deal · 2 games`, desc: `You pay for everyone. Invite up to ${+el.dataset.n - 1} friends - it's free for them.` }));
+        label: `${el.dataset.n} player game deal · 2 games`, desc: `You pay for everyone - free for your friends. Invite ${+el.dataset.n - 1} friend${+el.dataset.n - 1 === 1 ? '' : 's'} standing near you to unlock it.` }));
     $('mFam').innerHTML = arr(M.familyDeals).map(d => `<div class="deal ${sel && sel.kind === 'family' && sel.players === d.players ? 'sel' : ''}" data-n="${d.players}" data-p="${d.price}"><span>${d.players}, 1 x game each (${esc(d.label)})</span><span class="v">$${d.price.toFixed(2)}</span></div>`).join('');
+    $('famBox').classList.toggle('hidden', arr(M.familyDeals).length === 0);
     $('mFam').querySelectorAll('.deal').forEach(el => el.onclick = () => pick({ kind: 'family', players: +el.dataset.n, price: +el.dataset.p,
         label: `Family of ${el.dataset.n} · 1 game each`, desc: `You pay for the family. Invite up to ${+el.dataset.n - 1} family members - free for them.` }));
     renderOrder();
@@ -409,7 +410,9 @@ function renderOrder() {
     else {
         $('oSel').innerHTML = `<div class="l">${esc(sel.label)}</div><div class="d">${esc(sel.desc)}</div>`;
         $('oTotal').textContent = money(sel.price);
-        $('oPay').disabled = false;
+        const need = sel.kind === 'ticket' ? 0 : (sel.players - 1) - invited.size;
+        $('oPay').disabled = need > 0;
+        $('oPay').innerHTML = need > 0 ? `INVITE ${need} MORE` : 'PAY &amp; PICK LANE';
     }
     const max = sel ? seatsFor(sel) - 1 : 0;
     $('oSeats').textContent = sel ? `${invited.size}/${max}` : '';
@@ -429,7 +432,7 @@ $('oPay').onclick = () => {
     if (!sel) return;
     $('oPay').disabled = true; $('oPay').textContent = 'PAYING...';
     post('buy', { kind: sel.kind, ticket: sel.ticket, games: sel.games, players: sel.players, invite: [...invited] });
-    setTimeout(() => { $('oPay').disabled = false; $('oPay').innerHTML = 'PAY &amp; PICK LANE'; }, 2500);
+    setTimeout(() => renderOrder(), 2500);
 };
 function closeAll() { $('menu').classList.add('hidden'); $('lanePick').classList.add('hidden'); }
 $('mClose').onclick = () => { closeAll(); post('close'); };
@@ -468,7 +471,11 @@ function showInvite(d) {
         b.onclick = () => { ivTicket = t.id; tk.querySelectorAll('button').forEach(x => x.className = ''); b.className = 'on'; };
         tk.appendChild(b);
     });
-    tk.classList.toggle('hidden', !!d.prepaid);
+    tk.classList.toggle('hidden', !!d.prepaid || arr(d.tickets).length < 2);
+    if (!d.prepaid && arr(d.tickets).length === 1) {
+        const t0 = arr(d.tickets)[0], pr0 = (t0.prices || {})[d.games] ?? arr(t0.prices)[d.games - 1];
+        $('ivTxt').innerHTML += ` Your ticket is <b>${money(pr0)}</b>.`;
+    }
     $('invite').classList.remove('hidden');
     const bar = $('ivBar');
     bar.style.transition = 'none'; bar.style.width = '100%'; void bar.offsetWidth;

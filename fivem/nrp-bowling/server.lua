@@ -312,6 +312,11 @@ RegisterNetEvent('nrp-bowling:buy', function(order)
         end
     end
 
+    -- group deals need the group: every seat must have an invited friend
+    if prepaid and #inv < seats - 1 then
+        return notify(src, ('Invite %d more friend%s nearby to buy this deal.'):format(seats - 1 - #inv, (seats - 1 - #inv) == 1 and '' or 's'), 'error')
+    end
+
     if not charge(src, price, 'bowling-' .. (order.kind or 'ticket')) then
         return notify(src, ('That costs $%d.'):format(price), 'error')
     end

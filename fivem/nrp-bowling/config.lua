@@ -7,11 +7,11 @@ Config.Account = 'cash'    -- 'cash' or 'bank' (falls back to bank if cash is sh
 
 -- Single tickets: every player pays their own (invited friends pay when they accept)
 Config.Tickets = {
-    { id = 'adult',  label = 'Adult',  sub = '',          prices = { [1] = 9,  [2] = 17 } },
-    { id = 'junior', label = 'Junior', sub = 'UNDER 16',  prices = { [1] = 8,  [2] = 16 } },
+    { id = 'adult', label = 'Adult', sub = '', prices = { [1] = 9, [2] = 17 } },
 }
 
--- Game deals: based on 2 games, the host pays for the whole group
+-- Game deals: based on 2 games, the host pays for the whole group.
+-- You have to invite enough friends to fill the deal before you can buy it.
 Config.GameDeals = {
     { players = 2, price = 34 },
     { players = 3, price = 51 },
@@ -20,11 +20,9 @@ Config.GameDeals = {
     { players = 6, price = 102 },
 }
 
--- Family deals: based on 1 game each, the host pays for the whole family
-Config.FamilyDeals = {
-    { players = 4, label = '2 adults + 2 juniors', price = 34 },
-    { players = 5, label = '2 adults + 3 juniors', price = 42 },
-}
+-- Family deals: turned off (adult tickets only). Add entries to bring them back, e.g.
+-- { players = 4, label = '2 adults + 2 juniors', price = 34 },
+Config.FamilyDeals = {}
 
 Config.MaxPlayers  = 6     -- per lane
 Config.Frames      = 10    -- frames per game
