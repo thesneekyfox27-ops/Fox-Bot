@@ -194,7 +194,7 @@ local RELEASE = Config.Anims.release
 
 local function stance(ped)
     if not IsEntityPlayingAnim(ped, STANCE.dict, STANCE.anim, 3) then
-        TaskPlayAnim(ped, loadDict(STANCE.dict), STANCE.anim, 4.0, -4.0, -1, 1, 0, false, false, false)
+        TaskPlayAnim(ped, loadDict(STANCE.dict), STANCE.anim, 4.0, -4.0, -1, STANCE.flag or 1, 0, false, false, false)
     end
 end
 
@@ -206,8 +206,10 @@ local function holdBall(ped)
         ball = CreateObject(m, c.x, c.y, c.z, true, true, false)
         SetModelAsNoLongerNeeded(m)
     end
-    -- held in front of the chest, between both hands
-    AttachEntityToEntity(ball, ped, GetPedBoneIndex(ped, 24818), 0.08, 0.30, 0.0, 0.0, 0.0, 0.0, false, true, false, true, 0, true)
+    -- bone 0 = the ped's root, so the ball sits in front of the waist between the hands
+    local o, r = STANCE.ballOffset or vector3(0.0, 0.40, 0.08), STANCE.ballRot or vector3(0.0, 0.0, 0.0)
+    local bone = (STANCE.ballBone and STANCE.ballBone ~= 0) and GetPedBoneIndex(ped, STANCE.ballBone) or 0
+    AttachEntityToEntity(ball, ped, bone, o.x, o.y, o.z, r.x, r.y, r.z, false, true, false, true, 0, true)
 end
 
 -- flat shapes painted on the lane (both windings so they show from any angle)

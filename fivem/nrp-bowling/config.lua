@@ -45,13 +45,23 @@ Config.TurnTimeout  = 120  -- seconds to bowl before you're removed (AFK)
 Config.LeaveDistance = 45.0 -- walk this far from your lane and you leave the game
 
 -- ── Animations ─────────────────────────────────────────────────
--- GTA has no real bowling animation, so these are the closest built-in ones.
--- If you get a custom bowling animation resource, put its dict/anim here.
-Config.Anims = {
-    stance  = { dict = 'anim@heists@box_carry@',        anim = 'idle' },   -- both hands holding the ball at the chest
-    release = { dict = 'anim@heists@narcotics@trash',    anim = 'throw_b',  -- low underhand swing forward
-                duration = 1500, releaseAt = 620 },                       -- ms: ball leaves the hand at releaseAt
+-- GTA has no real bowling animation, so every bowling script borrows one.
+--   'bowling'  = two-hand hold at the waist + low underhand swing (default)
+--   'original' = what loaf_bowling used: grenade aim pose + overhand grenade lob
+-- Or put any dict/anim of your own (e.g. a custom bowling animation) in Config.Anims.
+Config.AnimPreset = 'bowling'
+
+local ANIM_PRESETS = {
+    bowling = {
+        stance  = { dict = 'anim@heists@box_carry@', anim = 'idle', flag = 1, ballBone = 0, ballOffset = vector3(0.0, 0.40, 0.08) },
+        release = { dict = 'anim@heists@narcotics@trash', anim = 'throw_b', duration = 1500, releaseAt = 620 },
+    },
+    original = {
+        stance  = { dict = 'weapons@projectile@', anim = 'aimlive_l', flag = 17, ballBone = 57005, ballOffset = vector3(0.09, 0.03, -0.02), ballRot = vector3(-78.0, 13.0, 28.0) },
+        release = { dict = 'weapons@projectile@', anim = 'throw_l_fb_stand', duration = 900, releaseAt = 150 },
+    },
 }
+Config.Anims = ANIM_PRESETS[Config.AnimPreset] or ANIM_PRESETS.bowling
 
 -- ── Ball physics ───────────────────────────────────────────────
 Config.Ball = {
