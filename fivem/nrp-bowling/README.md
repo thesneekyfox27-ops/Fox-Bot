@@ -1,4 +1,4 @@
-# nrp-bowling v2.2.0
+# nrp-bowling v2.3.0
 
 A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map resource, unchanged).
 
@@ -9,7 +9,9 @@ A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map re
    ensure bowling
    ensure nrp-bowling
    ```
-3. **Place the staff ped:** stand where you want her behind the desk, type `/bowlcoords`, and paste the vector4 into `Config.Staff.coords`.
+3. **Place the staff ped in game:** as an admin, stand where she should be (facing where customers stand) and type **`/bowlstaff`**.
+   She moves there for everyone right away and the spot is saved (`staff.json`), so it survives restarts.
+   (`/bowlcoords` still prints your position if you'd rather put it in `Config.Staff.coords`.)
 
 ## How it works
 1. **Talk to the staff ped** at the desk (ox_target / qb-target, or press **E**). The neon price sheet opens:
@@ -34,6 +36,10 @@ A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map re
    4. **Power:** stop the meter in the blue for a perfectly accurate ball.
 
    **BACKSPACE** goes back a step, and **C** changes the camera.
+   - Your character stands still in a two-hand bowler's stance the whole time; only the ball's start spot moves.
+     On release they crouch and let the ball go.
+   - The camera sits in front of the bowler, low over the lane looking at the pins.
+     **C** turns it round to face the bowler.
    - The panel shows the predicted path with the hook, and the pins at the end of the lane.
    - It shows the locked values (position cm, direction °, spin %).
    - It warns **GUTTER!** if your line leaves the lane.

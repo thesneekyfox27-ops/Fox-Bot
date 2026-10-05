@@ -46,8 +46,42 @@ local function coordsOf(src)
     return ped ~= 0 and GetEntityCoords(ped) or nil
 end
 
+-- ------------------------------------------------------------
+--  Staff ped position (admins move her in game with /bowlstaff;
+--  saved to staff.json so it survives restarts)
+-- ------------------------------------------------------------
+local STAFF_FILE = 'staff.json'
+local staffPos = Config.Staff.coords
+
+do
+    local raw = LoadResourceFile(GetCurrentResourceName(), STAFF_FILE)
+    local ok, d = pcall(json.decode, raw or '')
+    if ok and type(d) == 'table' and d.x then staffPos = vector4(d.x, d.y, d.z, d.w or 0.0) end
+end
+
+local function staffPayload() return { x = staffPos.x, y = staffPos.y, z = staffPos.z, w = staffPos.w } end
+
+RegisterNetEvent('nrp-bowling:staffPos', function()
+    TriggerClientEvent('nrp-bowling:staffPos', source, staffPayload())
+end)
+
+local function isAdmin(src)
+    return src == 0 or QBCore.Functions.HasPermission(src, 'admin') or QBCore.Functions.HasPermission(src, 'god')
+        or IsPlayerAceAllowed(src, 'command')
+end
+
+RegisterCommand('bowlstaff', function(src)
+    if src == 0 or not isAdmin(src) then return end
+    local ped = GetPlayerPed(src)
+    local c = GetEntityCoords(ped)
+    staffPos = vector4(c.x, c.y, c.z, (GetEntityHeading(ped) + 180.0) % 360.0)   -- she faces you
+    SaveResourceFile(GetCurrentResourceName(), STAFF_FILE, json.encode(staffPayload()), -1)
+    TriggerClientEvent('nrp-bowling:staffPos', -1, staffPayload())
+    notify(src, 'Bowling staff moved here and saved. She faces the way you came from.', 'success')
+end, false)
+
 local function nearStaff(src)
-    local c, s = coordsOf(src), Config.Staff.coords
+    local c, s = coordsOf(src), staffPos
     return c and #(c - vector3(s.x, s.y, s.z)) < 6.0
 end
 

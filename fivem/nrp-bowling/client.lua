@@ -188,7 +188,16 @@ end
 -- ------------------------------------------------------------
 --  Aim + throw
 -- ------------------------------------------------------------
-local ANIM = 'weapons@projectile@'
+-- Bowler's stance: both hands holding the ball at the chest (no weapon needed,
+-- so no T-pose). Release: a low crouching put-down, like letting the ball go.
+local STANCE  = { dict = 'anim@heists@box_carry@', anim = 'idle' }
+local RELEASE = { dict = 'pickup_object', anim = 'putdown_low' }
+
+local function stance(ped)
+    if not IsEntityPlayingAnim(ped, STANCE.dict, STANCE.anim, 3) then
+        TaskPlayAnim(ped, loadDict(STANCE.dict), STANCE.anim, 4.0, -4.0, -1, 1, 0, false, false, false)
+    end
+end
 
 local function holdBall(ped)
     if not ball or not DoesEntityExist(ball) then
@@ -198,7 +207,8 @@ local function holdBall(ped)
         ball = CreateObject(m, c.x, c.y, c.z, true, true, false)
         SetModelAsNoLongerNeeded(m)
     end
-    AttachEntityToEntity(ball, ped, GetPedBoneIndex(ped, 57005), 0.09, 0.03, -0.02, -78.0, 13.0, 28.0, false, true, true, true, 0, true)
+    -- held in front of the chest, between both hands
+    AttachEntityToEntity(ball, ped, GetPedBoneIndex(ped, 24818), 0.08, 0.30, 0.0, 0.0, 0.0, 0.0, false, true, false, true, 0, true)
 end
 
 -- an indicator that swings -1..1 and back; `rate` = sweeps per second
@@ -229,8 +239,8 @@ local function roll(g, offset, aim, spin, power, err)
     phase = 'rolling'
     updateControls()
 
-    TaskPlayAnim(ped, loadDict(ANIM), 'throw_l_fb_stand', 8.0, -8.0, 900, 48, 0, false, false, false)
-    Wait(320)
+    TaskPlayAnim(ped, loadDict(RELEASE.dict), RELEASE.anim, 4.0, -4.0, 1400, 0, 0, false, false, false)
+    Wait(550)   -- ball leaves the hand at the bottom of the crouch
     DetachEntity(ball, true, false)
     local start = along(g, 1.2, offset, g.laneZ + 0.13)
     SetEntityCoordsNoOffset(ball, start.x, start.y, start.z, false, false, false)
@@ -344,16 +354,13 @@ local function aimLoop()
         EnableControlAction(0, 245, true)   -- chat
         EnableControlAction(0, 249, true)   -- push to talk
 
-        if not IsEntityPlayingAnim(ped, ANIM, 'aimlive_l', 3) then
-            TaskPlayAnim(ped, loadDict(ANIM), 'aimlive_l', 8.0, -8.0, -1, 49, 0, false, false, false)
-        end
+        stance(ped)
 
         local t = (GetGameTimer() - stepStart) / 1000.0
         local id = STEPS[step].id
         -- the live (swinging) value for this step
         if id == 'position' then
             offset = swing(t + 0.5 / B.positionSpeed, B.positionSpeed) * B.maxOffset
-            placePed(ped, g, offset, 0.0)
         elseif id == 'direction' then
             aim = swing(t + 0.5 / B.directionSpeed, B.directionSpeed) * B.maxAim
         elseif id == 'spin' then
@@ -379,7 +386,6 @@ local function aimLoop()
         if IsDisabledControlJustPressed(0, 22) then
             PlaySoundFrontend(-1, 'SELECT', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
             if step < #STEPS then
-                if id == 'direction' then placePed(ped, g, offset, aim) end
                 setStep(step + 1)
             else
                 ui({ action = 'caption' })
@@ -398,10 +404,11 @@ local function aimLoop()
         end
 
         if camMode == 1 then
-            -- low, behind the ball, looking down the lane (like a real approach)
-            camAt(along(g, -1.4, offset * 0.4, g.laneZ + 1.05), along(g, g.D, offset * 0.2, g.laneZ - 0.2))
+            -- in front of the bowler, low over the lane, looking at the pins (nothing in the way)
+            camAt(along(g, 1.6, 0.0, g.laneZ + 0.95), along(g, g.D, 0.0, g.laneZ + 0.1))
         else
-            camAt(along(g, -3.0, 0.0, g.A.z + 1.9), along(g, g.D * 0.55, 0.0, g.laneZ))
+            -- turned round to watch the bowler in their stance
+            camAt(along(g, 3.4, 1.1, g.A.z + 0.7), along(g, 0.0, 0.0, g.A.z + 0.15))
         end
     end
 
@@ -600,6 +607,7 @@ end)
 -- ------------------------------------------------------------
 local staff = nil
 local usingTarget = false
+local staffPos = Config.Staff.coords   -- the server sends the saved spot (/bowlstaff)
 
 local function addTarget(ped)
     local mode = Config.Target
@@ -634,7 +642,7 @@ local function spawnStaff()
     local S = Config.Staff
     local m = loadModel(S.model)
     if not m then return print('[nrp-bowling] staff model is not valid: ' .. tostring(S.model)) end
-    local c = S.coords
+    local c = staffPos
     RequestCollisionAtCoord(c.x, c.y, c.z)
     local interior = GetInteriorAtCoords(c.x, c.y, c.z)
     if interior ~= 0 then
@@ -664,7 +672,7 @@ CreateThread(function()
     local shown = false
     while true do
         local sleep = 1000
-        local c = Config.Staff.coords
+        local c = staffPos
         local d = #(GetEntityCoords(PlayerPedId()) - vector3(c.x, c.y, c.z))
         if d < Config.Staff.spawnDistance then
             if not (staff and DoesEntityExist(staff)) then spawnStaff() end
@@ -680,6 +688,16 @@ CreateThread(function()
         elseif shown then ui({ action = 'prompt' }); shown = false end
         Wait(sleep)
     end
+end)
+
+RegisterNetEvent('nrp-bowling:staffPos', function(p)
+    staffPos = vector4(p.x, p.y, p.z, p.w)
+    if staff then del(staff); staff = nil end   -- respawns at the new spot on the next check
+end)
+
+CreateThread(function()
+    Wait(1500)
+    TriggerServerEvent('nrp-bowling:staffPos')
 end)
 
 RegisterCommand('bowlcoords', function()
