@@ -45,9 +45,6 @@ A full rebuild of `loaf_bowling` for the Breze bowling MLO (the `bowling` map re
      On release they crouch and let the ball go.
    - The camera sits just in front of the bowler looking down the lane, so they're out of the way and the markers are in view.
      **C** turns it round to face the bowler.
-   - The panel shows the predicted path with the hook, and the pins at the end of the lane.
-   - It shows the locked values (position cm, direction °, spin %).
-   - It warns **GUTTER!** if your line leaves the lane.
 7. **Lane monitor:** red and blue player rows, white frame boxes, yellow scores, **Max** possible score, the total, and "Game 1 of 2".
    STRIKE / SPARE / GUTTER banners show, and the winner is announced at the end.
 8. **DELETE** leaves your lane.
