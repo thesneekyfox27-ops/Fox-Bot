@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WeatherSync</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <!-- ===== admin panel ===== -->
+    <div id="app" class="hidden">
+        <section class="console">
+            <div class="lock-banner hidden" id="lockBanner">View only - you can't change weather or time.</div>
+
+            <div class="cols">
+                <!-- LEFT: sky, time, switches -->
+                <div class="col left">
+                    <div id="sky" class="sky">
+                        <div class="sky-body" id="skyBody"></div>
+                        <div class="celestial" id="celestial"></div>
+                        <div class="layer clouds" id="clouds"></div>
+                        <div class="layer rain" id="rain"></div>
+                        <div class="layer snow" id="snow"></div>
+                        <div class="layer fog" id="fog"></div>
+                        <div class="layer flash" id="flash"></div>
+                        <div class="layer scrim"></div>
+                        <header class="readout">
+                            <div>
+                                <span class="eyebrow">Server time</span>
+                                <span class="clock" id="clock">09:00</span>
+                            </div>
+                            <div class="readout-right">
+                                <span class="freeze-flag" id="freezeFlag">Frozen</span>
+                                <span class="weather-now" id="weatherNow">Sunny</span>
+                            </div>
+                        </header>
+                    </div>
+
+                    <div class="section">
+                        <div class="head"><span class="label">Time of day</span><span class="value" id="sliderReadout">09:00</span></div>
+                        <input type="range" id="timeSlider" class="time-range" min="0" max="1439" step="1" value="540" />
+                        <div class="presets" id="presets"></div>
+                    </div>
+
+                    <div class="section switches">
+                        <button class="switch" id="toggleFreeze" data-on="false">
+                            <span class="sw-text">Freeze time</span><span class="sw-track"><span class="sw-knob"></span></span>
+                        </button>
+                        <button class="switch amber" id="toggleBlackout" data-on="false">
+                            <span class="sw-text">Blackout grid</span><span class="sw-track"><span class="sw-knob"></span></span>
+                        </button>
+                        <button class="switch" id="toggleDynamic" data-on="false">
+                            <span class="sw-text">Auto weather<small>Follows the time of day</small></span><span class="sw-track"><span class="sw-knob"></span></span>
+                        </button>
+                        <button class="switch" id="toggleLightning" data-on="false">
+                            <span class="sw-text">Ground lightning<small>Bolts strike during storms</small></span><span class="sw-track"><span class="sw-knob"></span></span>
+                        </button>
+                    </div>
+
+                    <div class="section danger-zone">
+                        <button class="switch danger" id="toggleAlert" data-on="false">
+                            <span class="sw-text">Restart alert<small>Siren, extreme weather and a countdown</small></span><span class="sw-track"><span class="sw-knob"></span></span>
+                        </button>
+                        <div class="restart-slider" id="restartSlider">
+                            <div class="head"><span class="label">Restart in</span><span class="value danger" id="rsValue">5m</span></div>
+                            <input type="range" id="rsRange" min="5" max="3600" step="5" value="300" />
+                            <div class="ticks"><span>5s</span><span>15m</span><span>30m</span><span>45m</span><span>60m</span></div>
+                        </div>
+                        <button class="switch purge" id="togglePurge" data-on="false">
+                            <span class="sw-text">The Purge<small>Enables the schedule - won't start early</small></span><span class="sw-track"><span class="sw-knob"></span></span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- RIGHT: weather -->
+                <div class="col right">
+                    <div class="title-row">
+                        <div class="brand"><span class="dot"></span>WeatherSync</div>
+                        <button class="x" id="closeBtn" title="Close (Esc)">&#10005;</button>
+                    </div>
+
+                    <div class="section">
+                        <div class="head"><span class="label">Conditions</span><span class="hint">Applies to everyone</span></div>
+                        <div class="conditions" id="conditions"></div>
+                        <p class="note" id="simNote">Tornado spawns a real funnel when <b>gd_tornado</b> is running. Flooding raises real water you can swim in, then drains when the weather changes.</p>
+                    </div>
+
+                    <div class="section">
+                        <div class="head"><span class="label">More weather</span></div>
+                        <div class="weather-grid" id="weatherGrid"></div>
+                    </div>
+
+                    <div class="section cmds">
+                        <div class="head"><span class="label">Commands</span></div>
+                        <p><code>/weathermenu</code> <code>/weather &lt;id&gt;</code> <code>/time &lt;h&gt; &lt;m&gt;</code> <code>/tornadohere</code> <code>/purgenow</code> <code>/purgestatus</code> <code>/weathersync_whoami</code></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- ===== always-on overlays ===== -->
+    <div id="ebs" class="ebs hidden">
+        <div class="ebs-bars"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="ebs-body">
+            <span class="ebs-title" id="ebsTitle">EMERGENCY ALERT SYSTEM</span>
+            <span class="ebs-heading" id="ebsHeading"></span>
+            <span class="ebs-msg" id="ebsMsg"></span>
+        </div>
+        <div class="ebs-bars"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+
+    <!-- after the banner, so it can drop below it -->
+    <div id="restartHud" class="restart-hud hidden">
+        <span class="rh-label">Server restart in</span>
+        <span class="rh-time" id="rhTime">05:00</span>
+        <div class="rh-bar"><span class="rh-fill" id="rhFill"></span></div>
+    </div>
+
+    <div id="toasts" class="toasts"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
