@@ -4,7 +4,7 @@ lua54 'yes'
 
 author 'WeatherSync'
 description 'Realistic Time & Weather Sync with NUI control panel (QBCore / Standalone)'
-version '2.1.0'
+version '2.2.0'
 
 shared_script 'config.lua'
 client_script 'client.lua'
@@ -16,7 +16,7 @@ files {
     'html/index.html',
     'html/style.css',
     'html/script.js',
-    'html/sounds/restart_siren.mp3',
+    'html/sounds/restart_siren.ogg',
     'html/sounds/tornado_warning.mp3',
     'html/sounds/storm_rumble.mp3',
     'html/sounds/purge_start.mp3',

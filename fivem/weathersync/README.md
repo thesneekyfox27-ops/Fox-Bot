@@ -1,4 +1,4 @@
-# WeatherSync v2.1 — Time & Weather Sync (QBCore / Standalone)
+# WeatherSync v2.2 — Time & Weather Sync (QBCore / Standalone)
 
 ## What's new in 2.0
 - **Swim in the flood.** Flood water is real GTA water and the game now swims you itself: real swim
@@ -13,6 +13,14 @@
 - **The restart siren finishes right at the restart.** It loops during the countdown, but it's timed so
   the last play is a whole one that ends exactly as the server restarts. Players who join partway
   through hear it in sync.
+- **Proper sounds for each event.** `purge_start`, `purge_end` and `restart_siren` used to be the same
+  3-minute file (your Purge announcement). Now:
+  - `purge_start.mp3`: your Purge announcement, unchanged.
+  - `purge_end.mp3`: an all-clear siren that winds up, holds, then winds down (26 s).
+  - `restart_siren.ogg`: an air-raid wail that loops with no gap (32 s).
+  To use your own, drop a file in `html/sounds/` with the same name.
+- Fixed a script error: `SetScenarioPedDensityMultipliersThisFrame` -> `...MultiplierThisFrame`
+  (a typo carried over from the original, which stopped the flood's traffic removal).
 - **You float to the top of the flood and stay swimming there.** If you get stuck under something,
   you're moved straight up to the surface.
 - `storm_rumble` and `tornado_warning` are now .mp3 (the resource is about 20 MB smaller).

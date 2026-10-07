@@ -145,7 +145,7 @@ local function suppressTraffic()
         SetRandomVehicleDensityMultiplierThisFrame(0.0)
         SetParkedVehicleDensityMultiplierThisFrame(0.0)
         SetPedDensityMultiplierThisFrame(0.0)
-        SetScenarioPedDensityMultipliersThisFrame(0.0, 0.0)
+        SetScenarioPedDensityMultiplierThisFrame(0.0, 0.0)
         Wait(0)
     end
 end

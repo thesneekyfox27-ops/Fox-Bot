@@ -191,7 +191,7 @@ function startLoop(a, vol) {
     playAudio(a, vol);
 }
 
-const sirenAudio   = makeAudio('sounds/restart_siren.mp3', true);
+const sirenAudio   = makeAudio('sounds/restart_siren.ogg', true);   // .ogg loops with no gap
 
 // The siren loops for the whole countdown. It starts part-way into the clip so
 // that its LAST play is a full one that finishes exactly as the server restarts
@@ -201,9 +201,12 @@ function startSiren(vol, remaining) {
         const dur = sirenAudio.duration;
         if (!remaining || !isFinite(dur) || dur <= 0) return;
         const rem = remaining % dur;
-        try { sirenAudio.currentTime = rem > 0.5 ? dur - rem : 0; } catch (e) {}
+        const want = rem > 0.5 ? dur - rem : 0;
+        // already playing and in sync (e.g. a resync after respawning): don't jump
+        if (wasPlaying && Math.abs(sirenAudio.currentTime - want) < 2) return;
+        try { sirenAudio.currentTime = want; } catch (e) {}
     };
-    const wasPlaying = sirenAudio._want && !sirenAudio.paused;
+    const wasPlaying = sirenAudio._want && !sirenAudio.paused;   // read before startLoop
     startLoop(sirenAudio, vol);
     if (wasPlaying && !remaining) return;   // just a volume change
     if (sirenAudio.readyState >= 1) align();
