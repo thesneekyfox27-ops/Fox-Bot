@@ -797,6 +797,54 @@ setTimeout(() => {
   console.log(`[${RESOURCE_NAME}] Not working? Type  wordfilter_debug  here, then send a chat message in game.`);
 }, 3000);
 
+// wordfilter_scan: finds the scripts that read or send chat, so you know which
+// one shows a message the filter blocked (e.g. a script that posts "OOC" itself).
+RegisterCommand('wordfilter_scan', (src) => {
+  if (Number(src) !== 0) return replyTo(src, 'Run wordfilter_scan in the server console.');
+  const fs = require('fs');
+  const path = require('path');
+  const SKIP = new Set(['node_modules', '.git', 'stream', 'html', 'ui', 'web', 'nui', 'dist', 'build', 'locales', 'locale']);
+  const TYPED = /_chat:messageEntered|['"]chatMessage['"]/;   // reads what players type with T
+  const OOC = /\bOOC\b/i;
+  const results = [];
+
+  const walk = (dir, depth, visit) => {
+    if (depth > 6) return;
+    let entries = [];
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return; }
+    for (const e of entries) {
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) { if (!SKIP.has(e.name.toLowerCase())) walk(full, depth + 1, visit); }
+      else if (/\.(lua|js)$/i.test(e.name)) visit(full);
+    }
+  };
+
+  for (let i = 0; i < GetNumResources(); i++) {
+    const res = GetResourceByFindIndex(i);
+    if (!res || res === RESOURCE_NAME || GetResourceState(res) !== 'started') continue;
+    const root = GetResourcePath(res);
+    if (!root) continue;
+    walk(root, 0, (file) => {
+      let text;
+      try { if (fs.statSync(file).size > 600000) return; text = fs.readFileSync(file, 'utf8'); } catch (e) { return; }
+      const sendsChat = text.includes('chat:addMessage');
+      text.split(/\r?\n/).forEach((line, n) => {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('--') || trimmed.startsWith('//')) return;
+        if (TYPED.test(line) || (sendsChat && OOC.test(line))) {
+          results.push(`${res}  ${path.relative(root, file)}:${n + 1}   ${trimmed.substring(0, 110)}`);
+        }
+      });
+    });
+  }
+
+  console.log(`[${RESOURCE_NAME}] ===== chat scan: scripts that read typed chat or post OOC =====`);
+  if (results.length === 0) console.log(`[${RESOURCE_NAME}] nothing found`);
+  for (const line of results.slice(0, 60)) console.log(`[${RESOURCE_NAME}] ${line}`);
+  if (results.length > 60) console.log(`[${RESOURCE_NAME}] ...and ${results.length - 60} more`);
+  console.log(`[${RESOURCE_NAME}] Send these lines (or the files they point to) so the filter check can be added there.`);
+}, true);
+
 // wordfilter_debug: log every chat message the filter receives (no message text)
 RegisterCommand('wordfilter_debug', (src) => {
   debugChat = !debugChat;

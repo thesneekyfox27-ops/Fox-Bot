@@ -115,6 +115,16 @@ put its folder name in config.json as  "chatResources": ["its-name"]
 and restart. If it says a player "has the ... permission - not filtered",
 that player is skipping the filter because of bypassAce.
 
+If the console says "Blocked chat message" and you get the warning,
+but the message STILL shows in chat (e.g. as "OOC | Character Name"),
+another script is also posting what you type. Find it with:
+
+    wordfilter_scan
+
+It lists every running script that reads chat typed with T or posts
+OOC messages, with the file and line. That script needs the one-line
+check (see "FILTERING /ooc ..." above) where it reads the message.
+
 
 SETTINGS (config.json)
 ----------------------
