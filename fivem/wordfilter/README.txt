@@ -98,6 +98,24 @@ If plain chat is blocked in test mode but /ooc isn't, that command
 still needs the one export line from the section above.
 
 
+NOT WORKING? (server console / txAdmin live console)
+----------------------------------------------------
+When the server starts, the filter prints what it's hooked into:
+
+    [wordfilter] Chat: hooked into "chat". Filtering chat: ON.
+    [wordfilter] Bypass: nobody (admins are filtered too).
+
+Then type this in the console and send a chat message in game (T):
+
+    wordfilter_debug
+
+Every chat message the filter receives is logged (not the text). If
+nothing shows up when you chat, your chat script isn't the standard one -
+put its folder name in config.json as  "chatResources": ["its-name"]
+and restart. If it says a player "has the ... permission - not filtered",
+that player is skipping the filter because of bypassAce.
+
+
 SETTINGS (config.json)
 ----------------------
 blockChat          true/false - filter chat messages.

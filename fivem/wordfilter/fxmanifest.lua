@@ -3,7 +3,7 @@ game 'gta5'
 
 name 'wordfilter'
 description 'Blocks slurs in chat and player names, even when disguised'
-version '1.1.0'
+version '1.2.0'
 
 server_script 'server.js'
 

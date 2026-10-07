@@ -573,7 +573,11 @@ function logHit(kind, src, name, text, found) {
 // Returns true when the message should be blocked.
 function checkPlayerMessage(src, name, message, kind) {
   src = Number(src);
-  if (!src || !message || canBypass(src)) return false;
+  if (!src || !message) return false;
+  if (canBypass(src)) {
+    if (debugChat) console.log(`[${RESOURCE_NAME}] debug: id ${src} has the "${config.bypassAce}" permission - not filtered`);
+    return false;
+  }
 
   const found = findBlockedWords(String(message), matcher);
   if (found.length === 0) return false;
@@ -615,12 +619,53 @@ function checkPlayerMessage(src, name, message, kind) {
 }
 
 // Plain chat messages from the default cfx "chat" resource
+// Chat is caught two ways, so it works with the standard chat and its forks:
+//  1. the chat resource's message hook (runs before the message is sent)
+//  2. the classic "chatMessage" event
+// The same message seen by both only counts once.
+let debugChat = false;
+const recent = new Map();   // src -> { text, at, blocked }
+
+function handleChat(src, name, message, via) {
+  src = Number(src);
+  if (debugChat) console.log(`[${RESOURCE_NAME}] debug: chat from ${name} (id ${src}) via ${via}: ${String(message).length} chars`);
+  if (!config.blockChat || !message) return false;
+  const last = recent.get(src);
+  if (last && last.text === message && Date.now() - last.at < 2000) return last.blocked;
+  const blocked = checkPlayerMessage(src, name, message, 'chat message');
+  recent.set(src, { text: message, at: Date.now(), blocked });
+  return blocked;
+}
+
 on('chatMessage', (src, name, message) => {
-  if (!config.blockChat) return;
-  if (checkPlayerMessage(src, name, message, 'chat message')) {
-    CancelEvent();
-  }
+  if (handleChat(src, name, message, 'chatMessage event')) CancelEvent();
 });
+
+let hookedChat = null;
+function hookChatResource() {
+  for (const res of ['chat', ...(config.chatResources || [])]) {
+    if (GetResourceState(res) !== 'started') continue;
+    try {
+      exports[res].registerMessageHook((src, outMessage, hookRef) => {
+        const args = (outMessage && outMessage.args) || [];
+        const message = args[args.length - 1];
+        if (typeof message !== 'string') return;
+        const name = GetPlayerName(String(src)) || `id ${src}`;
+        if (handleChat(src, name, message, `${res} message hook`)) hookRef.cancel();
+      });
+      hookedChat = res;
+      return true;
+    } catch (error) {
+      console.log(`^3[${RESOURCE_NAME}] Couldn't hook "${res}" (${error.message}) - using the chatMessage event only.^7`);
+    }
+  }
+  return false;
+}
+
+on('onServerResourceStart', (res) => {
+  if (!hookedChat && (res === 'chat' || (config.chatResources || []).includes(res))) hookChatResource();
+});
+on('playerDropped', () => { recent.delete(Number(global.source)); });
 
 // For other scripts' chat commands (/ooc, /me, /twt ...). From Lua:
 //   if exports['wordfilter']:checkMessage(source, message) then return end
@@ -743,8 +788,20 @@ RegisterCommand('wordfilter_reload', (src) => {
 }, true);
 
 console.log(`^2[${RESOURCE_NAME}] Word filter loaded (${matcher.rules.length} rules, ${bans.length} bans)^7`);
+// Start-up report: what the filter is hooked into and who can skip it
 setTimeout(() => {
-  if (GetResourceState('chat') !== 'started') {
-    console.log(`^3[${RESOURCE_NAME}] The "chat" resource isn't running, so plain chat may not be filtered. /ooc, /me etc. need the one-line export (see README).^7`);
+  if (!hookedChat) hookChatResource();
+  console.log(`[${RESOURCE_NAME}] Chat: ${hookedChat ? `hooked into "${hookedChat}"` : 'no chat resource hook - listening for the chatMessage event only'}.` +
+    ` Filtering chat: ${config.blockChat ? 'ON' : 'OFF (blockChat is false in config.json)'}.`);
+  console.log(`[${RESOURCE_NAME}] Bypass: ${config.bypassAce ? `players with the "${config.bypassAce}" permission are NOT filtered` : 'nobody (admins are filtered too)'}.`);
+  console.log(`[${RESOURCE_NAME}] Not working? Type  wordfilter_debug  here, then send a chat message in game.`);
+}, 3000);
+
+// wordfilter_debug: log every chat message the filter receives (no message text)
+RegisterCommand('wordfilter_debug', (src) => {
+  debugChat = !debugChat;
+  replyTo(src, `Debug ${debugChat ? 'ON - every chat message the filter sees is logged in the server console' : 'OFF'}.`);
+  if (debugChat) {
+    replyTo(src, `Chat hook: ${hookedChat || 'none'}. Bypass permission: ${config.bypassAce || 'none'}.`);
   }
-}, 5000);
+}, true);
