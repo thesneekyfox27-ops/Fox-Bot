@@ -15,8 +15,8 @@
   through hear it in sync.
 - **Proper sounds for each event.** `purge_start`, `purge_end` and `restart_siren` used to be the same
   3-minute file (your Purge announcement). Now:
-  - `purge_start.mp3`: your Purge announcement, unchanged.
-  - `purge_end.mp3`: an all-clear siren that winds up, holds, then winds down (26 s).
+  - `purge_start.mp3`: The Purge announcement (69 s).
+  - `purge_end.mp3`: the Purge siren, looped twice with a smooth blend and a fade-out (35 s).
   - `restart_siren.ogg`: an air-raid wail that loops with no gap (32 s).
   To use your own, drop a file in `html/sounds/` with the same name.
 - Fixed a script error: `SetScenarioPedDensityMultipliersThisFrame` -> `...MultiplierThisFrame`
