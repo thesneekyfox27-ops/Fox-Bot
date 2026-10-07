@@ -1,0 +1,16 @@
+{
+  "blockChat": true,
+  "checkPlayerNames": true,
+  "kickAfterStrikes": 3,
+  "warningMessage": "Your message was blocked because it contained a blocked word.",
+  "kickMessage": "You were kicked for repeatedly using blocked words.",
+  "banOnKick": true,
+  "banDurationHours": 0,
+  "appealLink": "https://discord.gg/YOUR-INVITE",
+  "banMessage": "You are banned for using blocked words. Ban ID: {banId}. Open a ticket to appeal: {appealLink}",
+  "nameKickMessage": "Your name contains a blocked word. Please change it and reconnect.",
+  "bypassAce": "wordfilter.bypass",
+  "discordWebhook": "",
+  "customWords": [],
+  "allowedWords": []
+}
