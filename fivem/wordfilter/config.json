@@ -9,7 +9,7 @@
   "appealLink": "https://discord.gg/YOUR-INVITE",
   "banMessage": "You are banned for using blocked words. Ban ID: {banId}. Open a ticket to appeal: {appealLink}",
   "nameKickMessage": "Your name contains a blocked word. Please change it and reconnect.",
-  "bypassAce": "wordfilter.bypass",
+  "bypassAce": "",
   "discordWebhook": "",
   "customWords": [],
   "allowedWords": []

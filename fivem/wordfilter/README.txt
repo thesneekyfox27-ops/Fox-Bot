@@ -119,10 +119,11 @@ banMessage         What banned players see when kicked and when they
 kickMessage        Shown when a player is kicked (only if banOnKick is
                    false).
 nameKickMessage    Shown when a player's name is blocked.
-bypassAce          Players with this permission are not filtered.
-                   To let admins bypass, add to server.cfg:
+bypassAce          "" (the default) = nobody bypasses, admins included.
+                   Admins get strikes and bans like everyone else.
+                   To let a group skip the filter, set it to
+                   "wordfilter.bypass" and add to server.cfg:
                        add_ace group.admin wordfilter.bypass allow
-                   Leave it as "" so nobody bypasses.
 discordWebhook     Paste a Discord webhook URL to get a log of blocked
                    messages, or leave "" for none.
 customWords        Extra words to block, e.g. ["badword", "*worse*"].
