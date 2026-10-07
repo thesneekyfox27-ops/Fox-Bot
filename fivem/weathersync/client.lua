@@ -150,17 +150,20 @@ local function suppressTraffic()
     end
 end
 
--- Helps the game's own swimming along:
---  * if you're in deep water but still "walking on the bottom", you get lifted
---    up (velocity only, no animations) until the game switches you to swimming;
---  * buoyancy = false makes it a lethal flood: swimmers are dragged under;
---  * if your head stays under for breathSeconds you start losing health.
+-- Keeps you swimming on top of the flood:
+--  * in deep water you always float back up to the surface and stay there
+--    swimming (the game's own swim animations - nothing forced);
+--  * if you're stuck (snagged under something, or still "standing" in deep
+--    water) for a moment, you're popped straight up to the surface;
+--  * buoyancy = false makes it a lethal flood instead: you're dragged under,
+--    and lose health once your breath (breathSeconds) runs out.
 local function floodSwimHelper()
     local minDepth = FL.minDepth or 1.5
     local breathMs = (FL.breathSeconds or 12) * 1000
     local dps      = FL.drownDps or 8
     local buoyant  = FL.buoyancy ~= false
     local air, dmgAcc, last = breathMs, 0.0, GetGameTimer()
+    local stuckSince = nil
 
     while floodActive do
         local now = GetGameTimer()
@@ -175,15 +178,33 @@ local function floodSwimHelper()
             if found and surf and (surf - (c.z - 0.95)) > minDepth then
                 inDeep = true
                 local v = GetEntityVelocity(ped)
+                local floatZ = surf - 0.55           -- head and shoulders out of the water
                 if not buoyant then
-                    -- lethal flood: keep pulling them down
                     if v.z > -0.8 then SetEntityVelocity(ped, v.x, v.y, -0.8) end
-                elseif not IsPedSwimming(ped) then
-                    -- stuck on the bottom: float up so the game starts swimming
-                    local lift = math.min(2.5, math.max(0.0, (surf - 0.6 - c.z) * 2.0))
-                    if lift > v.z then SetEntityVelocity(ped, v.x, v.y, lift) end
+                    headUnder = (c.z + 0.6) < surf
+                else
+                    local below = floatZ - c.z       -- how far under the swimming height we are
+                    if below > 0.25 then
+                        -- rise to the top (faster the deeper you are)
+                        local up = math.min(6.0, 1.2 + below * 1.5)
+                        if v.z < up then SetEntityVelocity(ped, v.x, v.y, up) end
+                    end
+                    -- not swimming yet, or not getting any higher: pop up to the surface
+                    local stuck = (not IsPedSwimming(ped)) or (below > 0.6 and v.z < 0.3)
+                    if stuck then
+                        stuckSince = stuckSince or now
+                        if now - stuckSince > 1200 then
+                            SetEntityCoordsNoOffset(ped, c.x, c.y, floatZ, false, false, false)
+                            SetEntityVelocity(ped, v.x * 0.3, v.y * 0.3, 0.0)
+                            stuckSince = nil
+                        end
+                    else
+                        stuckSince = nil
+                    end
+                    headUnder = (c.z + 0.6) < surf
                 end
-                headUnder = (c.z + 0.6) < surf
+            else
+                stuckSince = nil
             end
         end
 
@@ -423,8 +444,8 @@ end)
 -- ------------------------------------------------------------
 --  Server -> client: alerts, HUDs, sounds, toasts
 -- ------------------------------------------------------------
-RegisterNetEvent('weathersync:client:siren', function(on)
-    nui({ action = on and 'playSiren' or 'stopSiren', volume = Config.RestartAlert.sirenVolume })
+RegisterNetEvent('weathersync:client:siren', function(on, remaining)
+    nui({ action = on and 'playSiren' or 'stopSiren', volume = Config.RestartAlert.sirenVolume, remaining = remaining })
 end)
 
 RegisterNetEvent('weathersync:client:restartHud', function(data)

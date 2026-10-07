@@ -1,4 +1,4 @@
-# WeatherSync v2.0 — Time & Weather Sync (QBCore / Standalone)
+# WeatherSync v2.1 — Time & Weather Sync (QBCore / Standalone)
 
 ## What's new in 2.0
 - **Swim in the flood.** Flood water is real GTA water and the game now swims you itself: real swim
@@ -10,6 +10,11 @@
 - **Tidier code.** client/server/NUI reorganised and dead code removed. Every command, event and
   **config value is unchanged** — drop your old `config.lua` in if you edited it.
 - The restart timer now drops below the purge banner when both are on screen.
+- **The restart siren finishes right at the restart.** It loops during the countdown, but it's timed so
+  the last play is a whole one that ends exactly as the server restarts. Players who join partway
+  through hear it in sync.
+- **You float to the top of the flood and stay swimming there.** If you get stuck under something,
+  you're moved straight up to the surface.
 - `storm_rumble` and `tornado_warning` are now .mp3 (the resource is about 20 MB smaller).
 
 
@@ -172,9 +177,9 @@ load is reliable. WeatherSync calls `ResetWater()` on boot, so your normal ocean
 and inland lakes are untouched until a flood actually runs.
 
 **Swimming:** the flood is real GTA water, so the game swims you, lets you dive and runs its own
-drowning, and cars float or sink. `Config.Flood.physics` adds a small helper: if you're standing on the
-flooded street in deep water, it lifts you until you start swimming, and drains health if your head
-stays under for `breathSeconds`. `buoyancy = false` drags swimmers under for a lethal flood. If you ever
+drowning, and cars float or sink. `Config.Flood.physics` keeps you on top: in deep water you rise to
+the surface and stay swimming there, and if you're stuck for about a second you're moved up to the
+surface. Health drains only if your head stays under for `breathSeconds`. `buoyancy = false` drags swimmers under for a lethal flood. If you ever
 see a patchy, floating-sheet flood, you're on `useBigQuad = false` — set it back to true.
 
 

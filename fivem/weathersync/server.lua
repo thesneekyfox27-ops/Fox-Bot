@@ -202,7 +202,7 @@ local function pushFullState(target)
         lightning = state.lightning, purge = scheduleOn,
     })
     if state.alert and Config.RestartAlert.siren then
-        TriggerClientEvent('weathersync:client:siren', target, true)
+        TriggerClientEvent('weathersync:client:siren', target, true, restartRemain)
     end
     if state.alert and restartRemain > 0 then
         TriggerClientEvent('weathersync:client:restartHud', target, { active = true, seconds = restartRemain })
@@ -363,8 +363,13 @@ end
 local function setAlert(on, seconds, doRestart)
     on = on and true or false
     if not Config.RestartAlert.enabled then return end
+    -- the siren is told how long is left so its last play ends right at the restart
+    local secs = math.max(5, math.min(7200, math.floor(tonumber(seconds) or Config.RestartAlert.countdownSeconds)))
     if on == state.alert then
-        if on then startRestartCountdown(seconds, doRestart ~= false) end   -- re-arm the timer
+        if on then   -- re-arm the timer
+            startRestartCountdown(secs, doRestart ~= false)
+            if Config.RestartAlert.siren then TriggerClientEvent('weathersync:client:siren', -1, true, secs) end
+        end
         return
     end
 
@@ -378,8 +383,8 @@ local function setAlert(on, seconds, doRestart)
                 math.floor(tonumber(seconds) or Config.RestartAlert.countdownSeconds))
         end
         setWeather(Config.RestartAlert.weatherId, true)
-        if Config.RestartAlert.siren then TriggerClientEvent('weathersync:client:siren', -1, true) end
-        startRestartCountdown(seconds, doRestart ~= false)
+        if Config.RestartAlert.siren then TriggerClientEvent('weathersync:client:siren', -1, true, secs) end
+        startRestartCountdown(secs, doRestart ~= false)
     else
         state.alert = false
         cancelRestartCountdown()

@@ -192,6 +192,23 @@ function startLoop(a, vol) {
 }
 
 const sirenAudio   = makeAudio('sounds/restart_siren.mp3', true);
+
+// The siren loops for the whole countdown. It starts part-way into the clip so
+// that its LAST play is a full one that finishes exactly as the server restarts
+// (e.g. a 5:00 timer with a 3:04 siren: 1:56 of it, then the whole siren to 0).
+function startSiren(vol, remaining) {
+    const align = () => {
+        const dur = sirenAudio.duration;
+        if (!remaining || !isFinite(dur) || dur <= 0) return;
+        const rem = remaining % dur;
+        try { sirenAudio.currentTime = rem > 0.5 ? dur - rem : 0; } catch (e) {}
+    };
+    const wasPlaying = sirenAudio._want && !sirenAudio.paused;
+    startLoop(sirenAudio, vol);
+    if (wasPlaying && !remaining) return;   // just a volume change
+    if (sirenAudio.readyState >= 1) align();
+    else sirenAudio.addEventListener('loadedmetadata', align, { once: true });
+}
 const warningAudio = makeAudio('sounds/tornado_warning.mp3', false);
 const rumbleAudio  = makeAudio('sounds/storm_rumble.mp3', true);
 
@@ -323,7 +340,7 @@ window.addEventListener('message', (ev) => {
         case 'notify': showToast(d.text, d.kind); break;
 
         case 'purgeSiren': d.on ? startPurgeSound(d.sound, d.volume, d.loop) : stopPurgeSounds(); break;
-        case 'playSiren': startLoop(sirenAudio, d.volume); break;
+        case 'playSiren': startSiren(d.volume, d.remaining); break;
         case 'stopSiren': stopAudio(sirenAudio); break;
         case 'playWarning': playAudio(warningAudio, d.volume); break;
         case 'startRumble': startLoop(rumbleAudio, d.volume); break;
