@@ -60,6 +60,17 @@ export default {
                 );
             }
             
+            if (robberData.testMode || victimData.testMode) {
+                throw createError(
+                    "Rob blocked in test mode",
+                    ErrorTypes.VALIDATION,
+                    robberData.testMode
+                        ? "You're in test mode, so you can't rob real players. Turn it off with `/testcoins off`."
+                        : "That user is in test mode and can't be robbed.",
+                    { robberId, victimId: victimUser.id }
+                );
+            }
+
             const lastRob = robberData.lastRob || 0;
 
             if (now < lastRob + ROB_COOLDOWN) {

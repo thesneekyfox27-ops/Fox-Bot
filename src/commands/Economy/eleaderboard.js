@@ -41,7 +41,7 @@ export default {
                 const userId = key.replace(prefix, "");
                 const userData = await client.db.get(key);
 
-                if (userData) {
+                if (userData && !userData.testMode) {
                     allUserData.push({
                         userId: userId,
                         net_worth: (userData.wallet || 0) + (userData.bank || 0),

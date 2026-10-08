@@ -1,0 +1,49 @@
+diff -ru a/modules/inventory/tgiann-inventory/server.lua b/modules/inventory/tgiann-inventory/server.lua
+--- a/modules/inventory/tgiann-inventory/server.lua
++++ b/modules/inventory/tgiann-inventory/server.lua
+@@ -150,6 +150,17 @@
+ 
+         markGranted(src, metadata.plate)
+ 
++        -- fox_keyring: put the key straight onto a keyring the player is carrying, if one has room.
++        if GetResourceState('fox_keyring') == 'started' then
++            local ringOk, onRing = pcall(function()
++                return exports['fox_keyring']:AddKeyToRing(src, item, metadata)
++            end)
++            if ringOk and onRing then
++                print(('[0r-vehiclekeys] key for plate %s placed on keyring'):format(tostring(metadata.plate)))
++                return true
++            end
++        end
++
+         if not tgiann:CanCarryItem(src, item, count) then return false end
+ 
+         -- SEPARATE SLOTS
+@@ -195,6 +206,16 @@
+     if type(metadata) == 'table' then
+         local found = findItemByMetadata(src, item, metadata)
+         if not found then
++            -- fox_keyring: the key may be on a keyring (e.g. a job car key someone put there by hand).
++            if GetResourceState('fox_keyring') == 'started' then
++                local ringOk, offRing = pcall(function()
++                    return exports['fox_keyring']:RemoveKeyFromRing(src, item, metadata)
++                end)
++                if ringOk and offRing then
++                    print(('[0r-vehiclekeys] removed %s for plate %s from keyring of %s'):format(item, tostring(metadata.plate), src))
++                    return true
++                end
++            end
+             print(('[0r-vehiclekeys] RemoveItem: no %s matching %s in inventory of %s'):format(item, json.encode(metadata), src))
+             return false
+         end
+@@ -236,6 +257,10 @@
+     if type(metadata) == 'table' then
+         if findItemByMetadata(src, item, metadata) ~= nil then return true end
+         -- NRP: also count a vehicle key stored on the player's keyring
++        if metadata.plate and GetResourceState('fox_keyring') == 'started'
++           and exports['fox_keyring']:RingHasPlate(src, metadata.plate, metadata.ssn) then
++            return true
++        end
+         if metadata.plate and GetResourceState('nrp-keyguard') == 'started'
+            and exports['nrp-keyguard']:RingHasPlate(src, metadata.plate) then
+             return true
