@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="flash"></div>
+  <div id="hud" aria-live="polite"></div>
+
+  <div id="phone" class="closed" aria-hidden="true">
+    <div class="bezel">
+      <div class="screen">
+        <div class="statusbar">
+          <span id="clock">9:41</span>
+          <span class="island"></span>
+          <span class="signal"><i></i><i></i><i></i><i></i></span>
+        </div>
+        <div class="peek-hint" id="peekHint">Press <b id="openKey">F6</b> to respond</div>
+        <main id="view"></main>
+        <nav class="tabs hide" id="tabs"></nav>
+        <div class="home-bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

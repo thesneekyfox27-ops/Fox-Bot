@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="embedded">
+  <!-- Loaded inside 17mov_Phone as the DoorDrop app. Same UI as index.html, minus our own phone shell. -->
+  <div id="flash"></div>
+  <div id="phone" class="open">
+    <div class="bezel">
+      <div class="screen">
+        <div class="statusbar"><span id="clock"></span></div>
+        <div class="peek-hint" id="peekHint"><b id="openKey"></b></div>
+        <main id="view"></main>
+        <nav class="tabs hide" id="tabs"></nav>
+        <div class="home-bar"></div>
+      </div>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
