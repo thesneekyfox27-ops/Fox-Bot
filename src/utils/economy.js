@@ -25,6 +25,21 @@ rob: 4 * 60 * 60 * 1000,
 
 
 
+// Owner test mode (/testcoins): every read refills the wallet and clears cooldowns, so
+// every economy command can be tried over and over. The real balance is kept in
+// testSaved and put back when test mode is turned off.
+export const TEST_MODE_BALANCE = 1_000_000_000;
+
+function applyTestMode(data) {
+    if (!data?.testMode) return data;
+    data.wallet = TEST_MODE_BALANCE;
+    for (const field of Object.keys(data)) {
+        if (/^last[A-Z]/.test(field) && typeof data[field] === 'number') data[field] = 0;
+    }
+    data.cooldowns = {};
+    return data;
+}
+
 export function getEconomyKey(guildId, userId) {
     const validGuildId = validateDiscordId(guildId, 'guildId');
     const validUserId = validateDiscordId(userId, 'userId');
@@ -88,7 +103,7 @@ export async function getEconomyData(client, guildId, userId) {
         const key = getEconomyKey(guildId, userId);
         const data = await client.db.get(key, {});
         
-        return normalizeEconomyData(data, DEFAULT_ECONOMY_DATA);
+        return applyTestMode(normalizeEconomyData(data, DEFAULT_ECONOMY_DATA));
     } catch (error) {
         logger.error(`Error getting economy data for user ${userId}`, error);
         return normalizeEconomyData({}, DEFAULT_ECONOMY_DATA);

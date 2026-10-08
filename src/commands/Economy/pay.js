@@ -59,6 +59,16 @@ export default {
                 );
             }
             
+            const senderCheck = await getEconomyData(client, guildId, senderId);
+            if (senderCheck?.testMode) {
+                throw createError(
+                    "Pay blocked in test mode",
+                    ErrorTypes.VALIDATION,
+                    "You're in test mode. Test coins can't be given to other people. Turn it off with `/testcoins off`.",
+                    { senderId }
+                );
+            }
+
             if (amount <= 0) {
                 throw createError(
                     "Invalid payment amount",
