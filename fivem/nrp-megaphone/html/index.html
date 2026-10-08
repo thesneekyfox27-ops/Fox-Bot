@@ -1,0 +1,125 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>nrp-megaphone</title></head>
+<body style="background:transparent;margin:0">
+<audio id="start" src="talk_start.ogg" preload="auto"></audio>
+<audio id="stop"  src="talk_stop.ogg"  preload="auto"></audio>
+<script>
+const RES = typeof GetParentResourceName === 'function' ? GetParentResourceName() : 'nrp-megaphone';
+const post = (n, d = {}) => fetch(`https://${RES}/${n}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) }).catch(() => {});
+
+/* ---------- talk clicks ---------- */
+const src = { start: document.getElementById('start'), stop: document.getElementById('stop') };
+function click(sound, volume) {
+  if (!src[sound]) return;
+  const a = src[sound].cloneNode();
+  a.volume = Math.max(0, Math.min(1, Number(volume) || 0));
+  a.play().then(() => post('clickResult', { ok: true }))
+          .catch((err) => post('clickResult', { ok: false, err: String(err && (err.name || err.message) || err) }));
+}
+
+/* ---------- hear yourself (self-monitor through a megaphone filter) ----------
+   Uses the Windows DEFAULT microphone (FiveM doesn't let pages pick a device).
+   The mic is only opened while a megaphone is on and is closed again after.   */
+let ctx = null, stream = null, gate = null, out = null, failed = false;
+let analyser = null, vadTimer = null, vad = false, vadLast = 0;
+let gameTalk = false, useMic = false, micThreshold = 0.02;
+
+function updateGate() {
+  if (!gate || !ctx) return;
+  const on = gameTalk || (useMic && vad);
+  const t = ctx.currentTime;
+  gate.gain.cancelScheduledValues(t);
+  gate.gain.setTargetAtTime(on ? 1 : 0, t, on ? 0.01 : 0.08);
+}
+
+function shaper(amount) {
+  const n = 2048, curve = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const x = i * 2 / n - 1; curve[i] = (1 + amount) * x / (1 + amount * Math.abs(x)); }
+  return curve;
+}
+
+async function monitorOn(cfg) {
+  if (stream || failed) return;
+  post('monitorStatus', { status: 'asking for microphone' });
+  const slow = setTimeout(() => post('monitorStatus', { status: 'still waiting for microphone (blocked or no prompt)' }), 3000);
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: false, noiseSuppression: true, autoGainControl: false },
+    });
+  } catch (err) {
+    clearTimeout(slow);
+    failed = true;
+    post('monitorStatus', { status: 'failed: ' + String(err && (err.name || err.message) || err) });
+    post('monitorFailed', { reason: String(err && (err.name || err.message) || err) });
+    return;
+  }
+  clearTimeout(slow);
+  ctx = ctx || new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+  if (ctx.state === 'suspended') { try { await ctx.resume(); } catch (_) {} }
+
+  const mic = ctx.createMediaStreamSource(stream);
+  micThreshold = cfg.micThreshold ?? 0.02;
+  // voice detection from the mic level (works even when the game doesn't report talking)
+  analyser = ctx.createAnalyser(); analyser.fftSize = 1024;
+  mic.connect(analyser);
+  const buf = new Float32Array(analyser.fftSize);
+  clearInterval(vadTimer);
+  vadTimer = setInterval(() => {
+    if (!analyser) return;
+    analyser.getFloatTimeDomainData(buf);
+    let sum = 0; for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+    const rms = Math.sqrt(sum / buf.length);
+    const now = performance.now();
+    if (rms > micThreshold) vadLast = now;
+    const talking = now - vadLast < 350;          // short hangover so words don't chop
+    if (talking !== vad) { vad = talking; post('vad', { state: vad }); updateGate(); }
+  }, 40);
+  // megaphone tone: thin band, crunchy, compressed
+  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 500;
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass';  lp.frequency.value = 3200;
+  const peak = ctx.createBiquadFilter(); peak.type = 'peaking'; peak.frequency.value = 1800; peak.Q.value = 1.2; peak.gain.value = 8;
+  const drive = ctx.createWaveShaper(); drive.curve = shaper(cfg.drive ?? 25); drive.oversample = '2x';
+  const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -28; comp.ratio.value = 8;
+  // slap-back echo
+  const delay = ctx.createDelay(1.0); delay.delayTime.value = cfg.echoDelay ?? 0.14;
+  const fb = ctx.createGain(); fb.gain.value = cfg.echoFeedback ?? 0.28;
+  const wet = ctx.createGain(); wet.gain.value = cfg.echoMix ?? 0.45;
+
+  gate = ctx.createGain(); gate.gain.value = 0;          // opened only while you talk
+  out = ctx.createGain(); out.gain.value = cfg.volume ?? 0.25;
+
+  mic.connect(hp); hp.connect(lp); lp.connect(peak); peak.connect(drive); drive.connect(comp); comp.connect(gate);
+  gate.connect(out);                                      // dry
+  gate.connect(delay); delay.connect(fb); fb.connect(delay); delay.connect(wet); wet.connect(out);   // echo
+  out.connect(ctx.destination);
+  post('monitorStarted');
+  post('monitorStatus', { status: 'running (audio ' + ctx.state + ', mic track ' + (stream.getAudioTracks()[0] || {}).label + ')' });
+}
+
+function monitorOff() {
+  clearInterval(vadTimer); vadTimer = null; analyser = null;
+  if (vad) { vad = false; post('vad', { state: false }); }
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  if (out) { try { out.disconnect(); } catch (_) {} out = null; }
+  gate = null;
+}
+
+function setTalking(on) { gameTalk = on; updateGate(); }
+
+window.addEventListener('message', (e) => {
+  const d = e.data || {};
+  if (d.action === 'click') click(d.sound, d.volume);
+  else if (d.action === 'monitor') { if (d.state) monitorOn(d.cfg || {}); else monitorOff(); }
+  else if (d.action === 'monitorTalk') setTalking(!!d.state);
+  else if (d.action === 'monitorRetry') failed = false;
+  else if (d.action === 'gateMode') { useMic = !!d.useMic; updateGate(); }
+  else if (d.action === 'testClick') click('start', 0.5);
+});
+// tell Lua the page is alive (retry: the page can load before Lua listens)
+(function hello(n) {
+  fetch(`https://${RES}/ready`, { method: 'POST', body: '{}' })
+    .then(r => { if (!r.ok && n < 30) setTimeout(() => hello(n + 1), 1000); })
+    .catch(() => { if (n < 30) setTimeout(() => hello(n + 1), 1000); });
+})(0);
+</script>
+</body></html>
