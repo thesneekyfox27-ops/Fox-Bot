@@ -62,8 +62,10 @@ Menus use real items from the NRP items list (the nrp-vending consumables), and 
   Closed places are folded into "N closed" at the bottom, showing when they open and how far away they are.
 - **Opening hours** use the in-game clock: `Config.StoreHours` sets hours per kind of food, and any
   restaurant can have its own `hours = { 8, 22 }`. Closed places can't be ordered from (checked by the server too).
-- **Store pictures:** without a picture, each card shows the map around the restaurant tinted in its colour
-  (`Config.StoreArt`). To use real photos, give a restaurant `banner = 'https://...'` and `logo = 'https://...'`.
+- **Store pictures:** drop pictures into `html/stores/` named after the restaurant (`burger-shot.jpg`,
+  `24-7.jpg` for every 24/7, ...; the full list is in `html/stores/README.txt`) and restart the resource.
+  A link works too: `banner = 'https://...'` on a restaurant. Places without a picture show the map around
+  them, tinted in their colour (`Config.StoreArt`). The console lists which pictures were found on start (`ddstores`).
 - **Orders:** your live order with the driver on the map, plus your recent orders (Delivered / Cancelled).
 - **Drive:** the dashing map screen, offers, deliveries, earnings (☰) and ratings (★) as before.
 - **Fixes:** couriers arriving near you no longer throw a script error (`NetworkDoesNetIdExist` doesn't exist;

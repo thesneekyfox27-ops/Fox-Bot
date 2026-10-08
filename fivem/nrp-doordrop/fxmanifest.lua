@@ -29,6 +29,10 @@ files {
     'html/style.css',
     'html/app.js',
     'html/sounds/*.mp3',
+    'html/stores/*.jpg',
+    'html/stores/*.jpeg',
+    'html/stores/*.png',
+    'html/stores/*.webp',
 }
 
 dependencies {

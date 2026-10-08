@@ -1494,6 +1494,51 @@ local function hourLabel(h)
     return h < 12 and (h .. 'am') or ((h - 12) .. 'pm')
 end
 
+---------------------------------------------------------------------
+-- Store pictures: drop an image named after the restaurant into html/stores/
+-- (e.g. html/stores/burger-shot-del-perro.jpg) and it's used as that card's picture.
+-- The names are printed in the console on start (`ddstores` lists them again).
+---------------------------------------------------------------------
+local RES = GetCurrentResourceName()
+local PHOTO_DIR = 'html/stores/'
+local PHOTO_EXT = { 'jpg', 'png', 'webp', 'jpeg' }
+local storePics = {}
+
+local function slugify(str)
+    return (str or ''):lower():gsub('[^%w]+', '-'):gsub('^%-+', ''):gsub('%-+$', '')
+end
+local function storeSlug(r) return slugify((r.label or '') .. '-' .. (r.area or '')) end
+local function chainSlug(r) return slugify(r.label) end   -- one picture for every 24/7, LTD, ...
+
+local function scanStorePics()
+    local found = 0
+    for _, r in ipairs(Config.Restaurants) do
+        local slug = storeSlug(r)
+        storePics[slug] = nil
+        for _, name in ipairs({ slug, chainSlug(r) }) do   -- this location first, then the chain picture
+            for _, ext in ipairs(PHOTO_EXT) do
+                if not storePics[slug] and LoadResourceFile(RES, PHOTO_DIR .. name .. '.' .. ext) then
+                    storePics[slug] = ('https://cfx-nui-%s/%s%s.%s'):format(RES, PHOTO_DIR, name, ext)
+                end
+            end
+        end
+        if storePics[slug] then found = found + 1 end
+    end
+    return found
+end
+
+local function storePhoto(r) return storePics[storeSlug(r)] end
+
+local function listStorePics()
+    print(('[nrp-doordrop] Store pictures: %d of %d found in %s'):format(scanStorePics(), #Config.Restaurants, PHOTO_DIR))
+    for _, r in ipairs(Config.Restaurants) do
+        print(('   %s  %s%s.jpg  (or %s.jpg for every %s)'):format(storePhoto(r) and '[x]' or '[ ]', PHOTO_DIR, storeSlug(r), chainSlug(r), r.label))
+    end
+end
+
+CreateThread(function() Wait(1000) listStorePics() end)
+RegisterCommand('ddstores', function(src) if src == 0 then listStorePics() end end, true)
+
 -- Recent player orders per character, for the Orders tab (kept until a restart)
 local Recent = {}
 local function rememberOrder(cid, o)
@@ -1551,7 +1596,7 @@ lib.callback.register('nrp-doordrop:customer:menu', function(src, opts)
                                 hours = h and not (h[2] - h[1] >= 24 or h[1] == h[2]) and ('%s - %s'):format(hourLabel(h[1]), hourLabel(h[2])) or nil,
                                 opensAt = (not open and h) and hourLabel(h[1]) or nil,
                                 color = r.color or art.color, icon = r.icon or art.icon,
-                                banner = r.banner or art.banner, logo = r.logo or art.logo }
+                                banner = r.banner or storePhoto(r) or art.banner, logo = r.logo or art.logo }
         end
     end
     table.sort(list, function(a, b) return a.meters < b.meters end)
