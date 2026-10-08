@@ -15,7 +15,7 @@ One picture per restaurant (the name, lowercase, with dashes):
   hookies.jpg   (included)
   yellow-jack-inn.jpg   (included)
   24-7.jpg   (included) <- used for all 9 24/7 stores
-  ltd-gasoline.jpg   <- used for all 5 LTD Gasoline stores
+  ltd-gasoline.jpg   (included) <- used for all 5 LTD Gasoline stores
   pier-snack-shack.jpg   (included)
   rex-s-diner.jpg   (included)
   mojito-inn.jpg   (included)
