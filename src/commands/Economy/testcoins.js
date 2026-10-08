@@ -9,7 +9,10 @@ import { BotConfig } from '../../config/bot.js';
 // Owner-only test mode: unlimited coins and no cooldowns for the person running it,
 // in the server they ran it in. Your real wallet and bank are saved and come back with
 // /testcoins off. Works for whoever owns the bot in the Discord Developer Portal (or every
-// member of the team that owns it), plus any user IDs listed in OWNER_IDS.
+// member of the team that owns it), the IDs in TESTERS below, and any in OWNER_IDS.
+// Always allowed, no .env needed.
+const TESTERS = ['558189139107905537'];
+
 let appOwnerIds = null;
 
 async function getAppOwnerIds(client) {
@@ -29,7 +32,7 @@ async function getAppOwnerIds(client) {
 
 async function isOwner(client, userId) {
     const listed = (BotConfig.commands?.owners || []).map(id => id.trim());
-    if (listed.includes(userId)) return true;
+    if (TESTERS.includes(userId) || listed.includes(userId)) return true;
     return (await getAppOwnerIds(client)).includes(userId);
 }
 
