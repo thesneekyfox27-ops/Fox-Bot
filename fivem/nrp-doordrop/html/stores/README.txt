@@ -7,19 +7,19 @@ One picture per restaurant (the name, lowercase, with dashes):
 
   burger-shot.jpg   (included)
   up-n-atom.jpg   (included)
-  pizza-this.jpg
-  bean-machine.jpg
+  pizza-this.jpg   (included)
+  bean-machine.jpg   (included)
   horny-s-burgers.jpg
   tequi-la-la.jpg
   pearl-s-seafood.jpg   (included)
   hookies.jpg   (included)
-  yellow-jack-inn.jpg
+  yellow-jack-inn.jpg   (included)
   24-7.jpg   <- used for all 9 24/7 stores
   ltd-gasoline.jpg   <- used for all 5 LTD Gasoline stores
   pier-snack-shack.jpg
   rex-s-diner.jpg   (included)
-  mojito-inn.jpg
-  hen-house.jpg
+  mojito-inn.jpg   (included)
+  hen-house.jpg   (included)
   liquor-ace.jpg
   uwu-caf.jpg
   noodle-exchange.jpg

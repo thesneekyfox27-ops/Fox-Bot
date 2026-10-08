@@ -631,3 +631,4 @@ body.embedded .home-bar::after { display: none; }
 .store-banner.has-pic .banner-tint::before { display: none; }
 .store-banner.has-pic .store-logo { width: 34px; height: 34px; font-size: 18px; border-radius: 10px; left: 10px; top: auto; bottom: 10px; border-width: 1.5px; }
 .store-banner.has-pic .store-logo.big { width: 40px; height: 40px; font-size: 21px; }
+.store-banner.has-pic .open-pill { top: auto; bottom: 10px; }
