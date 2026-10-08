@@ -8,9 +8,29 @@ import { BotConfig } from '../../config/bot.js';
 
 // Owner-only test mode: unlimited coins and no cooldowns for the person running it,
 // in the server they ran it in. Your real wallet and bank are saved and come back with
-// /testcoins off. Only user IDs listed in OWNER_IDS can use it.
-function isOwner(userId) {
-    return (BotConfig.commands?.owners || []).map(id => id.trim()).includes(userId);
+// /testcoins off. Works for whoever owns the bot in the Discord Developer Portal (or every
+// member of the team that owns it), plus any user IDs listed in OWNER_IDS.
+let appOwnerIds = null;
+
+async function getAppOwnerIds(client) {
+    if (appOwnerIds) return appOwnerIds;
+    try {
+        const app = await client.application.fetch();
+        const owner = app.owner;
+        if (owner?.members) appOwnerIds = [...owner.members.keys()];
+        else if (owner?.id) appOwnerIds = [owner.id];
+        else appOwnerIds = [];
+    } catch (error) {
+        logger.warn('[ECONOMY] Could not look up the bot owner for /testcoins', error);
+        return [];
+    }
+    return appOwnerIds;
+}
+
+async function isOwner(client, userId) {
+    const listed = (BotConfig.commands?.owners || []).map(id => id.trim());
+    if (listed.includes(userId)) return true;
+    return (await getAppOwnerIds(client)).includes(userId);
 }
 
 export default {
@@ -35,11 +55,11 @@ export default {
         const userId = interaction.user.id;
         const guildId = interaction.guildId;
 
-        if (!isOwner(userId)) {
+        if (!(await isOwner(client, userId))) {
             throw createError(
                 "testcoins used by non-owner",
                 ErrorTypes.PERMISSION,
-                "Only the bot owner can use this. Add your Discord user ID to `OWNER_IDS` in the bot's `.env`.",
+                "Only the bot's owner can use this.",
                 { userId }
             );
         }
