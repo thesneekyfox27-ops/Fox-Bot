@@ -21,8 +21,8 @@ One picture per restaurant (the name, lowercase, with dashes):
   mojito-inn.jpg   (included)
   hen-house.jpg   (included)
   liquor-ace.jpg   (included)
-  uwu-caf.jpg
-  noodle-exchange.jpg
+  uwu-caf.jpg   (included)
+  noodle-exchange.jpg   (included)
 
 To give ONE location its own picture, add the area: e.g. 24-7-sandy-shores.jpg
 The server console lists every name and which ones it found when the resource starts (or type: ddstores).
