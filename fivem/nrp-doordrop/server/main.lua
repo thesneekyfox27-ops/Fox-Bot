@@ -1600,6 +1600,18 @@ lib.callback.register('nrp-doordrop:customer:menu', function(src, opts)
         end
     end
     table.sort(list, function(a, b) return a.meters < b.meters end)
+
+    -- chains (24/7, LTD...) show one card: the closest open location, else the closest one
+    local best = {}
+    for _, r in ipairs(list) do
+        local cur = best[r.label]
+        if not cur or (r.open and not cur.open) then best[r.label] = r end
+    end
+    local one = {}
+    for _, r in ipairs(list) do
+        if best[r.label] == r then one[#one + 1] = r end
+    end
+    list = one
     return {
         restaurants = list,
         deliveryFee = Config.Customer.deliveryFee,
