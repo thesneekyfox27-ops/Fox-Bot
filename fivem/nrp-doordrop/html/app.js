@@ -703,7 +703,7 @@ function storeBanner(r, h, big) {
   const pic = r.banner
     ? `<img class="banner-img" src="${esc(r.banner)}" alt="" onerror="this.remove()">`
     : `<span class="banner-map" style="${bannerStyle(r, big ? 300 : 280, h)}"></span>`;
-  return `<div class="store-banner ${big ? 'big' : ''}" style="--c:${esc(r.color || '#3B82F6')};height:${h}px">
+  return `<div class="store-banner ${big ? 'big' : ''} ${r.banner ? 'has-pic' : ''}" style="--c:${esc(r.color || '#3B82F6')};height:${h}px">
     ${pic}<span class="banner-tint"></span>${storeLogo(r, big)}
     ${r.open === false ? `<span class="open-pill closed">CLOSED</span>` : `<span class="open-pill"><i></i>OPEN</span>`}
   </div>`;

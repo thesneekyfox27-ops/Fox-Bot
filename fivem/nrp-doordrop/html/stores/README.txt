@@ -5,19 +5,19 @@ Put a picture here named like below (.jpg, .png or .webp all work), then restart
 
 One picture per restaurant (the name, lowercase, with dashes):
 
-  burger-shot.jpg
-  up-n-atom.jpg
+  burger-shot.jpg   (included)
+  up-n-atom.jpg   (included)
   pizza-this.jpg
   bean-machine.jpg
   horny-s-burgers.jpg
   tequi-la-la.jpg
-  pearl-s-seafood.jpg
-  hookies.jpg
+  pearl-s-seafood.jpg   (included)
+  hookies.jpg   (included)
   yellow-jack-inn.jpg
   24-7.jpg   <- used for all 9 24/7 stores
   ltd-gasoline.jpg   <- used for all 5 LTD Gasoline stores
   pier-snack-shack.jpg
-  rex-s-diner.jpg
+  rex-s-diner.jpg   (included)
   mojito-inn.jpg
   hen-house.jpg
   liquor-ace.jpg
