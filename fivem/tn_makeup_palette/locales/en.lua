@@ -1,0 +1,25 @@
+Locales = {
+    menu_title      = 'Makeup Kit',
+    remove_all      = 'Wipe it all off',
+    remove_all_desc = 'Take off your makeup, blush and lipstick',
+    apply_all       = 'Put it all back on',
+    apply_all_desc  = 'Your saved look, exactly how it was',
+    remove_one      = 'Wipe off %s',
+    apply_one       = 'Put %s back on',
+    wearing         = 'Wearing',
+    saved           = 'Saved in your palette',
+    close           = 'Close',
+
+    progress_remove  = 'Removing makeup...',
+    progress_apply   = 'Applying makeup...',
+
+    removed         = 'Makeup removed. Your look is saved in the palette.',
+    removed_one     = '%s removed.',
+    reapplied       = 'Makeup back on.',
+    reapplied_one   = '%s back on.',
+    nothing         = "You aren't wearing any makeup and there's nothing saved.",
+    cant_use        = "You can't use this right now.",
+    cancelled       = 'Cancelled.',
+    busy            = 'Still busy. Wait a moment.',
+    reset           = 'Palette reset.',
+}
